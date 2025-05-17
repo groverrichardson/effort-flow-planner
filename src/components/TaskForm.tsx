@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
-import { Task, Priority, EffortLevel, Tag, Person } from '@/types';
+import { Task, Priority, EffortLevel } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,18 +12,16 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { format, addDays, addWeeks, addMonths } from 'date-fns';
-import { CalendarIcon, X, Search, Plus, Trash } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
-import { Badge } from '@/components/ui/badge';
 import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
+
+// Import our new components
+import DatePickerField from './form/DatePickerField';
+import TagSelector from './form/TagSelector';
+import PeopleSelector from './form/PeopleSelector';
+import NaturalLanguageInput from './form/NaturalLanguageInput';
+import TaskFormActions from './form/TaskFormActions';
 
 interface TaskFormProps {
   task?: Task;
@@ -48,8 +46,6 @@ const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
 const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
   const { addTask, updateTask, tags, people, addTag, addPerson } = useTaskContext();
   const [formData, setFormData] = useState(task || defaultTask);
-  const [tagSearch, setTagSearch] = useState('');
-  const [personSearch, setPersonSearch] = useState('');
   const [naturalLanguageInput, setNaturalLanguageInput] = useState('');
   const [showNaturalLanguageInput, setShowNaturalLanguageInput] = useState(false);
   
@@ -142,12 +138,12 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
     });
   };
 
-  const handleAddNewTag = () => {
-    if (!tagSearch.trim()) return;
+  const handleAddNewTag = (tagName: string) => {
+    if (!tagName.trim()) return;
     
     // Check if tag already exists
     const existingTag = tags.find(g => 
-      g.name.toLowerCase() === tagSearch.trim().toLowerCase()
+      g.name.toLowerCase() === tagName.trim().toLowerCase()
     );
     
     if (existingTag) {
@@ -155,27 +151,25 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
       if (!formData.tags.some(g => g.id === existingTag.id)) {
         handleTagToggle(existingTag.id);
       }
-      setTagSearch('');
       return;
     }
     
     // Add new tag
-    const newTag = addTag(tagSearch.trim());
+    const newTag = addTag(tagName.trim());
     if (newTag) {
       setFormData(prev => ({
         ...prev,
         tags: [...prev.tags, newTag]
       }));
-      setTagSearch('');
     }
   };
 
-  const handleAddNewPerson = () => {
-    if (!personSearch.trim()) return;
+  const handleAddNewPerson = (personName: string) => {
+    if (!personName.trim()) return;
     
     // Check if person already exists
     const existingPerson = people.find(p => 
-      p.name.toLowerCase() === personSearch.trim().toLowerCase()
+      p.name.toLowerCase() === personName.trim().toLowerCase()
     );
     
     if (existingPerson) {
@@ -183,18 +177,16 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
       if (!formData.people.some(p => p.id === existingPerson.id)) {
         handlePersonToggle(existingPerson.id);
       }
-      setPersonSearch('');
       return;
     }
     
     // Add new person
-    const newPerson = addPerson(personSearch.trim());
+    const newPerson = addPerson(personName.trim());
     if (newPerson) {
       setFormData(prev => ({
         ...prev,
         people: [...prev.people, newPerson]
       }));
-      setPersonSearch('');
     }
   };
 
@@ -241,54 +233,6 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
     if (onSuccess) onSuccess();
   };
 
-  const filteredTags = tags.filter(g => 
-    g.name.toLowerCase().includes(tagSearch.toLowerCase()) && 
-    !formData.tags.some(sg => sg.id === g.id)
-  );
-
-  const filteredPeople = people.filter(p => 
-    p.name.toLowerCase().includes(personSearch.toLowerCase()) && 
-    !formData.people.some(sp => sp.id === p.id)
-  );
-
-  // Condensed date picker component
-  const DatePickerField = ({ 
-    label, 
-    value, 
-    onChange 
-  }: { 
-    label: string; 
-    value: Date | null; 
-    onChange: (date: Date | null) => void 
-  }) => (
-    <div>
-      <label className="block text-xs font-medium mb-1">{label}</label>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal h-8 px-3 text-xs",
-              !value && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-3 w-3" />
-            {value ? format(value, "PP") : <span>Pick a date</span>}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={value || undefined}
-            onSelect={onChange}
-            initialFocus
-            className={cn("p-3 pointer-events-auto")}
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {!isEditing && (
@@ -305,23 +249,11 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
       )}
 
       {showNaturalLanguageInput && (
-        <div className="space-y-2">
-          <Textarea
-            value={naturalLanguageInput}
-            onChange={(e) => setNaturalLanguageInput(e.target.value)}
-            placeholder="Describe your task in natural language (e.g., 'Create a high priority presentation for the marketing team due next Friday')"
-            className="min-h-[80px] text-sm"
-          />
-          <div className="text-right">
-            <Button 
-              type="button" 
-              size="sm"
-              onClick={handleNaturalLanguageSubmit}
-            >
-              Parse Task
-            </Button>
-          </div>
-        </div>
+        <NaturalLanguageInput
+          value={naturalLanguageInput}
+          onChange={setNaturalLanguageInput}
+          onSubmit={handleNaturalLanguageSubmit}
+        />
       )}
 
       <div>
@@ -397,173 +329,25 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
         />
       </div>
 
-      <div>
-        <label className="block text-xs font-medium mb-1">Tags</label>
-        <div className="flex flex-wrap gap-1 mb-1">
-          {formData.tags.map(tag => (
-            <Badge key={tag.id} variant="outline" className="tag-tag text-xs py-0 h-6 flex items-center gap-1">
-              {tag.name}
-              <button 
-                type="button" 
-                onClick={() => handleTagToggle(tag.id)}
-                className="rounded-full hover:bg-accent ml-1 h-3 w-3 flex items-center justify-center"
-              >
-                <X size={10} />
-              </button>
-            </Badge>
-          ))}
-        </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <div className="relative">
-              <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search or add tags..."
-                value={tagSearch}
-                onChange={(e) => setTagSearch(e.target.value)}
-                className="pl-8 h-8 text-xs"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          </PopoverTrigger>
-          <PopoverContent className="w-full p-0" align="start" onInteractOutside={(e) => e.preventDefault()}>
-            <div className="p-2 max-h-[150px] overflow-y-auto">
-              {filteredTags.length > 0 ? (
-                <div className="space-y-1">
-                  {filteredTags.map(tag => (
-                    <div
-                      key={tag.id}
-                      className="flex items-center px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
-                      onClick={() => {
-                        handleTagToggle(tag.id);
-                        setTagSearch('');
-                      }}
-                    >
-                      {tag.name}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                tagSearch.trim() !== '' && (
-                  <div 
-                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
-                    onClick={handleAddNewTag}
-                  >
-                    <Plus size={14} />
-                    Add "{tagSearch.trim()}"
-                  </div>
-                )
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
+      <TagSelector 
+        selectedTags={formData.tags}
+        availableTags={tags}
+        onToggleTag={handleTagToggle}
+        onAddNewTag={handleAddNewTag}
+      />
 
-      <div>
-        <label className="block text-xs font-medium mb-1">People</label>
-        <div className="flex flex-wrap gap-1 mb-1">
-          {formData.people.map(person => (
-            <Badge key={person.id} variant="outline" className="people-tag text-xs py-0 h-6 flex items-center gap-1">
-              {person.name}
-              <button 
-                type="button" 
-                onClick={() => handlePersonToggle(person.id)}
-                className="rounded-full hover:bg-accent ml-1 h-3 w-3 flex items-center justify-center"
-              >
-                <X size={10} />
-              </button>
-            </Badge>
-          ))}
-        </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <div className="relative">
-              <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search or add people..."
-                value={personSearch}
-                onChange={(e) => setPersonSearch(e.target.value)}
-                className="pl-8 h-8 text-xs"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          </PopoverTrigger>
-          <PopoverContent className="w-full p-0" align="start" onInteractOutside={(e) => e.preventDefault()}>
-            <div className="p-2 max-h-[150px] overflow-y-auto">
-              {filteredPeople.length > 0 ? (
-                <div className="space-y-1">
-                  {filteredPeople.map(person => (
-                    <div
-                      key={person.id}
-                      className="flex items-center px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
-                      onClick={() => {
-                        handlePersonToggle(person.id);
-                        setPersonSearch('');
-                      }}
-                    >
-                      {person.name}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                personSearch.trim() !== '' && (
-                  <div 
-                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
-                    onClick={handleAddNewPerson}
-                  >
-                    <Plus size={14} />
-                    Add "{personSearch.trim()}"
-                  </div>
-                )
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
+      <PeopleSelector 
+        selectedPeople={formData.people}
+        availablePeople={people}
+        onTogglePerson={handlePersonToggle}
+        onAddNewPerson={handleAddNewPerson}
+      />
 
-      {isEditing ? (
-        <div className="flex justify-between pt-2 border-t">
-          <Button 
-            variant="destructive" 
-            size="sm"
-            type="button"
-            onClick={() => {
-              if (onCancel) onCancel();
-            }}
-          >
-            <Trash size={16} className="mr-1" />
-            Delete
-          </Button>
-          
-          <div className="flex gap-2">
-            {onCancel && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                type="button"
-                onClick={onCancel}
-              >
-                Close
-              </Button>
-            )}
-            <Button type="submit" size="sm">Update Task</Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex justify-end gap-2 pt-2">
-          {onCancel && (
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm"
-              onClick={onCancel}
-            >
-              Cancel
-            </Button>
-          )}
-          <Button type="submit" size="sm">Create Task</Button>
-        </div>
-      )}
+      <TaskFormActions 
+        isEditing={isEditing} 
+        onCancel={onCancel}
+        onDelete={onCancel} // Reusing onCancel for delete operation
+      />
     </form>
   );
 };
