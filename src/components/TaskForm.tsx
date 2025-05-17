@@ -49,8 +49,6 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
   const [formData, setFormData] = useState(task || defaultTask);
   const [groupSearch, setGroupSearch] = useState('');
   const [personSearch, setPersonSearch] = useState('');
-  const [groupsPopoverOpen, setGroupsPopoverOpen] = useState(false);
-  const [peoplePopoverOpen, setPeoplePopoverOpen] = useState(false);
   
   const isEditing = !!task;
 
@@ -127,8 +125,8 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
         ...prev,
         groups: [...prev.groups, newGroup]
       }));
+      setGroupSearch('');
     }
-    setGroupSearch('');
   };
 
   const handleAddNewPerson = () => {
@@ -155,8 +153,8 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
         ...prev,
         people: [...prev.people, newPerson]
       }));
+      setPersonSearch('');
     }
-    setPersonSearch('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -271,9 +269,8 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
                 selected={formData.dueDate || undefined}
                 onSelect={(date) => {
                   handleDateChange(date, 'dueDate');
-                  // Close the popover after selection
-                  const popoverTrigger = document.activeElement as HTMLElement;
-                  popoverTrigger?.blur();
+                  // Auto-close the popover after selection
+                  document.body.click();
                 }}
                 initialFocus
                 className={cn("p-3 pointer-events-auto")}
@@ -303,9 +300,8 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
                 selected={formData.targetDeadline || undefined}
                 onSelect={(date) => {
                   handleDateChange(date, 'targetDeadline');
-                  // Close the popover after selection
-                  const popoverTrigger = document.activeElement as HTMLElement;
-                  popoverTrigger?.blur();
+                  // Auto-close the popover after selection
+                  document.body.click();
                 }}
                 initialFocus
                 className={cn("p-3 pointer-events-auto")}
@@ -335,9 +331,8 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
                 selected={formData.goLiveDate || undefined}
                 onSelect={(date) => {
                   handleDateChange(date, 'goLiveDate');
-                  // Close the popover after selection
-                  const popoverTrigger = document.activeElement as HTMLElement;
-                  popoverTrigger?.blur();
+                  // Auto-close the popover after selection
+                  document.body.click();
                 }}
                 initialFocus
                 className={cn("p-3 pointer-events-auto")}
@@ -363,7 +358,7 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
             </Badge>
           ))}
         </div>
-        <Popover open={groupsPopoverOpen} onOpenChange={setGroupsPopoverOpen}>
+        <Popover>
           <PopoverTrigger asChild>
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -372,11 +367,11 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
                 value={groupSearch}
                 onChange={(e) => setGroupSearch(e.target.value)}
                 className="pl-8"
-                onFocus={() => setGroupsPopoverOpen(true)}
+                onClick={(e) => e.stopPropagation()}
               />
             </div>
           </PopoverTrigger>
-          <PopoverContent className="w-full p-0" align="start">
+          <PopoverContent className="w-full p-0" align="start" onInteractOutside={(e) => e.preventDefault()}>
             <div className="p-2">
               {filteredGroups.length > 0 ? (
                 <div className="space-y-1">
@@ -425,7 +420,7 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
             </Badge>
           ))}
         </div>
-        <Popover open={peoplePopoverOpen} onOpenChange={setPeoplePopoverOpen}>
+        <Popover>
           <PopoverTrigger asChild>
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -434,11 +429,11 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
                 value={personSearch}
                 onChange={(e) => setPersonSearch(e.target.value)}
                 className="pl-8"
-                onFocus={() => setPeoplePopoverOpen(true)}
+                onClick={(e) => e.stopPropagation()}
               />
             </div>
           </PopoverTrigger>
-          <PopoverContent className="w-full p-0" align="start">
+          <PopoverContent className="w-full p-0" align="start" onInteractOutside={(e) => e.preventDefault()}>
             <div className="p-2">
               {filteredPeople.length > 0 ? (
                 <div className="space-y-1">
