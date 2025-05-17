@@ -19,13 +19,10 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import { CalendarIcon, X } from 'lucide-react';
+import { CalendarIcon, X, Search, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import GroupForm from './GroupForm';
-import PersonForm from './PersonForm';
 
 interface TaskFormProps {
   task?: Task;
@@ -50,10 +47,10 @@ const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
 const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
   const { addTask, updateTask, groups, people, addGroup, addPerson } = useTaskContext();
   const [formData, setFormData] = useState(task || defaultTask);
-  const [groupModalOpen, setGroupModalOpen] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
-  const [personModalOpen, setPersonModalOpen] = useState(false);
-  const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  const [groupSearch, setGroupSearch] = useState('');
+  const [personSearch, setPersonSearch] = useState('');
+  const [groupsPopoverOpen, setGroupsPopoverOpen] = useState(false);
+  const [peoplePopoverOpen, setPeoplePopoverOpen] = useState(false);
   
   const isEditing = !!task;
 
@@ -106,6 +103,62 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
     });
   };
 
+  const handleAddNewGroup = () => {
+    if (!groupSearch.trim()) return;
+    
+    // Check if group already exists
+    const existingGroup = groups.find(g => 
+      g.name.toLowerCase() === groupSearch.trim().toLowerCase()
+    );
+    
+    if (existingGroup) {
+      // If it exists but isn't selected, select it
+      if (!formData.groups.some(g => g.id === existingGroup.id)) {
+        handleGroupToggle(existingGroup.id);
+      }
+      setGroupSearch('');
+      return;
+    }
+    
+    // Add new group
+    const newGroup = addGroup(groupSearch.trim());
+    if (newGroup) {
+      setFormData(prev => ({
+        ...prev,
+        groups: [...prev.groups, newGroup]
+      }));
+    }
+    setGroupSearch('');
+  };
+
+  const handleAddNewPerson = () => {
+    if (!personSearch.trim()) return;
+    
+    // Check if person already exists
+    const existingPerson = people.find(p => 
+      p.name.toLowerCase() === personSearch.trim().toLowerCase()
+    );
+    
+    if (existingPerson) {
+      // If it exists but isn't selected, select it
+      if (!formData.people.some(p => p.id === existingPerson.id)) {
+        handlePersonToggle(existingPerson.id);
+      }
+      setPersonSearch('');
+      return;
+    }
+    
+    // Add new person
+    const newPerson = addPerson(personSearch.trim());
+    if (newPerson) {
+      setFormData(prev => ({
+        ...prev,
+        people: [...prev.people, newPerson]
+      }));
+    }
+    setPersonSearch('');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -129,39 +182,15 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
     if (onSuccess) onSuccess();
   };
 
-  const handleCreateGroup = (name: string) => {
-    const newGroup = addGroup(name);
-    // Only update if newGroup is defined
-    if (newGroup) {
-      setFormData(prev => ({
-        ...prev,
-        groups: [...prev.groups, newGroup]
-      }));
-    }
-    setGroupModalOpen(false);
-  };
+  const filteredGroups = groups.filter(g => 
+    g.name.toLowerCase().includes(groupSearch.toLowerCase()) && 
+    !formData.groups.some(sg => sg.id === g.id)
+  );
 
-  const handleCreatePerson = (name: string) => {
-    const newPerson = addPerson(name);
-    // Only update if newPerson is defined
-    if (newPerson) {
-      setFormData(prev => ({
-        ...prev,
-        people: [...prev.people, newPerson]
-      }));
-    }
-    setPersonModalOpen(false);
-  };
-
-  const handleEditGroup = (group: Group) => {
-    setEditingGroup(group);
-    setGroupModalOpen(true);
-  };
-
-  const handleEditPerson = (person: Person) => {
-    setEditingPerson(person);
-    setPersonModalOpen(true);
-  };
+  const filteredPeople = people.filter(p => 
+    p.name.toLowerCase().includes(personSearch.toLowerCase()) && 
+    !formData.people.some(sp => sp.id === p.id)
+  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -240,21 +269,15 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
               <Calendar
                 mode="single"
                 selected={formData.dueDate || undefined}
-                onSelect={(date) => handleDateChange(date, 'dueDate')}
+                onSelect={(date) => {
+                  handleDateChange(date, 'dueDate');
+                  // Close the popover after selection
+                  const popoverTrigger = document.activeElement as HTMLElement;
+                  popoverTrigger?.blur();
+                }}
                 initialFocus
                 className={cn("p-3 pointer-events-auto")}
               />
-              {formData.dueDate && (
-                <div className="p-3 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDateChange(null, 'dueDate')}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              )}
             </PopoverContent>
           </Popover>
         </div>
@@ -278,21 +301,15 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
               <Calendar
                 mode="single"
                 selected={formData.targetDeadline || undefined}
-                onSelect={(date) => handleDateChange(date, 'targetDeadline')}
+                onSelect={(date) => {
+                  handleDateChange(date, 'targetDeadline');
+                  // Close the popover after selection
+                  const popoverTrigger = document.activeElement as HTMLElement;
+                  popoverTrigger?.blur();
+                }}
                 initialFocus
                 className={cn("p-3 pointer-events-auto")}
               />
-              {formData.targetDeadline && (
-                <div className="p-3 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDateChange(null, 'targetDeadline')}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              )}
             </PopoverContent>
           </Popover>
         </div>
@@ -316,130 +333,142 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
               <Calendar
                 mode="single"
                 selected={formData.goLiveDate || undefined}
-                onSelect={(date) => handleDateChange(date, 'goLiveDate')}
+                onSelect={(date) => {
+                  handleDateChange(date, 'goLiveDate');
+                  // Close the popover after selection
+                  const popoverTrigger = document.activeElement as HTMLElement;
+                  popoverTrigger?.blur();
+                }}
                 initialFocus
                 className={cn("p-3 pointer-events-auto")}
               />
-              {formData.goLiveDate && (
-                <div className="p-3 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDateChange(null, 'goLiveDate')}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              )}
             </PopoverContent>
           </Popover>
         </div>
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium">Groups/Areas</label>
-          <Button 
-            type="button" 
-            size="sm" 
-            variant="outline"
-            onClick={() => {
-              setEditingGroup(null);
-              setGroupModalOpen(true);
-            }}
-          >
-            Add New Group
-          </Button>
+        <label className="block text-sm font-medium mb-1">Groups/Areas</label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {formData.groups.map(group => (
+            <Badge key={group.id} variant="outline" className="group-tag flex items-center gap-1">
+              {group.name}
+              <button 
+                type="button" 
+                onClick={() => handleGroupToggle(group.id)}
+                className="rounded-full hover:bg-accent ml-1 h-4 w-4 flex items-center justify-center"
+              >
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
         </div>
-        <div className="border rounded-md p-3 min-h-[100px] bg-background">
-          <div className="flex flex-wrap gap-2 mb-3">
-            {formData.groups.map(group => (
-              <Badge key={group.id} variant="outline" className="group-tag flex items-center gap-1">
-                {group.name}
-                <button 
-                  type="button" 
-                  onClick={() => handleGroupToggle(group.id)}
-                  className="rounded-full hover:bg-accent ml-1 h-4 w-4 flex items-center justify-center"
-                >
-                  <X size={12} />
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => handleEditGroup(group)}
-                  className="ml-1 text-xs underline"
-                >
-                  Edit
-                </button>
-              </Badge>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {groups
-              .filter(g => !formData.groups.some(sg => sg.id === g.id))
-              .map(group => (
-                <div 
-                  key={group.id}
-                  onClick={() => handleGroupToggle(group.id)}
-                  className="flex items-center gap-2 p-2 border rounded-md cursor-pointer hover:bg-secondary"
-                >
-                  <span className="text-sm">{group.name}</span>
+        <Popover open={groupsPopoverOpen} onOpenChange={setGroupsPopoverOpen}>
+          <PopoverTrigger asChild>
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search or add groups..."
+                value={groupSearch}
+                onChange={(e) => setGroupSearch(e.target.value)}
+                className="pl-8"
+                onFocus={() => setGroupsPopoverOpen(true)}
+              />
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0" align="start">
+            <div className="p-2">
+              {filteredGroups.length > 0 ? (
+                <div className="space-y-1">
+                  {filteredGroups.map(group => (
+                    <div
+                      key={group.id}
+                      className="flex items-center px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-accent"
+                      onClick={() => {
+                        handleGroupToggle(group.id);
+                        setGroupSearch('');
+                      }}
+                    >
+                      {group.name}
+                    </div>
+                  ))}
                 </div>
-              ))}
-          </div>
-        </div>
+              ) : (
+                groupSearch.trim() !== '' && (
+                  <div 
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-accent"
+                    onClick={handleAddNewGroup}
+                  >
+                    <Plus size={16} />
+                    Add "{groupSearch.trim()}"
+                  </div>
+                )
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium">People</label>
-          <Button 
-            type="button" 
-            size="sm" 
-            variant="outline"
-            onClick={() => {
-              setEditingPerson(null);
-              setPersonModalOpen(true);
-            }}
-          >
-            Add New Person
-          </Button>
+        <label className="block text-sm font-medium mb-1">People</label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {formData.people.map(person => (
+            <Badge key={person.id} variant="outline" className="people-tag flex items-center gap-1">
+              {person.name}
+              <button 
+                type="button" 
+                onClick={() => handlePersonToggle(person.id)}
+                className="rounded-full hover:bg-accent ml-1 h-4 w-4 flex items-center justify-center"
+              >
+                <X size={12} />
+              </button>
+            </Badge>
+          ))}
         </div>
-        <div className="border rounded-md p-3 min-h-[100px] bg-background">
-          <div className="flex flex-wrap gap-2 mb-3">
-            {formData.people.map(person => (
-              <Badge key={person.id} variant="outline" className="people-tag flex items-center gap-1">
-                {person.name}
-                <button 
-                  type="button" 
-                  onClick={() => handlePersonToggle(person.id)}
-                  className="rounded-full hover:bg-accent ml-1 h-4 w-4 flex items-center justify-center"
-                >
-                  <X size={12} />
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => handleEditPerson(person)}
-                  className="ml-1 text-xs underline"
-                >
-                  Edit
-                </button>
-              </Badge>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {people
-              .filter(p => !formData.people.some(sp => sp.id === p.id))
-              .map(person => (
-                <div 
-                  key={person.id}
-                  onClick={() => handlePersonToggle(person.id)}
-                  className="flex items-center gap-2 p-2 border rounded-md cursor-pointer hover:bg-secondary"
-                >
-                  <span className="text-sm">{person.name}</span>
+        <Popover open={peoplePopoverOpen} onOpenChange={setPeoplePopoverOpen}>
+          <PopoverTrigger asChild>
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search or add people..."
+                value={personSearch}
+                onChange={(e) => setPersonSearch(e.target.value)}
+                className="pl-8"
+                onFocus={() => setPeoplePopoverOpen(true)}
+              />
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0" align="start">
+            <div className="p-2">
+              {filteredPeople.length > 0 ? (
+                <div className="space-y-1">
+                  {filteredPeople.map(person => (
+                    <div
+                      key={person.id}
+                      className="flex items-center px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-accent"
+                      onClick={() => {
+                        handlePersonToggle(person.id);
+                        setPersonSearch('');
+                      }}
+                    >
+                      {person.name}
+                    </div>
+                  ))}
                 </div>
-              ))}
-          </div>
-        </div>
+              ) : (
+                personSearch.trim() !== '' && (
+                  <div 
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-accent"
+                    onClick={handleAddNewPerson}
+                  >
+                    <Plus size={16} />
+                    Add "{personSearch.trim()}"
+                  </div>
+                )
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
@@ -454,32 +483,6 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
         )}
         <Button type="submit">{isEditing ? 'Update Task' : 'Create Task'}</Button>
       </div>
-
-      <Dialog open={groupModalOpen} onOpenChange={setGroupModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingGroup ? 'Edit Group' : 'Add New Group'}</DialogTitle>
-          </DialogHeader>
-          <GroupForm 
-            group={editingGroup} 
-            onSave={handleCreateGroup}
-            onCancel={() => setGroupModalOpen(false)} 
-          />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={personModalOpen} onOpenChange={setPersonModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingPerson ? 'Edit Person' : 'Add New Person'}</DialogTitle>
-          </DialogHeader>
-          <PersonForm 
-            person={editingPerson} 
-            onSave={handleCreatePerson}
-            onCancel={() => setPersonModalOpen(false)} 
-          />
-        </DialogContent>
-      </Dialog>
     </form>
   );
 };
