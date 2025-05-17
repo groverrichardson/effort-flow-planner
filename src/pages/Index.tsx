@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import TaskList from '@/components/TaskList';
@@ -35,11 +34,6 @@ import {
   Edit,
   Trash
 } from 'lucide-react';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger
-} from "@/components/ui/collapsible";
 
 const Index = () => {
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
