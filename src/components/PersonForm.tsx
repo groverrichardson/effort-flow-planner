@@ -50,22 +50,20 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
+    <form onSubmit={handleSubmit}>
+      <div className="flex items-center gap-2">
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Person name"
+          className="flex-grow"
         />
-      </div>
-
-      <div className="flex justify-end gap-2">
+        <Button type="submit" size="sm">{isEditing ? 'Update' : 'Add'}</Button>
         {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" size="sm" onClick={onCancel}>
             Cancel
           </Button>
         )}
-        <Button type="submit">{isEditing ? 'Update Person' : 'Add Person'}</Button>
       </div>
     </form>
   );

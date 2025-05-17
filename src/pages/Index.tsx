@@ -31,8 +31,15 @@ import {
   Users,
   Tag,
   Menu,
-  Settings
+  Settings,
+  Edit,
+  Trash
 } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from "@/components/ui/collapsible";
 
 const Index = () => {
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
@@ -96,7 +103,7 @@ const Index = () => {
 
       {/* Manage Groups/People Dialog */}
       <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Manage</DialogTitle>
           </DialogHeader>
@@ -131,16 +138,16 @@ const ManageGroups = () => {
   const [editingGroup, setEditingGroup] = useState<{ id: string; name: string } | null>(null);
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-medium mb-4">Add Group/Area</h3>
+        <h3 className="text-lg font-medium mb-2">Add Group/Area</h3>
         <GroupForm />
       </div>
       
       <div>
-        <h3 className="text-lg font-medium mb-4">Existing Groups/Areas</h3>
+        <h3 className="text-lg font-medium mb-2">Existing Groups/Areas</h3>
         {groups.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
             {groups.map(group => (
               <div key={group.id} className="flex items-center justify-between p-2 border rounded-md">
                 {editingGroup?.id === group.id ? (
@@ -150,26 +157,27 @@ const ManageGroups = () => {
                     onCancel={() => setEditingGroup(null)}
                   />
                 ) : (
-                  <>
-                    <span>{group.name}</span>
-                    <div>
+                  <div className="flex w-full items-center justify-between">
+                    <span className="truncate">{group.name}</span>
+                    <div className="flex items-center space-x-1">
                       <Button 
                         variant="ghost" 
-                        size="sm" 
+                        size="icon"
                         onClick={() => setEditingGroup(group)}
+                        className="h-7 w-7"
                       >
-                        Edit
+                        <Edit size={14} />
                       </Button>
                       <Button 
                         variant="ghost" 
-                        size="sm" 
-                        className="text-red-500 hover:text-red-700"
+                        size="icon"
+                        className="text-red-500 hover:text-red-700 h-7 w-7"
                         onClick={() => deleteGroup(group.id)}
                       >
-                        Delete
+                        <Trash size={14} />
                       </Button>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             ))}
@@ -187,16 +195,16 @@ const ManagePeople = () => {
   const [editingPerson, setEditingPerson] = useState<{ id: string; name: string } | null>(null);
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-medium mb-4">Add Person</h3>
+        <h3 className="text-lg font-medium mb-2">Add Person</h3>
         <PersonForm />
       </div>
       
       <div>
-        <h3 className="text-lg font-medium mb-4">Existing People</h3>
+        <h3 className="text-lg font-medium mb-2">Existing People</h3>
         {people.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
             {people.map(person => (
               <div key={person.id} className="flex items-center justify-between p-2 border rounded-md">
                 {editingPerson?.id === person.id ? (
@@ -206,26 +214,27 @@ const ManagePeople = () => {
                     onCancel={() => setEditingPerson(null)}
                   />
                 ) : (
-                  <>
-                    <span>{person.name}</span>
-                    <div>
+                  <div className="flex w-full items-center justify-between">
+                    <span className="truncate">{person.name}</span>
+                    <div className="flex items-center space-x-1">
                       <Button 
                         variant="ghost" 
-                        size="sm" 
+                        size="icon"
                         onClick={() => setEditingPerson(person)}
+                        className="h-7 w-7"
                       >
-                        Edit
+                        <Edit size={14} />
                       </Button>
                       <Button 
                         variant="ghost" 
-                        size="sm" 
-                        className="text-red-500 hover:text-red-700"
+                        size="icon"
+                        className="text-red-500 hover:text-red-700 h-7 w-7"
                         onClick={() => deletePerson(person.id)}
                       >
-                        Delete
+                        <Trash size={14} />
                       </Button>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             ))}

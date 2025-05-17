@@ -50,22 +50,20 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
+    <form onSubmit={handleSubmit}>
+      <div className="flex items-center gap-2">
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Group name"
+          className="flex-grow"
         />
-      </div>
-
-      <div className="flex justify-end gap-2">
+        <Button type="submit" size="sm">{isEditing ? 'Update' : 'Add'}</Button>
         {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" size="sm" onClick={onCancel}>
             Cancel
           </Button>
         )}
-        <Button type="submit">{isEditing ? 'Update Group' : 'Add Group'}</Button>
       </div>
     </form>
   );
