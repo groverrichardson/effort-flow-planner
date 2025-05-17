@@ -53,7 +53,7 @@ const TaskList = () => {
     }
     
     // Group filter
-    if (selectedGroups.length > 0 && !task.groups.some(group => selectedGroups.includes(group.id))) {
+    if (selectedGroups.length > 0 && !task.tags.some(tag => selectedGroups.includes(tag.id))) {
       return false;
     }
     

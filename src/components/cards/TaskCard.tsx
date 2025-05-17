@@ -85,11 +85,11 @@ const TaskCard = ({ task, viewingCompleted, onClick, onComplete }: TaskCardProps
               {renderEffortChip(task.effortLevel)}
               {renderDateInfo(task)}
             </div>
-            {(task.groups.length > 0 || task.people.length > 0) && (
+            {(task.tags.length > 0 || task.people.length > 0) && (
               <div className="flex flex-wrap gap-1 mt-2">
-                {task.groups.map(group => (
-                  <Badge key={group.id} variant="outline" className="group-tag">
-                    {group.name}
+                {task.tags.map(tag => (
+                  <Badge key={tag.id} variant="outline" className="group-tag">
+                    {tag.name}
                   </Badge>
                 ))}
                 {task.people.map(person => (

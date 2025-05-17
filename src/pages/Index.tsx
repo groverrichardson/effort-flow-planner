@@ -67,10 +67,10 @@ const Index = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => {
                 setManageDialogOpen(true);
-                setActiveTab('groups');
+                setActiveTab('tags');
               }}>
                 <Tag size={16} className="mr-2" />
-                Groups & Areas
+                Tags & Areas
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => {
                 setManageDialogOpen(true);
@@ -101,7 +101,7 @@ const Index = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Manage Groups/People Dialog */}
+      {/* Manage Tags/People Dialog */}
       <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -109,9 +109,9 @@ const Index = () => {
           </DialogHeader>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="groups" className="flex items-center gap-1">
+              <TabsTrigger value="tags" className="flex items-center gap-1">
                 <Tag size={16} />
-                <span>Groups/Areas</span>
+                <span>Tags/Areas</span>
               </TabsTrigger>
               <TabsTrigger value="people" className="flex items-center gap-1">
                 <Users size={16} />
@@ -119,8 +119,8 @@ const Index = () => {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="groups" className="mt-4">
-              <ManageGroups />
+            <TabsContent value="tags" className="mt-4">
+              <ManageTags />
             </TabsContent>
             
             <TabsContent value="people" className="mt-4">
@@ -133,37 +133,37 @@ const Index = () => {
   );
 };
 
-const ManageGroups = () => {
-  const { groups, deleteGroup } = useTaskContext();
-  const [editingGroup, setEditingGroup] = useState<{ id: string; name: string } | null>(null);
+const ManageTags = () => {
+  const { tags, deleteTag } = useTaskContext();
+  const [editingTag, setEditingTag] = useState<{ id: string; name: string } | null>(null);
   
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-medium mb-2">Add Group/Area</h3>
+        <h3 className="text-lg font-medium mb-2">Add Tag/Area</h3>
         <GroupForm />
       </div>
       
       <div>
-        <h3 className="text-lg font-medium mb-2">Existing Groups/Areas</h3>
-        {groups.length > 0 ? (
+        <h3 className="text-lg font-medium mb-2">Existing Tags/Areas</h3>
+        {tags.length > 0 ? (
           <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
-            {groups.map(group => (
-              <div key={group.id} className="flex items-center justify-between p-2 border rounded-md">
-                {editingGroup?.id === group.id ? (
+            {tags.map(tag => (
+              <div key={tag.id} className="flex items-center justify-between p-2 border rounded-md">
+                {editingTag?.id === tag.id ? (
                   <GroupForm 
-                    group={group}
-                    onSave={() => setEditingGroup(null)}
-                    onCancel={() => setEditingGroup(null)}
+                    group={tag}
+                    onSave={() => setEditingTag(null)}
+                    onCancel={() => setEditingTag(null)}
                   />
                 ) : (
                   <div className="flex w-full items-center justify-between">
-                    <span className="truncate">{group.name}</span>
+                    <span className="truncate">{tag.name}</span>
                     <div className="flex items-center space-x-1">
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        onClick={() => setEditingGroup(group)}
+                        onClick={() => setEditingTag(tag)}
                         className="h-7 w-7"
                       >
                         <Edit size={14} />
@@ -172,7 +172,7 @@ const ManageGroups = () => {
                         variant="ghost" 
                         size="icon"
                         className="text-red-500 hover:text-red-700 h-7 w-7"
-                        onClick={() => deleteGroup(group.id)}
+                        onClick={() => deleteTag(tag.id)}
                       >
                         <Trash size={14} />
                       </Button>
@@ -183,7 +183,7 @@ const ManageGroups = () => {
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground">No groups created yet</p>
+          <p className="text-muted-foreground">No tags created yet</p>
         )}
       </div>
     </div>
