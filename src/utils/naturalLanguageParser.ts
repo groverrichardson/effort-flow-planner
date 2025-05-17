@@ -58,6 +58,30 @@ export const naturalLanguageToTask = (input: string) => {
     const dayOfWeek = today.getDay();
     const daysToAdd = (5 - dayOfWeek + 7) % 7;
     taskData.dueDate = addDays(today, daysToAdd);
+  } else if (lowerInput.includes('due monday') || lowerInput.includes('due on monday')) {
+    const dayOfWeek = today.getDay();
+    const daysToAdd = (1 - dayOfWeek + 7) % 7;
+    taskData.dueDate = addDays(today, daysToAdd);
+  } else if (lowerInput.includes('due tuesday') || lowerInput.includes('due on tuesday')) {
+    const dayOfWeek = today.getDay();
+    const daysToAdd = (2 - dayOfWeek + 7) % 7;
+    taskData.dueDate = addDays(today, daysToAdd);
+  } else if (lowerInput.includes('due wednesday') || lowerInput.includes('due on wednesday')) {
+    const dayOfWeek = today.getDay();
+    const daysToAdd = (3 - dayOfWeek + 7) % 7;
+    taskData.dueDate = addDays(today, daysToAdd);
+  } else if (lowerInput.includes('due thursday') || lowerInput.includes('due on thursday')) {
+    const dayOfWeek = today.getDay();
+    const daysToAdd = (4 - dayOfWeek + 7) % 7;
+    taskData.dueDate = addDays(today, daysToAdd);
+  } else if (lowerInput.includes('due saturday') || lowerInput.includes('due on saturday')) {
+    const dayOfWeek = today.getDay();
+    const daysToAdd = (6 - dayOfWeek + 7) % 7;
+    taskData.dueDate = addDays(today, daysToAdd);
+  } else if (lowerInput.includes('due sunday') || lowerInput.includes('due on sunday')) {
+    const dayOfWeek = today.getDay();
+    const daysToAdd = (0 - dayOfWeek + 7) % 7;
+    taskData.dueDate = addDays(today, daysToAdd);
   }
   
   // Go-live date

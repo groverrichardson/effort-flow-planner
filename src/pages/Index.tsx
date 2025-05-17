@@ -1,10 +1,14 @@
+
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
+import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
 import TaskList from '@/components/TaskList';
 import TaskForm from '@/components/TaskForm';
 import GroupForm from '@/components/GroupForm';
 import PersonForm from '@/components/PersonForm';
+import NaturalLanguageInput from '@/components/form/NaturalLanguageInput';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -36,9 +40,67 @@ import {
 } from 'lucide-react';
 
 const Index = () => {
+  const { addTask, tags, people } = useTaskContext();
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('tasks');
+  const [activeTab, setActiveTab] = useState('tags');
+  const [quickTaskInput, setQuickTaskInput] = useState('');
+  
+  const handleQuickTaskSubmit = () => {
+    if (!quickTaskInput.trim()) return;
+    
+    const taskData = naturalLanguageToTask(quickTaskInput);
+    
+    // Process tags from names
+    if (taskData.tagNames && taskData.tagNames.length > 0) {
+      taskData.tags = taskData.tagNames.map(tagName => {
+        // Try to find an existing tag
+        const existingTag = tags.find(t => 
+          t.name.toLowerCase() === tagName.toLowerCase()
+        );
+        return existingTag || { id: crypto.randomUUID(), name: tagName };
+      });
+      delete taskData.tagNames;
+    } else {
+      taskData.tags = [];
+    }
+    
+    // Process people from names
+    if (taskData.peopleNames && taskData.peopleNames.length > 0) {
+      taskData.people = taskData.peopleNames.map(personName => {
+        // Try to find an existing person
+        const existingPerson = people.find(p => 
+          p.name.toLowerCase() === personName.toLowerCase()
+        );
+        return existingPerson || { id: crypto.randomUUID(), name: personName };
+      });
+      delete taskData.peopleNames;
+    } else {
+      taskData.people = [];
+    }
+    
+    // Set default values for required fields
+    const newTask = {
+      title: taskData.title || quickTaskInput,
+      description: taskData.description || '',
+      priority: taskData.priority || 'normal',
+      dueDate: taskData.dueDate || null,
+      targetDeadline: taskData.targetDeadline || null,
+      goLiveDate: taskData.goLiveDate || null,
+      effortLevel: taskData.effortLevel || 4,
+      completed: false,
+      completedDate: null,
+      tags: taskData.tags,
+      people: taskData.people,
+    };
+    
+    addTask(newTask);
+    toast({ 
+      title: "Task created", 
+      description: `"${newTask.title}" has been created` 
+    });
+    setQuickTaskInput('');
+  };
   
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -80,6 +142,19 @@ const Index = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Natural language quick task input */}
+      <div className="mb-6">
+        <NaturalLanguageInput
+          value={quickTaskInput}
+          onChange={setQuickTaskInput}
+          onSubmit={handleQuickTaskSubmit}
+          autoFocus
+        />
+        <div className="mt-1 text-xs text-muted-foreground">
+          Pro tip: Use #tag for tags, @person for people, "high priority" or dates like "due tomorrow"
         </div>
       </div>
 

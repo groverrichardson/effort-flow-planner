@@ -1,29 +1,54 @@
 
+import { useState, KeyboardEvent } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Send } from 'lucide-react';
 
 interface NaturalLanguageInputProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
+  placeholder?: string;
+  buttonLabel?: string;
+  autoFocus?: boolean;
 }
 
-const NaturalLanguageInput = ({ value, onChange, onSubmit }: NaturalLanguageInputProps) => {
+const NaturalLanguageInput = ({ 
+  value, 
+  onChange, 
+  onSubmit, 
+  placeholder = "What would you like to get done today?", 
+  buttonLabel = "Create Task",
+  autoFocus = false
+}: NaturalLanguageInputProps) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Allow creating task with Ctrl+Enter or Cmd+Enter
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      onSubmit();
+    }
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="relative">
       <Textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Describe your task in natural language (e.g., 'Create a high priority presentation for the marketing team due next Friday')"
-        className="min-h-[80px] text-sm"
+        placeholder={placeholder}
+        className="min-h-[60px] text-sm pr-24"
+        onKeyDown={handleKeyDown}
+        autoFocus={autoFocus}
       />
-      <div className="text-right">
+      <div className="absolute bottom-2 right-2">
         <Button 
           type="button" 
           size="sm"
           onClick={onSubmit}
+          className="gap-1"
+          disabled={!value.trim()}
         >
-          Parse Task
+          <Send size={16} />
+          {buttonLabel}
         </Button>
       </div>
     </div>
