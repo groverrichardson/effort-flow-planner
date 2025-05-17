@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task, Group, Person } from '@/types';
@@ -25,9 +24,10 @@ import { toast } from '@/components/ui/use-toast';
 interface TaskDetailProps {
   task: Task;
   onClose?: () => void;
+  onEdit?: () => void; // Added onEdit prop to the interface
 }
 
-const TaskDetail = ({ task, onClose }: TaskDetailProps) => {
+const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
   const { updateTask, deleteTask, updateGroup, updatePerson } = useTaskContext();
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [personModalOpen, setPersonModalOpen] = useState(false);
