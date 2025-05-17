@@ -30,16 +30,16 @@ const NaturalLanguageInput = ({
   };
 
   return (
-    <div className="relative">
+    <div className="flex flex-col gap-2">
       <Textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="min-h-[60px] text-sm pr-24"
+        className="min-h-[60px] text-sm resize-none"
         onKeyDown={handleKeyDown}
         autoFocus={autoFocus}
       />
-      <div className="absolute bottom-2 right-2">
+      <div className="flex justify-end">
         <Button 
           type="button" 
           size="sm"

@@ -104,10 +104,13 @@ const Index = () => {
   
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <h1 className="text-3xl font-bold">Task Manager</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => setCreateTaskOpen(true)}>
+      <div className="flex justify-between items-center gap-4 mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold">Task Manager</h1>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="md:hidden">
+            <Plus size={16} />
+          </Button>
+          <Button onClick={() => setCreateTaskOpen(true)} className="hidden md:flex">
             <Plus size={16} className="mr-1" />
             New Task
           </Button>
