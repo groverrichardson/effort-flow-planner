@@ -2,7 +2,7 @@
 import { addDays, addWeeks } from 'date-fns';
 import { Priority, EffortLevel } from '@/types';
 
-// Basic natural language task parser
+// Improved natural language task parser
 export const naturalLanguageToTask = (input: string) => {
   const taskData: any = {};
   const lowerInput = input.toLowerCase();
@@ -77,6 +77,12 @@ export const naturalLanguageToTask = (input: string) => {
   } else if (lowerInput.includes('due next week')) {
     title = title.replace(/due next week/gi, '');
     taskData.dueDate = addDays(today, 7);
+  } else if (lowerInput.includes('tomorrow')) {
+    title = title.replace(/tomorrow/gi, '');
+    taskData.dueDate = addDays(today, 1);
+  } else if (lowerInput.includes('today')) {
+    title = title.replace(/today/gi, '');
+    taskData.dueDate = today;
   } else if (lowerInput.includes('due friday') || lowerInput.includes('due on friday')) {
     title = title.replace(/due friday|due on friday/gi, '');
     // Find the next Friday

@@ -163,7 +163,7 @@ const Index = () => {
 
       <TaskList />
 
-      {/* Create Task Dialog */}
+      {/* Create Task Dialog - NO natural language input here */}
       <Dialog open={createTaskOpen} onOpenChange={setCreateTaskOpen}>
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>

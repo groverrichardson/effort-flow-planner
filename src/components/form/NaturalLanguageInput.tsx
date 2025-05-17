@@ -1,9 +1,10 @@
 
-import { useState, KeyboardEvent, useEffect } from 'react';
+import { useState, KeyboardEvent, useEffect, useRef } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 import { useTaskContext } from '@/context/TaskContext';
+import { Badge } from '@/components/ui/badge';
 
 interface NaturalLanguageInputProps {
   value: string;
@@ -12,6 +13,13 @@ interface NaturalLanguageInputProps {
   placeholder?: string;
   buttonLabel?: string;
   autoFocus?: boolean;
+}
+
+interface Token {
+  type: 'text' | 'tag' | 'person' | 'priority' | 'date' | 'effort';
+  value: string;
+  original: string;
+  color?: string;
 }
 
 const NaturalLanguageInput = ({ 
@@ -23,9 +31,167 @@ const NaturalLanguageInput = ({
   autoFocus = false
 }: NaturalLanguageInputProps) => {
   const { tags, people } = useTaskContext();
-  const [highlightedText, setHighlightedText] = useState<string>(value);
   const [suggestions, setSuggestions] = useState<{ type: string, items: { id: string, name: string }[] }>({ type: '', items: [] });
   const [cursorPosition, setCursorPosition] = useState<number>(0);
+  const [tokens, setTokens] = useState<Token[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Process tokens when value changes
+  useEffect(() => {
+    processTokens();
+  }, [value]);
+
+  // Process the input text into tokens
+  const processTokens = () => {
+    if (!value) {
+      setTokens([]);
+      return;
+    }
+
+    // Start with a simple word-by-word analysis
+    const words = value.split(/\s+/);
+    const newTokens: Token[] = [];
+    let currentText = '';
+    
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      
+      // Check for tags
+      if (word.startsWith('#')) {
+        if (currentText) {
+          newTokens.push({ type: 'text', value: currentText, original: currentText });
+          currentText = '';
+        }
+        newTokens.push({ 
+          type: 'tag', 
+          value: word.substring(1), 
+          original: word,
+          color: '#9b87f5'  // Purple
+        });
+        continue;
+      }
+      
+      // Check for people
+      if (word.startsWith('@')) {
+        if (currentText) {
+          newTokens.push({ type: 'text', value: currentText, original: currentText });
+          currentText = '';
+        }
+        newTokens.push({ 
+          type: 'person', 
+          value: word.substring(1), 
+          original: word,
+          color: '#0EA5E9'  // Ocean blue
+        });
+        continue;
+      }
+
+      // Check for priority keywords
+      if (word.toLowerCase() === 'high' && i < words.length - 1 && words[i+1].toLowerCase() === 'priority') {
+        if (currentText) {
+          newTokens.push({ type: 'text', value: currentText, original: currentText });
+          currentText = '';
+        }
+        newTokens.push({ 
+          type: 'priority', 
+          value: 'high priority', 
+          original: 'high priority',
+          color: '#ea384c'  // Red
+        });
+        i++; // Skip the "priority" word
+        continue;
+      }
+      
+      if (word.toLowerCase() === 'low' && i < words.length - 1 && words[i+1].toLowerCase() === 'priority') {
+        if (currentText) {
+          newTokens.push({ type: 'text', value: currentText, original: currentText });
+          currentText = '';
+        }
+        newTokens.push({ 
+          type: 'priority', 
+          value: 'low priority', 
+          original: 'low priority',
+          color: '#7E69AB'  // Secondary purple
+        });
+        i++; // Skip the "priority" word
+        continue;
+      }
+
+      // Check for date keywords
+      if (word.toLowerCase() === 'tomorrow') {
+        if (currentText) {
+          newTokens.push({ type: 'text', value: currentText, original: currentText });
+          currentText = '';
+        }
+        newTokens.push({ 
+          type: 'date', 
+          value: 'tomorrow', 
+          original: 'tomorrow',
+          color: '#F97316'  // Bright orange
+        });
+        continue;
+      }
+      
+      if (word.toLowerCase() === 'today') {
+        if (currentText) {
+          newTokens.push({ type: 'text', value: currentText, original: currentText });
+          currentText = '';
+        }
+        newTokens.push({ 
+          type: 'date', 
+          value: 'today', 
+          original: 'today',
+          color: '#F97316'  // Bright orange
+        });
+        continue;
+      }
+      
+      if (word.toLowerCase() === 'due' && i < words.length - 1) {
+        const nextWord = words[i+1].toLowerCase();
+        if (['today', 'tomorrow', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].includes(nextWord)) {
+          if (currentText) {
+            newTokens.push({ type: 'text', value: currentText, original: currentText });
+            currentText = '';
+          }
+          newTokens.push({ 
+            type: 'date', 
+            value: `due ${nextWord}`, 
+            original: `due ${nextWord}`,
+            color: '#F97316'  // Bright orange
+          });
+          i++; // Skip the day word
+          continue;
+        }
+      }
+
+      // Time effort indicators
+      if (['quick', 'few minutes', '5 minutes', '30 minutes', 'half hour', 'short', 'couple hours', 'few hours',
+           'all day', 'one day', 'full day', 'this week', 'several days', 'couple weeks', 'few weeks',
+           'month', 'long term', 'big project'].includes(word.toLowerCase())) {
+        if (currentText) {
+          newTokens.push({ type: 'text', value: currentText, original: currentText });
+          currentText = '';
+        }
+        newTokens.push({ 
+          type: 'effort', 
+          value: word, 
+          original: word,
+          color: '#1EAEDB'  // Bright blue
+        });
+        continue;
+      }
+
+      // If nothing special, add to current text buffer
+      currentText += (currentText ? ' ' : '') + word;
+    }
+    
+    // Add any remaining text
+    if (currentText) {
+      newTokens.push({ type: 'text', value: currentText, original: currentText });
+    }
+    
+    setTokens(newTokens);
+  };
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -42,24 +208,6 @@ const NaturalLanguageInput = ({
       setSuggestions({ type: '', items: [] });
       return;
     }
-  };
-
-  // Process text for highlighting and suggestions
-  useEffect(() => {
-    highlightInputText();
-    checkForSuggestions();
-  }, [value, cursorPosition]);
-
-  // Highlight special syntax in the input
-  const highlightInputText = () => {
-    if (!value) {
-      setHighlightedText('');
-      return;
-    }
-
-    // This would be implemented in a real app
-    // For now, we'll use the input as is
-    setHighlightedText(value);
   };
 
   // Check for potential auto-completion suggestions
@@ -124,20 +272,52 @@ const NaturalLanguageInput = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e.target.value);
     setCursorPosition(e.target.selectionStart || 0);
+    checkForSuggestions();
+  };
+
+  // Update suggestions when cursor position changes
+  const handleCursorPositionChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    setCursorPosition((e.target as HTMLTextAreaElement).selectionStart || 0);
+    checkForSuggestions();
   };
 
   return (
     <div className="flex flex-col gap-2">
       <div className="relative">
         <Textarea
+          ref={textareaRef}
           value={value}
           onChange={handleInputChange}
           placeholder={placeholder}
           className="min-h-[60px] text-sm resize-none"
           onKeyDown={handleKeyDown}
           autoFocus={autoFocus}
-          onSelect={(e) => setCursorPosition((e.target as HTMLTextAreaElement).selectionStart || 0)}
+          onSelect={handleCursorPositionChange}
+          onClick={handleCursorPositionChange}
         />
+        
+        {/* Visualization of parsed tokens */}
+        {tokens.length > 0 && (
+          <div className="absolute top-0 left-0 w-full h-full pointer-events-none p-2 pt-[9px]">
+            <div className="space-x-1">
+              {tokens.map((token, index) => (
+                token.type === 'text' ? (
+                  <span key={index} className="text-transparent">
+                    {token.value}
+                  </span>
+                ) : (
+                  <Badge 
+                    key={index} 
+                    className="pointer-events-none text-sm"
+                    style={{ backgroundColor: token.color, color: 'white' }}
+                  >
+                    {token.value}
+                  </Badge>
+                )
+              ))}
+            </div>
+          </div>
+        )}
         
         {/* Display suggestions if available */}
         {suggestions.items.length > 0 && (
@@ -159,7 +339,7 @@ const NaturalLanguageInput = ({
           type="button" 
           size="sm"
           onClick={onSubmit}
-          className="gap-1 w-full md:w-auto"
+          className="gap-1 w-full"
           disabled={!value.trim()}
         >
           <Send size={16} />
