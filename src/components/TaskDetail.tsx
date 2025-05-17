@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
-import { Task, Group, Person } from '@/types';
+import { Task, Tag, Person } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import GroupForm from './GroupForm';
 import PersonForm from './PersonForm';
@@ -25,24 +25,24 @@ interface TaskDetailProps {
 }
 
 const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
-  const { updateTask, deleteTask, updateGroup, updatePerson } = useTaskContext();
-  const [groupModalOpen, setGroupModalOpen] = useState(false);
+  const { updateTask, deleteTask, updateTag, updatePerson } = useTaskContext();
+  const [tagModalOpen, setTagModalOpen] = useState(false);
   const [personModalOpen, setPersonModalOpen] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const handleEditGroup = (group: Group) => {
-    setEditingGroup(group);
-    setGroupModalOpen(true);
+  const handleEditTag = (tag: Tag) => {
+    setEditingTag(tag);
+    setTagModalOpen(true);
   };
 
-  const handleUpdateGroup = (name: string) => {
-    if (editingGroup) {
-      const updatedGroup = { ...editingGroup, name };
-      updateGroup(updatedGroup);
-      toast({ title: "Success", description: "Group updated successfully" });
-      setGroupModalOpen(false);
+  const handleUpdateTag = (name: string) => {
+    if (editingTag) {
+      const updatedTag = { ...editingTag, name };
+      updateTag(updatedTag);
+      toast({ title: "Success", description: "Tag updated successfully" });
+      setTagModalOpen(false);
     }
   };
 
@@ -81,15 +81,15 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
         onCancel={onClose}
       />
 
-      <Dialog open={groupModalOpen} onOpenChange={setGroupModalOpen}>
+      <Dialog open={tagModalOpen} onOpenChange={setTagModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Group</DialogTitle>
+            <DialogTitle>Edit Tag</DialogTitle>
           </DialogHeader>
           <GroupForm 
-            group={editingGroup} 
-            onSave={handleUpdateGroup}
-            onCancel={() => setGroupModalOpen(false)} 
+            group={editingTag} 
+            onSave={handleUpdateTag}
+            onCancel={() => setTagModalOpen(false)} 
           />
         </DialogContent>
       </Dialog>

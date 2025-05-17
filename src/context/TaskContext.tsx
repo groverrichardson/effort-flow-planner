@@ -1,19 +1,19 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Task, Group, Person, Priority, EffortLevel } from '@/types';
+import { Task, Tag, Person, Priority, EffortLevel } from '@/types';
 
 interface TaskContextType {
   tasks: Task[];
-  groups: Group[];
+  tags: Tag[];
   people: Person[];
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateTask: (task: Task) => void;
   deleteTask: (taskId: string) => void;
   completeTask: (taskId: string) => void;
-  addGroup: (name: string) => Group; // Return type changed to Group
-  updateGroup: (group: Group) => void;
-  deleteGroup: (groupId: string) => void;
-  addPerson: (name: string) => Person; // Return type changed to Person
+  addTag: (name: string) => Tag;
+  updateTag: (tag: Tag) => void;
+  deleteTag: (tagId: string) => void;
+  addPerson: (name: string) => Person;
   updatePerson: (person: Person) => void;
   deletePerson: (personId: string) => void;
   getTodaysCompletedTasks: () => Task[];
@@ -33,15 +33,28 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         goLiveDate: task.goLiveDate ? new Date(task.goLiveDate) : null,
         completedDate: task.completedDate ? new Date(task.completedDate) : null,
         createdAt: new Date(task.createdAt),
-        updatedAt: new Date(task.updatedAt)
+        updatedAt: new Date(task.updatedAt),
+        // Handle migration from groups to tags
+        tags: task.tags || task.groups || []
       }));
     }
     return [];
   });
   
-  const [groups, setGroups] = useState<Group[]>(() => {
+  const [tags, setTags] = useState<Tag[]>(() => {
+    const savedTags = localStorage.getItem('tags');
     const savedGroups = localStorage.getItem('groups');
-    return savedGroups ? JSON.parse(savedGroups) : [
+    
+    // Migration from groups to tags
+    if (savedTags) {
+      return JSON.parse(savedTags);
+    } else if (savedGroups) {
+      const groups = JSON.parse(savedGroups);
+      localStorage.setItem('tags', JSON.stringify(groups));
+      return groups;
+    }
+    
+    return [
       { id: '1', name: 'Work' },
       { id: '2', name: 'Personal' },
       { id: '3', name: 'Health' },
@@ -63,8 +76,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   }, [tasks]);
 
   useEffect(() => {
-    localStorage.setItem('groups', JSON.stringify(groups));
-  }, [groups]);
+    localStorage.setItem('tags', JSON.stringify(tags));
+  }, [tags]);
 
   useEffect(() => {
     localStorage.setItem('people', JSON.stringify(people));
@@ -106,41 +119,41 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const addGroup = (name: string) => {
-    const newGroup: Group = {
+  const addTag = (name: string) => {
+    const newTag: Tag = {
       id: crypto.randomUUID(),
       name
     };
-    setGroups(prev => [...prev, newGroup]);
-    return newGroup;
+    setTags(prev => [...prev, newTag]);
+    return newTag;
   };
 
-  const updateGroup = (updatedGroup: Group) => {
-    setGroups(prev => 
-      prev.map(group => 
-        group.id === updatedGroup.id ? updatedGroup : group
+  const updateTag = (updatedTag: Tag) => {
+    setTags(prev => 
+      prev.map(tag => 
+        tag.id === updatedTag.id ? updatedTag : tag
       )
     );
     
-    // Update tasks with this group
+    // Update tasks with this tag
     setTasks(prev => 
       prev.map(task => ({
         ...task,
-        groups: task.groups.map(g => 
-          g.id === updatedGroup.id ? updatedGroup : g
+        tags: task.tags.map(g => 
+          g.id === updatedTag.id ? updatedTag : g
         )
       }))
     );
   };
 
-  const deleteGroup = (groupId: string) => {
-    setGroups(prev => prev.filter(group => group.id !== groupId));
+  const deleteTag = (tagId: string) => {
+    setTags(prev => prev.filter(tag => tag.id !== tagId));
     
-    // Remove the group from all tasks
+    // Remove the tag from all tasks
     setTasks(prev => 
       prev.map(task => ({
         ...task,
-        groups: task.groups.filter(g => g.id !== groupId)
+        tags: task.tags.filter(g => g.id !== tagId)
       }))
     );
   };
@@ -200,15 +213,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   const value = {
     tasks,
-    groups,
+    tags,
     people,
     addTask,
     updateTask,
     deleteTask,
     completeTask,
-    addGroup,
-    updateGroup,
-    deleteGroup,
+    addTag,
+    updateTag,
+    deleteTag,
     addPerson,
     updatePerson,
     deletePerson,

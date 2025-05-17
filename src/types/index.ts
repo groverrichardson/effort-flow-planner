@@ -3,7 +3,7 @@ export type Priority = 'high' | 'normal' | 'low' | 'lowest';
 
 export type EffortLevel = 1 | 2 | 4 | 8 | 16 | 32 | 64;
 
-export interface Group {
+export interface Tag {
   id: string;
   name: string;
 }
@@ -24,8 +24,11 @@ export interface Task {
   effortLevel: EffortLevel;
   completed: boolean;
   completedDate: Date | null;
-  groups: Group[];
+  tags: Tag[];
   people: Person[];
   createdAt: Date;
   updatedAt: Date;
 }
+
+// For backward compatibility
+export interface Group extends Tag {}

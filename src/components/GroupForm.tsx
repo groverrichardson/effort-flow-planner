@@ -1,19 +1,19 @@
 
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
-import { Group } from '@/types';
+import { Tag } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
 
-interface GroupFormProps {
-  group?: Group | null;
+interface TagFormProps {
+  group?: Tag | null;
   onSave?: (name: string) => void;
   onCancel?: () => void;
 }
 
-const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
-  const { addGroup, updateGroup } = useTaskContext();
+const TagForm = ({ group, onSave, onCancel }: TagFormProps) => {
+  const { addTag, updateTag } = useTaskContext();
   const [name, setName] = useState('');
   const isEditing = !!group;
 
@@ -31,20 +31,20 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
     if (!name.trim()) {
       toast({
         title: "Error",
-        description: "Group name is required",
+        description: "Tag name is required",
         variant: "destructive"
       });
       return;
     }
     
     if (isEditing && group) {
-      updateGroup({ ...group, name });
-      toast({ title: "Success", description: "Group updated successfully" });
+      updateTag({ ...group, name });
+      toast({ title: "Success", description: "Tag updated successfully" });
     } else if (onSave) {
       onSave(name);
     } else {
-      addGroup(name);
-      toast({ title: "Success", description: "Group created successfully" });
+      addTag(name);
+      toast({ title: "Success", description: "Tag created successfully" });
       setName('');
     }
   };
@@ -55,7 +55,7 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Group name"
+          placeholder="Tag name"
           className="flex-grow"
         />
         <Button type="submit" size="sm">{isEditing ? 'Update' : 'Add'}</Button>
@@ -69,4 +69,4 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
   );
 };
 
-export default GroupForm;
+export default TagForm;

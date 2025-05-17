@@ -57,6 +57,7 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
           onChange={(e) => setName(e.target.value)}
           placeholder="Person name"
           className="flex-grow"
+          autoFocus
         />
         <Button type="submit" size="sm">{isEditing ? 'Update' : 'Add'}</Button>
         {onCancel && (
