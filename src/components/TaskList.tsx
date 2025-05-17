@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task, Priority, EffortLevel } from '@/types';
@@ -12,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import TaskDetail from './TaskDetail';
 import TaskForm from './TaskForm';
 import { toast } from '@/components/ui/use-toast';
-import { Check, Filter, Calendar } from 'lucide-react';
+import { Check, Filter, Calendar, X } from 'lucide-react';
 
 const TaskList = () => {
   const { tasks, completeTask, getTodaysCompletedTasks } = useTaskContext();
