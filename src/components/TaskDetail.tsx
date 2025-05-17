@@ -1,14 +1,11 @@
+
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task, Group, Person } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import GroupForm from './GroupForm';
 import PersonForm from './PersonForm';
 import TaskForm from './TaskForm';
-import { Calendar, Edit, Trash } from 'lucide-react';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -72,60 +69,17 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
 
   const handleTaskUpdate = () => {
     toast({ title: "Success", description: "Task updated successfully" });
-  };
-
-  const renderPriorityBadge = (priority: string) => {
-    let className = '';
-    switch (priority) {
-      case 'high': className = 'priority-high'; break;
-      case 'normal': className = 'priority-normal'; break;
-      case 'low': className = 'priority-low'; break;
-      case 'lowest': className = 'priority-lowest'; break;
-    }
-    
-    return (
-      <span className={`priority-badge ${className}`}>
-        {priority.charAt(0).toUpperCase() + priority.slice(1)}
-      </span>
-    );
-  };
-
-  const renderEffortChip = (effort: number) => {
-    return (
-      <span className={`effort-chip effort-${effort}`}>{effort}</span>
-    );
+    if (onEdit) onEdit();
   };
 
   return (
-    <div className="space-y-6">
-      {/* Task form is now directly embedded */}
+    <div className="space-y-4">
+      {/* Task form is directly embedded */}
       <TaskForm 
         task={task} 
         onSuccess={handleTaskUpdate}
+        onCancel={onClose}
       />
-
-      <div className="border-t pt-4 mt-6 flex justify-between">
-        <Button 
-          variant="destructive" 
-          size="sm"
-          onClick={() => setDeleteDialogOpen(true)}
-        >
-          <Trash size={16} className="mr-1" />
-          Delete
-        </Button>
-        
-        <div className="flex gap-2">
-          {onClose && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={onClose}
-            >
-              Close
-            </Button>
-          )}
-        </div>
-      </div>
 
       <Dialog open={groupModalOpen} onOpenChange={setGroupModalOpen}>
         <DialogContent>
