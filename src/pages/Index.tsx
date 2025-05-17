@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { useTaskContext } from '@/context/TaskContext';
+import { useTaskContext, TaskProvider } from '@/context/TaskContext';
 import TaskList from '@/components/TaskList';
 import TaskForm from '@/components/TaskForm';
 import GroupForm from '@/components/GroupForm';
