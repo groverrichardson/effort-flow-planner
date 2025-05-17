@@ -21,7 +21,7 @@ const TaskList = () => {
   
   // Filter states
   const [selectedPriorities, setSelectedPriorities] = useState<Priority[]>([]);
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [filterByDueDate, setFilterByDueDate] = useState<string>('all');
   const [filterByGoLive, setFilterByGoLive] = useState<boolean>(false);
@@ -52,8 +52,8 @@ const TaskList = () => {
       return false;
     }
     
-    // Group filter
-    if (selectedGroups.length > 0 && !task.tags.some(tag => selectedGroups.includes(tag.id))) {
+    // Tag filter
+    if (selectedTags.length > 0 && !task.tags.some(tag => selectedTags.includes(tag.id))) {
       return false;
     }
     
@@ -100,11 +100,11 @@ const TaskList = () => {
     );
   };
 
-  const handleToggleGroup = (groupId: string) => {
-    setSelectedGroups(prev => 
-      prev.includes(groupId)
-        ? prev.filter(id => id !== groupId)
-        : [...prev, groupId]
+  const handleToggleTag = (tagId: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tagId)
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
     );
   };
 
@@ -143,7 +143,7 @@ const TaskList = () => {
 
   const clearAllFilters = () => {
     setSelectedPriorities([]);
-    setSelectedGroups([]);
+    setSelectedTags([]);
     setSelectedPeople([]);
     setFilterByDueDate('all');
     setFilterByGoLive(false);
@@ -183,12 +183,12 @@ const TaskList = () => {
             <TaskFilters 
               activeTasks={activeTasks}
               selectedPriorities={selectedPriorities}
-              selectedGroups={selectedGroups}
+              selectedTags={selectedTags}
               selectedPeople={selectedPeople}
               filterByDueDate={filterByDueDate}
               filterByGoLive={filterByGoLive}
               onTogglePriority={handleTogglePriority}
-              onToggleGroup={handleToggleGroup}
+              onToggleTag={handleToggleTag}
               onTogglePerson={handleTogglePerson}
               onSetFilterByDueDate={setFilterByDueDate}
               onSetFilterByGoLive={setFilterByGoLive}
