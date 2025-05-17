@@ -21,7 +21,7 @@ import { toast } from '@/components/ui/use-toast';
 interface TaskDetailProps {
   task: Task;
   onClose?: () => void;
-  onEdit?: () => void; // Added onEdit prop to the interface
+  onEdit?: () => void;
 }
 
 const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {

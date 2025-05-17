@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task, Priority, EffortLevel, Group, Person } from '@/types';
@@ -19,7 +18,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import { CalendarIcon, X, Search, Plus } from 'lucide-react';
+import { CalendarIcon, X, Search, Plus, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
