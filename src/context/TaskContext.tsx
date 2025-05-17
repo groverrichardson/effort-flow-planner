@@ -10,10 +10,10 @@ interface TaskContextType {
   updateTask: (task: Task) => void;
   deleteTask: (taskId: string) => void;
   completeTask: (taskId: string) => void;
-  addGroup: (name: string) => void;
+  addGroup: (name: string) => Group; // Return type changed to Group
   updateGroup: (group: Group) => void;
   deleteGroup: (groupId: string) => void;
-  addPerson: (name: string) => void;
+  addPerson: (name: string) => Person; // Return type changed to Person
   updatePerson: (person: Person) => void;
   deletePerson: (personId: string) => void;
   getTodaysCompletedTasks: () => Task[];

@@ -131,19 +131,25 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
 
   const handleCreateGroup = (name: string) => {
     const newGroup = addGroup(name);
-    setFormData(prev => ({
-      ...prev,
-      groups: [...prev.groups, newGroup]
-    }));
+    // Only update if newGroup is defined
+    if (newGroup) {
+      setFormData(prev => ({
+        ...prev,
+        groups: [...prev.groups, newGroup]
+      }));
+    }
     setGroupModalOpen(false);
   };
 
   const handleCreatePerson = (name: string) => {
     const newPerson = addPerson(name);
-    setFormData(prev => ({
-      ...prev,
-      people: [...prev.people, newPerson]
-    }));
+    // Only update if newPerson is defined
+    if (newPerson) {
+      setFormData(prev => ({
+        ...prev,
+        people: [...prev.people, newPerson]
+      }));
+    }
     setPersonModalOpen(false);
   };
 
