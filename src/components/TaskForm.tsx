@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task, Priority, EffortLevel } from '@/types';
@@ -20,7 +19,6 @@ import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
 import DatePickerField from './form/DatePickerField';
 import TagSelector from './form/TagSelector';
 import PeopleSelector from './form/PeopleSelector';
-import NaturalLanguageInput from './form/NaturalLanguageInput';
 import TaskFormActions from './form/TaskFormActions';
 
 interface TaskFormProps {
@@ -46,9 +44,6 @@ const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
 const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
   const { addTask, updateTask, tags, people, addTag, addPerson } = useTaskContext();
   const [formData, setFormData] = useState(task || defaultTask);
-  const [naturalLanguageInput, setNaturalLanguageInput] = useState('');
-  const [showNaturalLanguageInput, setShowNaturalLanguageInput] = useState(false);
-  
   const isEditing = !!task;
 
   // Auto-fill target deadline based on effort level
@@ -190,26 +185,6 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
     }
   };
 
-  const handleNaturalLanguageSubmit = () => {
-    if (!naturalLanguageInput.trim()) return;
-    
-    const taskData = naturalLanguageToTask(naturalLanguageInput);
-    
-    // Merge with existing form data, prioritizing parsed data
-    setFormData(prev => ({
-      ...prev,
-      ...taskData
-    }));
-    
-    setNaturalLanguageInput('');
-    setShowNaturalLanguageInput(false);
-    
-    toast({
-      title: "Task parsed",
-      description: "Task details extracted from natural language input"
-    });
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -235,27 +210,6 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {!isEditing && (
-        <div className="text-right">
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setShowNaturalLanguageInput(!showNaturalLanguageInput)}
-          >
-            {showNaturalLanguageInput ? "Hide" : "Use Natural Language Input"}
-          </Button>
-        </div>
-      )}
-
-      {showNaturalLanguageInput && (
-        <NaturalLanguageInput
-          value={naturalLanguageInput}
-          onChange={setNaturalLanguageInput}
-          onSubmit={handleNaturalLanguageSubmit}
-        />
-      )}
-
       <div>
         <Input
           name="title"
