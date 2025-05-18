@@ -142,49 +142,66 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Updated bypass login function
+  // Improved bypass login function that ensures a working demo account
   const bypassLogin = async () => {
     try {
       console.log('Attempting bypass login...');
       
-      // First check if the dummy account exists
-      const { data: existingUser, error: checkError } = await supabase.auth.signInWithPassword({
+      let demoUser;
+      
+      // Try to sign in with the dummy account first
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: DUMMY_USER_EMAIL,
         password: DUMMY_USER_PASSWORD
       });
-
-      // If dummy account doesn't exist yet or login fails, create it
-      if (checkError) {
-        console.log('Creating dummy account...');
-        const { error: signUpError } = await supabase.auth.signUp({
+      
+      if (signInError) {
+        console.log('Login failed, creating dummy account:', signInError.message);
+        
+        // Create the dummy account with auto-confirmation enabled
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: DUMMY_USER_EMAIL,
           password: DUMMY_USER_PASSWORD,
           options: {
             data: {
               username: 'Demo User'
-            }
+            },
+            // Attempt auto-confirmation for development 
+            emailRedirectTo: window.location.origin
           }
         });
-
+        
         if (signUpError) {
           throw signUpError;
         }
         
-        // After creating the account, sign in
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        demoUser = signUpData;
+        console.log('Dummy account created:', demoUser);
+        
+        // After creating the account, try signing in again
+        const { data: newSignInData, error: newSignInError } = await supabase.auth.signInWithPassword({
           email: DUMMY_USER_EMAIL,
           password: DUMMY_USER_PASSWORD
         });
-
-        if (signInError) {
-          throw signInError;
+        
+        if (newSignInError) {
+          throw newSignInError;
         }
+        
+        demoUser = newSignInData;
+      } else {
+        demoUser = signInData;
+        console.log('Signed in with existing dummy account');
       }
-
-      toast({
-        title: 'Demo Access Granted',
-        description: 'You are now signed in as a demo user.',
-      });
+      
+      if (demoUser?.user) {
+        toast({
+          title: 'Demo Access Granted',
+          description: 'You are now signed in as a demo user.',
+        });
+      } else {
+        throw new Error('Failed to authenticate demo user');
+      }
     } catch (error) {
       console.error('Error during bypass login:', error);
       toast({
