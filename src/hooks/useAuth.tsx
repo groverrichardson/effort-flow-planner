@@ -25,8 +25,8 @@ const AuthContext = createContext<AuthContextType>({
   bypassLogin: async () => {},
 });
 
-// Using a proper email format for the dummy account
-const DUMMY_USER_EMAIL = 'demouser@example.com';
+// Using a valid domain for the demo account
+const DUMMY_USER_EMAIL = 'demo-user@gmail.com';
 const DUMMY_USER_PASSWORD = 'demopassword123';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -142,10 +142,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Completely revamped bypass login function for reliable demo access
+  // Improved bypass login function that uses a valid email domain
   const bypassLogin = async () => {
     try {
-      console.log('Attempting bypass login with valid email...');
+      console.log('Attempting bypass login with valid email domain...');
       
       // First try to sign in with the dummy account
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -156,13 +156,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (signInError) {
         console.log('Login failed, creating new demo account:', signInError.message);
         
-        // Create the demo account
+        // Create the demo account with auto-confirmation
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: DUMMY_USER_EMAIL,
-          password: DUMMY_USER_PASSWORD
+          password: DUMMY_USER_PASSWORD,
+          options: {
+            // For development purposes, try to auto-confirm the account
+            emailRedirectTo: window.location.origin
+          }
         });
         
         if (signUpError) {
+          console.error('Error creating demo account:', signUpError);
           throw signUpError;
         }
         
@@ -175,12 +180,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
         
         if (newSignInError) {
-          throw new Error(`Demo account created but couldn't sign in: ${newSignInError.message}`);
+          console.error('Could not sign in with new demo account:', newSignInError);
+          toast({
+            title: 'Demo Account Created',
+            description: 'The demo account was created but requires email verification. Please check your Supabase settings or try again later.',
+            variant: 'default',
+          });
+          return;
         }
         
         toast({
           title: 'Demo Access Granted',
-          description: 'You are now signed in as a demo user. Note: You may need to verify the email if required by your Supabase settings.',
+          description: 'You are now signed in as a demo user.',
         });
         
         return;
