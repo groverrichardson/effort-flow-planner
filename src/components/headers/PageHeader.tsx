@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Tag, User, LogOut, Menu } from 'lucide-react';
+import { PlusCircle, Tag, User, LogOut, Menu, Filter } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -11,21 +11,40 @@ import {
   SheetTitle,
   SheetTrigger
 } from "@/components/ui/sheet";
+import TaskFilters from '@/components/filters/TaskFilters';
+import { useTaskContext } from '@/context/TaskContext';
+import { Priority } from '@/types';
+import { Separator } from '@/components/ui/separator';
 
 interface PageHeaderProps {
   onCreateTaskClick: () => void;
   onManageTagsClick: () => void;
   onManagePeopleClick: () => void;
+  filterProps?: {
+    selectedTags: string[];
+    selectedPeople: string[];
+    selectedPriorities: Priority[];
+    filterByDueDate: string;
+    filterByGoLive: boolean;
+    onToggleTag: (tagId: string) => void;
+    onTogglePerson: (personId: string) => void;
+    onTogglePriority: (priority: Priority) => void;
+    onSetFilterByDueDate: (value: string) => void;
+    onSetFilterByGoLive: (value: boolean) => void;
+    onResetFilters: () => void;
+  };
 }
 
 const PageHeader = ({ 
   onCreateTaskClick, 
   onManageTagsClick,
-  onManagePeopleClick
+  onManagePeopleClick,
+  filterProps
 }: PageHeaderProps) => {
   const isMobile = useIsMobile();
   const { signOut, user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { tags, people } = useTaskContext();
   
   const MobileMenu = () => (
     <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -35,11 +54,11 @@ const PageHeader = ({
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right">
+      <SheetContent side="right" className="flex flex-col">
         <SheetHeader>
           <SheetTitle>Menu</SheetTitle>
         </SheetHeader>
-        <div className="flex flex-col gap-3 mt-6">
+        <div className="flex flex-col gap-3 mt-6 flex-1">
           <Button 
             onClick={() => {
               onManageTagsClick();
@@ -75,10 +94,38 @@ const PageHeader = ({
             New Task
           </Button>
           
+          {isMobile && filterProps && (
+            <>
+              <Separator className="my-2" />
+              
+              <div className="px-1">
+                <TaskFilters
+                  selectedTags={filterProps.selectedTags}
+                  selectedPeople={filterProps.selectedPeople}
+                  selectedPriorities={filterProps.selectedPriorities}
+                  filterByDueDate={filterProps.filterByDueDate}
+                  filterByGoLive={filterProps.filterByGoLive}
+                  onToggleTag={filterProps.onToggleTag}
+                  onTogglePerson={filterProps.onTogglePerson}
+                  onTogglePriority={filterProps.onTogglePriority}
+                  onSetFilterByDueDate={filterProps.onSetFilterByDueDate}
+                  onSetFilterByGoLive={filterProps.onSetFilterByGoLive}
+                  onResetFilters={filterProps.onResetFilters}
+                  tags={tags}
+                  people={people}
+                  inMobileMenu={true}
+                />
+              </div>
+            </>
+          )}
+          
+          {/* Spacer to push Sign Out to the bottom */}
+          <div className="flex-grow" />
+          
           <Button
             onClick={() => signOut()}
             variant="outline"
-            className="w-full justify-start gap-2"
+            className="w-full justify-start gap-2 mt-auto"
           >
             <LogOut size={16} />
             Sign Out
@@ -97,7 +144,7 @@ const PageHeader = ({
             <img 
               src="/lovable-uploads/df8e6029-f2da-4281-bd02-198de6b96226.png" 
               alt="Do Next Logo" 
-              className="h-5"
+              className="h-4"
             />
           </div>
           
@@ -148,11 +195,13 @@ const PageHeader = ({
       {isMobile && (
         <>
           <div className="flex justify-between items-center">
-            <img 
-              src="/lovable-uploads/df8e6029-f2da-4281-bd02-198de6b96226.png" 
-              alt="Do Next Logo" 
-              className="h-5"
-            />
+            <div className="flex items-center">
+              <img 
+                src="/lovable-uploads/df8e6029-f2da-4281-bd02-198de6b96226.png" 
+                alt="Do Next Logo" 
+                className="h-4"
+              />
+            </div>
             <MobileMenu />
           </div>
           {user && (

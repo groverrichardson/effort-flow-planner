@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { FilterX, Filter } from 'lucide-react';
 import { Priority } from '@/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TaskFiltersProps {
   selectedTags: string[];
@@ -27,6 +29,7 @@ interface TaskFiltersProps {
   onToggleShowCompleted?: () => void;
   tags: { id: string; name: string }[];
   people: { id: string; name: string }[];
+  inMobileMenu?: boolean;
 }
 
 const TaskFilters: React.FC<TaskFiltersProps> = ({
@@ -45,7 +48,9 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
   onToggleShowCompleted = () => {},
   tags,
   people,
+  inMobileMenu = false,
 }) => {
+  const isMobile = useIsMobile();
   const hasActiveFilters = selectedTags.length > 0 || 
                          selectedPeople.length > 0 || 
                          selectedPriorities.length > 0 || 
@@ -55,6 +60,126 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
   // Keep the dropdown open while selecting multiple items
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  // For mobile menu, we use a different UI approach - expanded filters rather than a dropdown
+  if (inMobileMenu) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-sm font-medium">Filters</h3>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onResetFilters}
+              className="h-8 px-2 text-xs"
+            >
+              <FilterX size={14} className="mr-1" />
+              Reset
+            </Button>
+          )}
+        </div>
+
+        {onToggleShowCompleted && (
+          <Button
+            onClick={onToggleShowCompleted}
+            variant={showCompleted ? "default" : "outline"}
+            size="sm"
+            className="w-full justify-start"
+          >
+            {showCompleted ? "Hide Completed" : "Show Completed"}
+          </Button>
+        )}
+
+        <div className="space-y-3">
+          <h4 className="text-xs font-medium text-muted-foreground">Filter by Priority</h4>
+          <div className="flex flex-wrap gap-2">
+            {['high', 'normal', 'low', 'lowest'].map((priority) => (
+              <Button
+                key={priority}
+                size="sm"
+                variant={selectedPriorities.includes(priority as Priority) ? "secondary" : "outline"}
+                onClick={() => onTogglePriority(priority as Priority)}
+                className="text-xs px-2 py-0 h-7"
+              >
+                {priority.charAt(0).toUpperCase() + priority.slice(1)}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="text-xs font-medium text-muted-foreground">Filter by Due Date</h4>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'all', label: 'All Dates' },
+              { id: 'today', label: 'Due Today' },
+              { id: 'week', label: 'This Week' },
+              { id: 'overdue', label: 'Overdue' }
+            ].map((option) => (
+              <Button
+                key={option.id}
+                size="sm"
+                variant={filterByDueDate === option.id ? "secondary" : "outline"}
+                onClick={() => onSetFilterByDueDate(option.id)}
+                className="text-xs px-2 py-0 h-7"
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <Button
+          size="sm"
+          variant={filterByGoLive ? "secondary" : "outline"}
+          onClick={() => onSetFilterByGoLive(!filterByGoLive)}
+          className="text-xs"
+        >
+          Has Go-Live Date
+        </Button>
+
+        {tags.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-xs font-medium text-muted-foreground">Filter by Tag</h4>
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <Button
+                  key={tag.id}
+                  size="sm"
+                  variant={selectedTags.includes(tag.id) ? "secondary" : "outline"}
+                  onClick={() => onToggleTag(tag.id)}
+                  className="text-xs px-2 py-0 h-7"
+                >
+                  {tag.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {people.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-xs font-medium text-muted-foreground">Filter by Person</h4>
+            <div className="flex flex-wrap gap-2">
+              {people.map((person) => (
+                <Button
+                  key={person.id}
+                  size="sm"
+                  variant={selectedPeople.includes(person.id) ? "secondary" : "outline"}
+                  onClick={() => onTogglePerson(person.id)}
+                  className="text-xs px-2 py-0 h-7"
+                >
+                  {person.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Default desktop dropdown implementation
   return (
     <div className="mb-4">
       <div className="flex flex-wrap gap-2">

@@ -6,6 +6,8 @@ import PageHeader from '@/components/headers/PageHeader';
 import CreateTaskDialog from '@/components/dialogs/CreateTaskDialog';
 import ManageDialog from '@/components/dialogs/ManageDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useTaskContext } from '@/context/TaskContext';
+import { useTaskFiltering } from '@/hooks/useTaskFiltering';
 
 const Index = () => {
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
@@ -15,6 +17,24 @@ const Index = () => {
   const prevScrollY = useRef(0);
   const isMobile = useIsMobile();
   
+  const { tasks, getTodaysCompletedTasks } = useTaskContext();
+  
+  // Get filter functions for mobile menu
+  const {
+    selectedPriorities,
+    selectedTags,
+    selectedPeople,
+    filterByDueDate,
+    filterByGoLive,
+    handleTogglePriority,
+    handleToggleTag,
+    handleTogglePerson,
+    setFilterByDueDate,
+    setFilterByGoLive,
+    clearAllFilters,
+  } = useTaskFiltering({ tasks, getTodaysCompletedTasks });
+  
+  // Mobile quick task input scrolling behavior
   useEffect(() => {
     // Only add scroll listener on mobile
     if (!isMobile) return;
@@ -40,12 +60,28 @@ const Index = () => {
     setManageDialogOpen(true);
   };
   
+  // Filter props for mobile menu
+  const filterProps = {
+    selectedTags,
+    selectedPeople,
+    selectedPriorities,
+    filterByDueDate,
+    filterByGoLive,
+    onToggleTag: handleToggleTag,
+    onTogglePerson: handleTogglePerson,
+    onTogglePriority: handleTogglePriority,
+    onSetFilterByDueDate: setFilterByDueDate,
+    onSetFilterByGoLive: setFilterByGoLive,
+    onResetFilters: clearAllFilters
+  };
+  
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8 pb-20 md:pb-8 relative">
       <PageHeader 
         onCreateTaskClick={() => setCreateTaskOpen(true)}
         onManageTagsClick={handleManageTags}
         onManagePeopleClick={handleManagePeople}
+        filterProps={filterProps}
       />
 
       {/* Quick task input shows at the top on desktop */}

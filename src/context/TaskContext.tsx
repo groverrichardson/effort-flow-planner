@@ -123,15 +123,20 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     
     try {
       // First remove the task from the local state immediately for a responsive UI
-      setTasks(prev => prev.filter(task => task.id !== taskId));
+      // Use a state update function to ensure we're working with the latest state
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
       
       // Then send the delete request to the backend
       await TaskService.deleteTask(taskId);
+      
+      toast({
+        title: 'Task deleted',
+        description: 'Task has been successfully removed'
+      });
     } catch (error) {
       console.error('Error deleting task:', error);
       
-      // If there's an error, we could fetch the tasks again to restore the correct state
-      // or we could add the task back to the local state
+      // If there's an error, refresh the tasks from the backend to restore correct state
       toast({
         title: 'Error',
         description: 'Failed to delete task',

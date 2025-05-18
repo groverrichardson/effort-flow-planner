@@ -2,6 +2,21 @@
 import { Priority } from '@/types';
 import TaskFilters from '../filters/TaskFilters';
 import TaskListHeader from './TaskListHeader';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+interface FilterProps {
+  selectedTags: string[];
+  selectedPeople: string[];
+  selectedPriorities: Priority[];
+  filterByDueDate: string;
+  filterByGoLive: boolean;
+  onToggleTag: (tagId: string) => void;
+  onTogglePerson: (personId: string) => void;
+  onTogglePriority: (priority: Priority) => void;
+  onSetFilterByDueDate: (value: string) => void;
+  onSetFilterByGoLive: (value: boolean) => void;
+  onResetFilters: () => void;
+}
 
 interface TaskListControlsProps {
   viewingCompleted: boolean;
@@ -24,6 +39,7 @@ interface TaskListControlsProps {
   onResetFilters: () => void;
   tags: { id: string; name: string }[];
   people: { id: string; name: string }[];
+  filterProps?: FilterProps;
 }
 
 const TaskListControls = ({
@@ -46,8 +62,11 @@ const TaskListControls = ({
   onSetFilterByGoLive,
   onResetFilters,
   tags,
-  people
+  people,
+  filterProps
 }: TaskListControlsProps) => {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="flex flex-col space-y-4">
       <div className="flex flex-wrap justify-between items-center gap-2">
@@ -61,7 +80,8 @@ const TaskListControls = ({
           onShowCompleted={onShowCompleted}
         />
         
-        {!viewingCompleted && (
+        {/* Only show filters in desktop view, mobile view filters are in the hamburger menu */}
+        {!viewingCompleted && !isMobile && (
           <TaskFilters 
             selectedTags={selectedTags}
             selectedPeople={selectedPeople} 

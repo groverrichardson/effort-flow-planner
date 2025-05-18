@@ -63,6 +63,21 @@ const TaskList = () => {
     setEditTask(null);
   };
 
+  // Make filter props available for both mobile menu and desktop view
+  const filterProps = {
+    selectedTags,
+    selectedPeople,
+    selectedPriorities,
+    filterByDueDate,
+    filterByGoLive,
+    onToggleTag: handleToggleTag,
+    onTogglePerson: handleTogglePerson,
+    onTogglePriority: handleTogglePriority,
+    onSetFilterByDueDate: setFilterByDueDate,
+    onSetFilterByGoLive: setFilterByGoLive,
+    onResetFilters: clearAllFilters
+  };
+
   return (
     <div className="space-y-6">
       <TaskListControls 
@@ -86,6 +101,7 @@ const TaskList = () => {
         onResetFilters={clearAllFilters}
         tags={allTags}
         people={allPeople}
+        filterProps={filterProps}
       />
 
       <TaskListContent 
