@@ -1,17 +1,10 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { FilterX, Filter } from 'lucide-react';
 import { Priority } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { FilterDropdownMenu } from './components/FilterDropdownMenu';
+import { ActiveFilterPills } from './components/ActiveFilterPills';
+import { MobileFilters } from './components/MobileFilterSection';
 
 interface TaskFiltersProps {
   selectedTags: string[];
