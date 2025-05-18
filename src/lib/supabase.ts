@@ -8,7 +8,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Create a mock AuthError using AuthApiError class which extends AuthError
 const createMockAuthError = (message: string): AuthError => {
-  return new AuthApiError(message, 0);
+  return new AuthApiError(message, 0, 'not_initialized');
 };
 
 // Create a Supabase client only if the required environment variables are available
