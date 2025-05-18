@@ -15,6 +15,7 @@ interface PersonFormProps {
 const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
   const { addPerson, updatePerson, loading } = useTaskContext();
   const [personName, setPersonName] = useState(person?.name || '');
+  const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus and select all text when the form opens
@@ -36,6 +37,8 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
       });
       return;
     }
+    
+    setSubmitting(true);
     
     try {
       if (person) {
@@ -59,6 +62,8 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
         description: "Failed to save person", 
         variant: "destructive" 
       });
+    } finally {
+      setSubmitting(false);
     }
   };
   
@@ -70,10 +75,10 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
         onChange={(e) => setPersonName(e.target.value)}
         placeholder="Add or edit person..." 
         className="flex-1"
-        disabled={loading}
+        disabled={loading || submitting}
       />
       
-      <Button type="submit" variant="default" size="icon" className="h-10 w-10" disabled={loading}>
+      <Button type="submit" variant="default" size="icon" className="h-10 w-10" disabled={loading || submitting}>
         <Save className="h-4 w-4" />
       </Button>
       
@@ -84,7 +89,7 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
           onClick={onCancel} 
           size="icon" 
           className="h-10 w-10"
-          disabled={loading}
+          disabled={loading || submitting}
         >
           <X className="h-4 w-4" />
         </Button>

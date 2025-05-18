@@ -13,10 +13,10 @@ interface TaskContextType {
   updateTask: (task: Task) => void;
   deleteTask: (taskId: string) => void;
   completeTask: (taskId: string) => void;
-  addTag: (name: string) => Tag;
+  addTag: (name: string) => Promise<Tag>;
   updateTag: (tag: Tag) => void;
   deleteTag: (tagId: string) => void;
-  addPerson: (name: string) => Person;
+  addPerson: (name: string) => Promise<Person>;
   updatePerson: (person: Person) => void;
   deletePerson: (personId: string) => void;
   getTodaysCompletedTasks: () => Task[];
@@ -157,14 +157,14 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addTag = async (name: string) => {
+  const addTag = async (name: string): Promise<Tag> => {
     if (!user) {
       toast({
         title: 'Error',
         description: 'You must be logged in to create tags',
         variant: 'destructive'
       });
-      return { id: '', name: '' };
+      throw new Error('User not authenticated');
     }
     
     try {
@@ -174,6 +174,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         setTags(prev => [...prev, newTag]);
         return newTag;
       }
+      throw new Error('Failed to create tag');
     } catch (error) {
       console.error('Error adding tag:', error);
       toast({
@@ -181,9 +182,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         description: 'Failed to create tag',
         variant: 'destructive'
       });
+      throw error;
     }
-    
-    return { id: '', name: '' };
   };
 
   const updateTag = async (updatedTag: Tag) => {
@@ -242,14 +242,14 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addPerson = async (name: string) => {
+  const addPerson = async (name: string): Promise<Person> => {
     if (!user) {
       toast({
         title: 'Error',
         description: 'You must be logged in to create people',
         variant: 'destructive'
       });
-      return { id: '', name: '' };
+      throw new Error('User not authenticated');
     }
     
     try {
@@ -259,6 +259,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         setPeople(prev => [...prev, newPerson]);
         return newPerson;
       }
+      throw new Error('Failed to create person');
     } catch (error) {
       console.error('Error adding person:', error);
       toast({
@@ -266,9 +267,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         description: 'Failed to create person',
         variant: 'destructive'
       });
+      throw error;
     }
-    
-    return { id: '', name: '' };
   };
 
   const updatePerson = async (updatedPerson: Person) => {

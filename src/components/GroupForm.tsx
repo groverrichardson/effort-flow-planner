@@ -15,6 +15,7 @@ interface GroupFormProps {
 const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
   const { addTag, updateTag, loading } = useTaskContext();
   const [groupName, setGroupName] = useState(group?.name || '');
+  const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus and select all text when the form opens
@@ -36,6 +37,8 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
       });
       return;
     }
+    
+    setSubmitting(true);
     
     try {
       if (group) {
@@ -59,6 +62,8 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
         description: "Failed to save tag", 
         variant: "destructive" 
       });
+    } finally {
+      setSubmitting(false);
     }
   };
   
@@ -70,10 +75,10 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
         onChange={(e) => setGroupName(e.target.value)}
         placeholder="Add or edit tag/area..." 
         className="flex-1"
-        disabled={loading}
+        disabled={loading || submitting}
       />
       
-      <Button type="submit" variant="default" size="icon" className="h-10 w-10" disabled={loading}>
+      <Button type="submit" variant="default" size="icon" className="h-10 w-10" disabled={loading || submitting}>
         <Save className="h-4 w-4" />
       </Button>
       
@@ -84,7 +89,7 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
           onClick={onCancel} 
           size="icon" 
           className="h-10 w-10"
-          disabled={loading}
+          disabled={loading || submitting}
         >
           <X className="h-4 w-4" />
         </Button>

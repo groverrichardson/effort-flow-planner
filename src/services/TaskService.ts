@@ -50,19 +50,24 @@ export const TaskService = {
   },
 
   async createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task | null> {
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    
     // Insert the task
     const { data, error } = await supabase
       .from('tasks')
       .insert({
+        user_id: user.id,
         title: task.title,
         description: task.description,
         priority: task.priority,
-        due_date: task.dueDate,
-        target_deadline: task.targetDeadline,
-        go_live_date: task.goLiveDate,
+        due_date: task.dueDate ? task.dueDate.toISOString() : null,
+        target_deadline: task.targetDeadline ? task.targetDeadline.toISOString() : null,
+        go_live_date: task.goLiveDate ? task.goLiveDate.toISOString() : null,
         effort_level: task.effortLevel,
         completed: task.completed,
-        completed_date: task.completedDate
+        completed_date: task.completedDate ? task.completedDate.toISOString() : null
       })
       .select()
       .single();
@@ -133,13 +138,13 @@ export const TaskService = {
         title: task.title,
         description: task.description,
         priority: task.priority,
-        due_date: task.dueDate,
-        target_deadline: task.targetDeadline,
-        go_live_date: task.goLiveDate,
+        due_date: task.dueDate ? task.dueDate.toISOString() : null,
+        target_deadline: task.targetDeadline ? task.targetDeadline.toISOString() : null,
+        go_live_date: task.goLiveDate ? task.goLiveDate.toISOString() : null,
         effort_level: task.effortLevel,
         completed: task.completed,
-        completed_date: task.completedDate,
-        updated_at: new Date()
+        completed_date: task.completedDate ? task.completedDate.toISOString() : null,
+        updated_at: new Date().toISOString()
       })
       .eq('id', task.id);
 
@@ -206,8 +211,8 @@ export const TaskService = {
       .from('tasks')
       .update({
         completed: true,
-        completed_date: completedDate,
-        updated_at: completedDate
+        completed_date: completedDate.toISOString(),
+        updated_at: completedDate.toISOString()
       })
       .eq('id', taskId);
 
@@ -234,16 +239,25 @@ export const TaskService = {
     }));
   },
 
-  async createTag(name: string): Promise<Tag | null> {
+  async createTag(name: string): Promise<Tag> {
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    
     const { data, error } = await supabase
       .from('tags')
-      .insert({ name })
+      .insert({ 
+        name,
+        user_id: user.id
+      })
       .select()
       .single();
     
     if (error) {
       console.error('Error creating tag:', error);
-      return null;
+      throw error;
     }
 
     return {
@@ -313,16 +327,25 @@ export const TaskService = {
     }));
   },
 
-  async createPerson(name: string): Promise<Person | null> {
+  async createPerson(name: string): Promise<Person> {
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    
     const { data, error } = await supabase
       .from('people')
-      .insert({ name })
+      .insert({ 
+        name,
+        user_id: user.id
+      })
       .select()
       .single();
     
     if (error) {
       console.error('Error creating person:', error);
-      return null;
+      throw error;
     }
 
     return {
