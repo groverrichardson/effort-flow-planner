@@ -205,7 +205,10 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
       toast({ title: "Success", description: "Task created successfully" });
     }
     
-    if (onSuccess) onSuccess();
+    // Always call onSuccess to close the modal after a successful update or creation
+    if (onSuccess) {
+      onSuccess();
+    }
   };
 
   return (
@@ -300,7 +303,7 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
       <TaskFormActions 
         isEditing={isEditing} 
         onCancel={onCancel}
-        onDelete={onCancel} // Reusing onCancel for delete operation
+        onDelete={onCancel} 
       />
     </form>
   );

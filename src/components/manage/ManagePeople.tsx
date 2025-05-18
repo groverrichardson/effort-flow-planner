@@ -30,12 +30,12 @@ const ManagePeople = () => {
                   />
                 ) : (
                   <div className="flex w-full items-center justify-between">
-                    <span 
+                    <div 
                       className="truncate cursor-pointer flex-grow py-1 px-2 hover:bg-muted rounded"
                       onClick={() => setEditingPerson(person)}
                     >
                       {person.name}
-                    </span>
+                    </div>
                     <Button 
                       variant="ghost" 
                       size="icon"

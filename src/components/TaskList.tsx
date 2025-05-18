@@ -55,7 +55,8 @@ const TaskList = () => {
   }, [] as { id: string; name: string }[]);
 
   const handleTaskClick = (task: Task) => {
-    setDetailTask(task);
+    // Go directly to edit mode when clicking on a task
+    setEditTask(task);
   };
 
   const handleCloseDetail = () => {

@@ -309,6 +309,11 @@ const NaturalLanguageInput = ({
       );
     }
     
+    // Always add a space at the end to ensure proper cursor positioning
+    result.push(
+      <span key="space-at-end">&nbsp;</span>
+    );
+    
     return result;
   };
 
@@ -334,7 +339,7 @@ const NaturalLanguageInput = ({
             value={value}
             onChange={handleInputChange}
             placeholder={placeholder}
-            className="min-h-[60px] text-sm resize-none bg-transparent"
+            className="min-h-[60px] text-sm resize-none bg-transparent text-transparent caret-black"
             onKeyDown={handleKeyDown}
             autoFocus={autoFocus}
             onSelect={handleCursorPositionChange}

@@ -1,23 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Task } from '@/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import TaskDetail from '../TaskDetail';
 import TaskForm from '../TaskForm';
 
 interface TaskDialogsProps {
-  detailTask: Task | null;
   editTask: Task | null;
-  onCloseDetail: () => void;
   onCloseEdit: () => void;
-  onEditClick: (task: Task) => void;
 }
 
 const TaskDialogs = ({
-  detailTask,
   editTask,
-  onCloseDetail,
-  onCloseEdit,
-  onEditClick
+  onCloseEdit
 }: TaskDialogsProps) => {
   // Keep a local reference to the task being edited to prevent stale data
   const [currentEditTask, setCurrentEditTask] = useState<Task | null>(null);
@@ -33,24 +26,6 @@ const TaskDialogs = ({
 
   return (
     <>
-      <Dialog open={!!detailTask} onOpenChange={(open) => !open && onCloseDetail()}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Task Details</DialogTitle>
-            <DialogDescription>
-              View and manage your task
-            </DialogDescription>
-          </DialogHeader>
-          {detailTask && (
-            <TaskDetail 
-              task={detailTask} 
-              onClose={onCloseDetail}
-              onEdit={() => onEditClick(detailTask)} 
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={!!editTask} onOpenChange={(open) => !open && onCloseEdit()}>
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
