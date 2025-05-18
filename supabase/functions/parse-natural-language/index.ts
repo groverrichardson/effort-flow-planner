@@ -157,7 +157,8 @@ function getFullSubmissionPrompt(text: string) {
        For example, in "@Kyle Dudley needs to review the report", extract "Kyle Dudley" as a complete name.
     2. Tags mentioned (with # symbol): Extract all hashtags (like #work, #personal).
     3. Priority level: High, Normal, Low, or Lowest.
-    4. Due date or deadline: Any date or time reference. Watch for phrases like "due on Tuesday" or "by next week".
+    4. Due date or deadline: Any date or time reference. Be extremely thorough in finding date references like "next Friday", "tomorrow", "next Tuesday", etc. 
+       Always pay special attention to phrases with "next" followed by a day of the week.
     5. Effort level: Extract mentions of time effort (quick, 30 minutes, few hours, day, week, etc.)
 
     Return ONLY valid JSON in this format:
@@ -170,5 +171,8 @@ function getFullSubmissionPrompt(text: string) {
     }
 
     If any field is not found, use null or an empty array as appropriate.
+    
+    IMPORTANT: Pay special attention to date phrases like "next Friday" or any day of the week with "next" before it,
+    as these are critical due date indicators that must be captured accurately.
   `;
 }

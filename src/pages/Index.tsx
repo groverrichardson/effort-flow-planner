@@ -5,6 +5,7 @@ import QuickTaskInput from '@/components/quick-task/QuickTaskInput';
 import PageHeader from '@/components/headers/PageHeader';
 import CreateTaskDialog from '@/components/dialogs/CreateTaskDialog';
 import ManageDialog from '@/components/dialogs/ManageDialog';
+import BulkImportDialog from '@/components/dialogs/BulkImportDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTaskContext } from '@/context/TaskContext';
 import { useTaskFiltering } from '@/hooks/useTaskFiltering';
@@ -12,6 +13,7 @@ import { useTaskFiltering } from '@/hooks/useTaskFiltering';
 const Index = () => {
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [manageActiveTab, setManageActiveTab] = useState<'tags' | 'people'>('tags');
   const [showMobileInput, setShowMobileInput] = useState(true);
   const prevScrollY = useRef(0);
@@ -73,7 +75,8 @@ const Index = () => {
     onSetFilterByDueDate: setFilterByDueDate,
     onSetFilterByGoLive: setFilterByGoLive,
     onResetFilters: clearAllFilters,
-    onCreateTask: () => setCreateTaskOpen(true)
+    onCreateTask: () => setCreateTaskOpen(true),
+    onBulkImport: () => setBulkImportOpen(true)
   };
   
   return (
@@ -82,6 +85,7 @@ const Index = () => {
         onCreateTaskClick={() => setCreateTaskOpen(true)}
         onManageTagsClick={handleManageTags}
         onManagePeopleClick={handleManagePeople}
+        onBulkImportClick={() => setBulkImportOpen(true)}
         filterProps={filterProps}
       />
 
@@ -115,6 +119,12 @@ const Index = () => {
         open={manageDialogOpen} 
         onOpenChange={setManageDialogOpen}
         defaultTab={manageActiveTab}
+      />
+      
+      {/* Bulk Import Dialog */}
+      <BulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
       />
     </div>
   );

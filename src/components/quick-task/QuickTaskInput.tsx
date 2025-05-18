@@ -7,21 +7,22 @@ import { toast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useQuickTaskInputState } from '@/hooks/useQuickTaskInputState';
 
 const QuickTaskInput = () => {
   const { addTask, tags, people, addTag, addPerson } = useTaskContext();
-  const [quickTaskInput, setQuickTaskInput] = useState('');
+  const { inputValue, setInputValue } = useQuickTaskInputState();
   const [isProcessing, setIsProcessing] = useState(false);
   const isMobile = useIsMobile();
   
   const handleQuickTaskSubmit = async () => {
-    if (!quickTaskInput.trim()) return;
+    if (!inputValue.trim()) return;
     
     try {
       setIsProcessing(true);
       
       // Use the enhanced natural language parser (now async)
-      const taskData = await naturalLanguageToTask(quickTaskInput);
+      const taskData = await naturalLanguageToTask(inputValue);
       
       console.log("Parsed task data:", taskData);
       
@@ -65,7 +66,7 @@ const QuickTaskInput = () => {
       
       // Set default values for required fields
       const newTask = {
-        title: taskData.title || quickTaskInput,
+        title: taskData.title || inputValue,
         description: taskData.description || '',
         priority: taskData.priority || 'normal',
         dueDate: taskData.dueDate || null,
@@ -85,7 +86,7 @@ const QuickTaskInput = () => {
         title: "Task created", 
         description: `"${newTask.title}" has been created` 
       });
-      setQuickTaskInput('');
+      setInputValue('');
     } catch (error) {
       console.error("Error creating task:", error);
       toast({
@@ -104,12 +105,12 @@ const QuickTaskInput = () => {
         {isProcessing ? (
           <div className="flex items-center space-x-2 mb-4 p-2 border border-input rounded-md bg-muted/20">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <p className="text-sm">Processing your task with AI...</p>
+            <p className="text-sm">Processing your task...</p>
           </div>
         ) : (
           <NaturalLanguageInput
-            value={quickTaskInput}
-            onChange={setQuickTaskInput}
+            value={inputValue}
+            onChange={setInputValue}
             onSubmit={handleQuickTaskSubmit}
             placeholder="What would you like to get done?"
           />
@@ -126,12 +127,12 @@ const QuickTaskInput = () => {
       {isProcessing ? (
         <div className="flex items-center space-x-2 mb-4 p-2 border border-input rounded-md bg-muted/20">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <p className="text-sm">Processing your task with AI...</p>
+          <p className="text-sm">Processing your task...</p>
         </div>
       ) : (
         <NaturalLanguageInput
-          value={quickTaskInput}
-          onChange={setQuickTaskInput}
+          value={inputValue}
+          onChange={setInputValue}
           onSubmit={handleQuickTaskSubmit}
           autoFocus={true}
         />
