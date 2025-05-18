@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Task } from '@/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import TaskForm from '../TaskForm';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TaskDialogsProps {
   editTask: Task | null;
@@ -14,6 +16,7 @@ const TaskDialogs = ({
 }: TaskDialogsProps) => {
   // Keep a local reference to the task being edited to prevent stale data
   const [currentEditTask, setCurrentEditTask] = useState<Task | null>(null);
+  const isMobile = useIsMobile();
   
   // Update the local task reference whenever editTask changes
   useEffect(() => {
@@ -28,9 +31,9 @@ const TaskDialogs = ({
     <>
       <Dialog open={!!editTask} onOpenChange={(open) => !open && onCloseEdit()}>
         <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-            <DialogDescription>
+          <DialogHeader className={isMobile ? "text-left" : ""}>
+            <DialogTitle className={isMobile ? "text-left" : ""}>Edit Task</DialogTitle>
+            <DialogDescription className={isMobile ? "text-left" : ""}>
               Make changes to your task
             </DialogDescription>
           </DialogHeader>

@@ -149,6 +149,12 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
       onSubmit();
       return;
     }
+
+    // Handle backspace/delete key
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      // Default behavior is fine - slate will handle deletion
+      return;
+    }
     
     // Close suggestions with Escape
     if (e.key === 'Escape' && suggestions.items.length > 0) {
@@ -182,25 +188,21 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     // Check for tag suggestions
     if (word.startsWith('#')) {
       const tagQuery = word.substring(1).toLowerCase();
-      if (tagQuery.length > 0) {
-        const matchingTags = tags.filter(
-          tag => tag.name.toLowerCase().includes(tagQuery)
-        );
-        setSuggestions({ type: 'tag', items: matchingTags });
-        return;
-      }
+      setSuggestions({ 
+        type: 'tag', 
+        items: tags.filter(tag => tag.name.toLowerCase().includes(tagQuery)) 
+      });
+      return;
     }
 
-    // Check for people suggestions - fixed to properly look for @ symbol
+    // Check for people suggestions
     if (word.startsWith('@')) {
       const personQuery = word.substring(1).toLowerCase();
-      if (personQuery.length >= 0) {  // Show suggestions even when just @ is typed
-        const matchingPeople = people.filter(
-          person => person.name.toLowerCase().includes(personQuery)
-        );
-        setSuggestions({ type: 'person', items: matchingPeople });
-        return;
-      }
+      setSuggestions({ 
+        type: 'person', 
+        items: people.filter(person => person.name.toLowerCase().includes(personQuery)) 
+      });
+      return;
     }
 
     // No suggestions
@@ -378,16 +380,18 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
             <div className="px-3 py-2 border-b text-sm font-medium">
               {suggestions.type === 'tag' ? 'Tag Suggestions' : 'People Suggestions'}
             </div>
-            {suggestions.items.map((item) => (
-              <div
-                key={item.id}
-                className="px-3 py-2.5 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
-                onClick={() => applySuggestion(item)}
-              >
-                <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>
-                {item.name}
-              </div>
-            ))}
+            <div className="p-2 max-h-[150px] overflow-y-auto">
+              {suggestions.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="px-3 py-2.5 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
+                  onClick={() => applySuggestion(item)}
+                >
+                  <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>
+                  {item.name}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

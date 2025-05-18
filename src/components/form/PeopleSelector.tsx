@@ -32,7 +32,6 @@ const PeopleSelector = ({
     if (personSearch.trim()) {
       onAddNewPerson(personSearch.trim());
       setPersonSearch('');
-      setIsPopoverOpen(false);
     }
   };
 
@@ -56,6 +55,15 @@ const PeopleSelector = ({
       setIsPopoverOpen(false);
     }
   };
+  
+  // Focus input when popover is opened
+  useEffect(() => {
+    if (isPopoverOpen && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [isPopoverOpen]);
 
   return (
     <div>
@@ -89,37 +97,38 @@ const PeopleSelector = ({
             />
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
-          <div className="p-2 max-h-[150px] overflow-y-auto">
-            {filteredPeople.length > 0 ? (
-              <div className="space-y-1">
-                {filteredPeople.map(person => (
-                  <div
-                    key={person.id}
-                    className="flex items-center px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
-                    onClick={() => {
-                      onTogglePerson(person.id);
-                      setPersonSearch('');
-                      inputRef.current?.focus();
-                    }}
-                  >
-                    {person.name}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              personSearch.trim() !== '' && (
-                <div 
-                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
-                  onClick={handleAddNewPerson}
-                >
-                  <Plus size={14} />
-                  Add "{personSearch.trim()}"
+        {isPopoverOpen && (
+          <PopoverContent className="w-full p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+            <div className="p-2 max-h-[150px] overflow-y-auto">
+              {filteredPeople.length > 0 ? (
+                <div className="space-y-1">
+                  {filteredPeople.map(person => (
+                    <div
+                      key={person.id}
+                      className="flex items-center px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
+                      onClick={() => {
+                        onTogglePerson(person.id);
+                        setPersonSearch('');
+                      }}
+                    >
+                      {person.name}
+                    </div>
+                  ))}
                 </div>
-              )
-            )}
-          </div>
-        </PopoverContent>
+              ) : (
+                personSearch.trim() !== '' && (
+                  <div 
+                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
+                    onClick={handleAddNewPerson}
+                  >
+                    <Plus size={14} />
+                    Add "{personSearch.trim()}"
+                  </div>
+                )
+              )}
+            </div>
+          </PopoverContent>
+        )}
       </Popover>
     </div>
   );
