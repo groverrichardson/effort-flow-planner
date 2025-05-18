@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Task } from '@/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import TaskDetail from '../TaskDetail';
 import TaskForm from '../TaskForm';
 
@@ -26,6 +26,9 @@ const TaskDialogs = ({
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Task Details</DialogTitle>
+            <DialogDescription>
+              View and manage your task
+            </DialogDescription>
           </DialogHeader>
           {detailTask && (
             <TaskDetail 
@@ -41,6 +44,9 @@ const TaskDialogs = ({
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>
+              Make changes to your task
+            </DialogDescription>
           </DialogHeader>
           {editTask && (
             <TaskForm 

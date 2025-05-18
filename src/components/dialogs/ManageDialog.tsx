@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tag, Users } from 'lucide-react';
 import ManageTags from '@/components/manage/ManageTags';
@@ -20,6 +20,9 @@ const ManageDialog = ({ open, onOpenChange, defaultTab = 'tags' }: ManageDialogP
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Manage</DialogTitle>
+          <DialogDescription>
+            Manage your tags and people for tasks
+          </DialogDescription>
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'tags' | 'people')} className="w-full">
           <TabsList className="grid w-full grid-cols-2">

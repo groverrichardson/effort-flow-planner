@@ -38,6 +38,7 @@ const NaturalLanguageInput = ({
   const [tokens, setTokens] = useState<Token[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const suggestionRef = useRef<HTMLDivElement>(null);
+  const highlightRef = useRef<HTMLDivElement>(null);
   
   // Process tokens when value changes
   useEffect(() => {
@@ -230,26 +231,69 @@ const NaturalLanguageInput = ({
     checkForSuggestions();
   };
 
+  // Create highlighted content with spans
+  const renderHighlightedContent = () => {
+    if (!value) return null;
+    
+    // Sort tokens by start position to process them in order
+    const sortedTokens = [...tokens].sort((a, b) => a.start - b.start);
+    
+    let result = [];
+    let lastIndex = 0;
+    
+    for (const token of sortedTokens) {
+      // Add text before the token
+      if (token.start > lastIndex) {
+        result.push(
+          <span key={`text-${lastIndex}`}>
+            {value.substring(lastIndex, token.start)}
+          </span>
+        );
+      }
+      
+      // Add the highlighted token
+      result.push(
+        <span 
+          key={`token-${token.start}`} 
+          style={{ 
+            backgroundColor: token.color,
+            borderRadius: '2px',
+          }}
+        >
+          {value.substring(token.start, token.end)}
+        </span>
+      );
+      
+      lastIndex = token.end;
+    }
+    
+    // Add remaining text after last token
+    if (lastIndex < value.length) {
+      result.push(
+        <span key={`text-end`}>
+          {value.substring(lastIndex)}
+        </span>
+      );
+    }
+    
+    return result;
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <div className="relative">
         <div className="relative">
           {/* Background highlighting layer */}
-          <div className="absolute inset-0 p-2.5 text-transparent overflow-hidden whitespace-pre-wrap break-words pointer-events-none">
-            {value}
-            {tokens.map((token, index) => (
-              <span
-                key={index}
-                className="absolute"
-                style={{
-                  backgroundColor: token.color,
-                  left: 0,
-                  right: 0,
-                  height: '1.5rem', // Match the line height of text
-                  zIndex: -1
-                }}
-              />
-            ))}
+          <div 
+            ref={highlightRef}
+            className="absolute inset-0 p-2.5 whitespace-pre-wrap break-words pointer-events-none"
+            style={{ 
+              fontFamily: 'inherit',
+              fontSize: 'inherit',
+              lineHeight: '1.5rem'
+            }}
+          >
+            {renderHighlightedContent()}
           </div>
           
           <Textarea
@@ -257,11 +301,12 @@ const NaturalLanguageInput = ({
             value={value}
             onChange={handleInputChange}
             placeholder={placeholder}
-            className="min-h-[60px] text-sm resize-none"
+            className="min-h-[60px] text-sm resize-none bg-transparent"
             onKeyDown={handleKeyDown}
             autoFocus={autoFocus}
             onSelect={handleCursorPositionChange}
             onClick={handleCursorPositionChange}
+            style={{ caretColor: 'black' }}
           />
         </div>
         

@@ -4,7 +4,6 @@ import { useTaskContext } from '@/context/TaskContext';
 import { Task, Tag, Person } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Trash } from 'lucide-react';
 import GroupForm from './GroupForm';
 import PersonForm from './PersonForm';
 import TaskForm from './TaskForm';
@@ -33,7 +32,6 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
   const [personModalOpen, setPersonModalOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const handleEditTag = (tag: Tag) => {
     setEditingTag(tag);
@@ -82,29 +80,6 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
         onSuccess={handleTaskUpdate}
         onCancel={onClose}
       />
-      
-      <div className="flex justify-end">
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" className="gap-1">
-              <Trash size={16} />
-              Delete Task
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the task.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
 
       <Dialog open={tagModalOpen} onOpenChange={setTagModalOpen}>
         <DialogContent>
