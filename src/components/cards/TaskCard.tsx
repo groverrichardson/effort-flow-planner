@@ -4,14 +4,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Task, Priority, EffortLevel } from '@/types';
-import { Check } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/use-toast';
 
 interface TaskCardProps {
   task: Task;
   viewingCompleted: boolean;
   onClick: (task: Task) => void;
   onComplete: (task: Task) => void;
-  onDelete: (taskId: string) => void;  // Added the missing prop
+  onDelete: (taskId: string) => void;
 }
 
 const TaskCard = ({ task, viewingCompleted, onClick, onComplete, onDelete }: TaskCardProps) => {
@@ -60,6 +62,14 @@ const TaskCard = ({ task, viewingCompleted, onClick, onComplete, onDelete }: Tas
     return null;
   };
 
+  const handleDelete = () => {
+    onDelete(task.id);
+    toast({ 
+      title: "Task deleted", 
+      description: `"${task.title}" has been removed` 
+    });
+  };
+
   return (
     <Card key={task.id} className="overflow-hidden">
       <CardContent className="p-0">
@@ -101,6 +111,17 @@ const TaskCard = ({ task, viewingCompleted, onClick, onComplete, onDelete }: Tas
               </div>
             )}
           </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-gray-500 hover:text-red-500" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>
