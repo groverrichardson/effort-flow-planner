@@ -1,39 +1,16 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Upload, FileText, X, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import ColumnMapping from './ColumnMapping';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-
-interface CSVTask {
-  title: string;
-  description?: string;
-  priority?: string;
-  dueDate?: string;
-  personNames?: string[];
-  tagNames?: string[];
-  status?: 'pending' | 'processing' | 'error' | 'success';
-  error?: string;
-}
-
-interface ParsedCSVData {
-  headers: string[];
-  rows: string[][];
-}
+import { CSVFileUploader } from './CSVFileUploader';
+import { CSVMappingSection } from './CSVMappingSection';
+import { TaskPreviewTable } from './TaskPreviewTable';
+import { ImportProgressBar } from './ImportProgressBar';
+import { CSVHelpAlert } from './CSVHelpAlert';
+import { parseRawCSV, createInitialColumnMap, generateTasksFromCSV } from './CSVUtils';
+import { CSVTask, ParsedCSVData } from './types';
 
 const CSVTaskImporter = () => {
   const { addTask, tags, people, addTag, addPerson } = useTaskContext();
@@ -47,68 +24,17 @@ const CSVTaskImporter = () => {
   const [columnMap, setColumnMap] = useState<Record<string, string>>({});
   const [mappingComplete, setMappingComplete] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setMappingComplete(false);
-      setCsvTasks([]);
-      parseRawCSV(selectedFile);
+  const handleFileChange = async (selectedFile: File) => {
+    setFile(selectedFile);
+    setMappingComplete(false);
+    setCsvTasks([]);
+    
+    const parsedCSV = await parseRawCSV(selectedFile);
+    if (parsedCSV) {
+      setParsedData(parsedCSV);
+      const initialMap = createInitialColumnMap(parsedCSV.headers, hasHeaders);
+      setColumnMap(initialMap);
     }
-  };
-
-  const parseRawCSV = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const text = e.target?.result as string;
-        const lines = text.split('\n').filter(line => line.trim().length > 0);
-        
-        if (lines.length === 0) {
-          toast({
-            title: "Empty CSV file",
-            description: "The CSV file doesn't contain any data",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Parse CSV into rows and columns
-        const rows = lines.map(line => 
-          line.split(',').map(value => value.trim().replace(/^["'](.*)["']$/, '$1'))
-        );
-        
-        // Set the parsed data
-        setParsedData({
-          headers: rows[0],
-          rows: rows.slice(1)
-        });
-        
-        // Initialize column mapping with default values if headers exist
-        const initialMap: Record<string, string> = {};
-        if (hasHeaders) {
-          rows[0].forEach(header => {
-            const lowerHeader = header.toLowerCase();
-            if (lowerHeader === 'title') initialMap[header] = 'title';
-            else if (lowerHeader === 'description') initialMap[header] = 'description';
-            else if (lowerHeader === 'priority') initialMap[header] = 'priority';
-            else if (lowerHeader === 'duedate' || lowerHeader === 'due date') initialMap[header] = 'dueDate';
-            else if (lowerHeader === 'people' || lowerHeader === 'person') initialMap[header] = 'people';
-            else if (lowerHeader === 'tags' || lowerHeader === 'tag') initialMap[header] = 'tags';
-            else initialMap[header] = 'ignore'; // Set default to 'ignore' instead of empty string
-          });
-        }
-        setColumnMap(initialMap);
-        
-      } catch (error) {
-        toast({
-          title: "Error parsing CSV",
-          description: "Could not parse the CSV file",
-          variant: "destructive",
-        });
-      }
-    };
-    reader.readAsText(file);
   };
 
   const handleClearFile = () => {
@@ -130,11 +56,8 @@ const CSVTaskImporter = () => {
       });
       
       // Reset column mapping when header toggle changes
-      const initialMap: Record<string, string> = {};
       const headers = checked ? parsedData.rows[0] : Array.from({ length: parsedData.rows[0].length }, (_, i) => `Column ${i + 1}`);
-      headers.forEach(header => {
-        initialMap[header] = 'ignore'; // Set default to 'ignore'
-      });
+      const initialMap = createInitialColumnMap(headers, checked);
       setColumnMap(initialMap);
     }
   };
@@ -142,48 +65,7 @@ const CSVTaskImporter = () => {
   const applyColumnMapping = () => {
     if (!parsedData) return;
     
-    const tasks: CSVTask[] = [];
-    const { headers, rows } = parsedData;
-    
-    // Process each row based on the column mapping
-    rows.forEach(row => {
-      const task: CSVTask = { title: '', status: 'pending' };
-      
-      // Apply mapping to extract fields
-      headers.forEach((header, index) => {
-        const field = columnMap[header];
-        if (!field || field === 'ignore' || index >= row.length) return; // Skip ignored fields
-        
-        const value = row[index];
-        if (!value) return;
-        
-        switch (field) {
-          case 'title':
-            task.title = value;
-            break;
-          case 'description':
-            task.description = value;
-            break;
-          case 'priority':
-            task.priority = value;
-            break;
-          case 'dueDate':
-            task.dueDate = value;
-            break;
-          case 'people':
-            task.personNames = value ? value.split(';').map(p => p.trim()) : [];
-            break;
-          case 'tags':
-            task.tagNames = value ? value.split(';').map(t => t.trim()) : [];
-            break;
-        }
-      });
-      
-      // Only add tasks with a title
-      if (task.title) {
-        tasks.push(task);
-      }
-    });
+    const tasks = generateTasksFromCSV(parsedData, columnMap);
     
     if (tasks.length === 0) {
       toast({
@@ -276,19 +158,6 @@ const CSVTaskImporter = () => {
     setIsImporting(false);
   };
 
-  const getTaskStatusIcon = (status: CSVTask['status']) => {
-    switch (status) {
-      case 'processing':
-        return <Loader2 className="h-4 w-4 animate-spin" />;
-      case 'success':
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-      case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return null;
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div>
@@ -298,129 +167,35 @@ const CSVTaskImporter = () => {
         </p>
       </div>
       
-      <div className="flex items-center gap-2">
-        <Input
-          type="file"
-          accept=".csv"
-          onChange={handleFileChange}
-          id="csv-file"
-          className="hidden"
-        />
-        <label
-          htmlFor="csv-file"
-          className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-        >
-          <Upload size={16} />
-          Choose CSV File
-        </label>
-        
-        {file && (
-          <button
-            onClick={handleClearFile}
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-          >
-            <X size={16} className="mr-1" /> Clear
-          </button>
-        )}
-      </div>
+      <CSVFileUploader 
+        file={file} 
+        onFileChange={handleFileChange} 
+        onClearFile={handleClearFile} 
+      />
       
-      {file && (
-        <div className="flex items-center gap-2 text-sm">
-          <FileText size={16} />
-          <span>{file.name}</span>
-        </div>
-      )}
-      
-      {parsedData && !mappingComplete && (
-        <div className="space-y-4 border p-4 rounded-md bg-muted/30">
-          <div className="flex items-center space-x-2 mb-4">
-            <Switch 
-              id="has-headers" 
-              checked={hasHeaders}
-              onCheckedChange={handleHeaderToggle}
-            />
-            <Label htmlFor="has-headers">First row contains column headers</Label>
-          </div>
-          
-          <h3 className="text-md font-medium">Map Columns to Task Fields</h3>
-          <ColumnMapping
-            headers={parsedData.headers}
-            previewRows={parsedData.rows.slice(0, 3)}
-            columnMap={columnMap}
-            onColumnMapChange={setColumnMap}
-          />
-          
-          <Button 
-            onClick={applyColumnMapping} 
-            className="w-full mt-2"
-          >
-            Apply Mapping
-          </Button>
-        </div>
-      )}
+      <CSVMappingSection
+        parsedData={parsedData}
+        hasHeaders={hasHeaders}
+        columnMap={columnMap}
+        onHeaderToggle={handleHeaderToggle}
+        onColumnMapChange={setColumnMap}
+        onApplyMapping={applyColumnMapping}
+        mappingComplete={mappingComplete}
+      />
       
       {csvTasks.length > 0 && mappingComplete && (
         <div className="space-y-4">
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40px]">Status</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>People</TableHead>
-                  <TableHead>Tags</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {csvTasks.slice(0, 10).map((task, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{getTaskStatusIcon(task.status)}</TableCell>
-                    <TableCell className="font-medium">{task.title}</TableCell>
-                    <TableCell>{task.priority || 'Normal'}</TableCell>
-                    <TableCell>{task.dueDate || '-'}</TableCell>
-                    <TableCell>{task.personNames?.join(', ') || '-'}</TableCell>
-                    <TableCell>{task.tagNames?.join(', ') || '-'}</TableCell>
-                  </TableRow>
-                ))}
-                {csvTasks.length > 10 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                      + {csvTasks.length - 10} more tasks
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <TaskPreviewTable tasks={csvTasks} />
           
-          {isImporting ? (
-            <div className="space-y-2">
-              <div className="w-full bg-muted rounded-full h-2.5">
-                <div 
-                  className="bg-primary h-2.5 rounded-full" 
-                  style={{ width: `${importProgress}%` }}
-                ></div>
-              </div>
-              <p className="text-sm text-center">
-                Importing... {Math.round(importProgress)}%
-              </p>
-            </div>
-          ) : (
+          <ImportProgressBar progress={importProgress} isImporting={isImporting} />
+          
+          {!isImporting && (
             <Button onClick={importTasks} className="w-full">
               Import {csvTasks.length} Tasks
             </Button>
           )}
           
-          <Alert variant="default" className="bg-muted/50">
-            <FileText className="h-4 w-4" />
-            <AlertTitle>CSV Format Example</AlertTitle>
-            <AlertDescription className="font-mono text-xs">
-              title,description,priority,dueDate,people,tags<br />
-              "Call client","Discuss project timeline",high,2025-05-25,"John Smith;Jane Doe","client;important"
-            </AlertDescription>
-          </Alert>
+          <CSVHelpAlert />
         </div>
       )}
     </div>
