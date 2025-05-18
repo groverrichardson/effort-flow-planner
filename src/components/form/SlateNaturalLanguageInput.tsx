@@ -1,6 +1,5 @@
-
 import React, { useState, useCallback, useMemo, KeyboardEvent, useEffect, useRef } from 'react';
-import { createEditor, Descendant, Editor, Element as SlateElement, Node as SlateNode, Range, Text } from 'slate';
+import { createEditor, Descendant, Editor, Element as SlateElement, Node as SlateNode, Range, Text, BaseEditor, BaseRange } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
@@ -28,28 +27,39 @@ const TOKEN_COLORS = {
   effort: 'rgba(30, 174, 219, 0.3)' // Light blue background
 };
 
-// Custom types for our editor
-type CustomText = {
-  text: string;
+// Define interfaces for our custom types
+interface CustomText extends Text {
   tag?: boolean;
   person?: boolean;
   priority?: boolean;
+  priorityType?: 'high' | 'normal' | 'low';
   date?: boolean;
   effort?: boolean;
-  priorityType?: 'high' | 'normal' | 'low';
-};
+}
 
-type CustomElement = {
+interface CustomElement {
   type: 'paragraph';
   children: CustomText[];
-};
+}
+
+interface CustomEditor extends BaseEditor, ReactEditor {}
+
+interface CustomRange extends BaseRange {
+  tag?: boolean;
+  person?: boolean;
+  priority?: boolean;
+  priorityType?: 'high' | 'normal' | 'low';
+  date?: boolean;
+  effort?: boolean;
+}
 
 // Add custom types to Slate's type system
 declare module 'slate' {
   interface CustomTypes {
-    Editor: Editor & ReactEditor;
+    Editor: CustomEditor;
     Element: CustomElement;
     Text: CustomText;
+    Range: CustomRange;
   }
 }
 
@@ -76,7 +86,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
         children: value ? [{ text: value }] : [{ text: '' }]
       }
     ];
-  }, []);
+  }, [value]);
 
   // Keep track of editor value in local state
   const [editorValue, setEditorValue] = useState<Descendant[]>(initialValue);
@@ -112,7 +122,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
         }
       ]);
     }
-  }, [value, serializeNodes]);
+  }, [value, serializeNodes, editorValue]);
   
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -212,7 +222,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     const prefix = word.startsWith('#') ? '#' : '@';
     
     // Replace the current word with the suggestion
-    Editor.deleteFragment(editor, { at: wordRange });
+    Editor.deleteFragment(editor, wordRange);
     Editor.insertText(editor, `${prefix}${suggestion.name} `);
     
     setSuggestions({ type: '', items: [] });
@@ -220,7 +230,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
   
   // Decorate the editor content to highlight tokens
   const decorate = useCallback(([node, path]) => {
-    const ranges: Range[] = [];
+    const ranges: CustomRange[] = [];
     
     if (!Text.isText(node)) {
       return ranges;
