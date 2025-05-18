@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Task } from '@/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import TaskDetail from '../TaskDetail';
@@ -20,9 +19,21 @@ const TaskDialogs = ({
   onCloseEdit,
   onEditClick
 }: TaskDialogsProps) => {
+  // Keep a local reference to the task being edited to prevent stale data
+  const [currentEditTask, setCurrentEditTask] = useState<Task | null>(null);
+  
+  // Update the local task reference whenever editTask changes
+  useEffect(() => {
+    if (editTask) {
+      setCurrentEditTask({...editTask});
+    } else {
+      setCurrentEditTask(null);
+    }
+  }, [editTask]);
+
   return (
     <>
-      <Dialog open={!!detailTask} onOpenChange={() => onCloseDetail()}>
+      <Dialog open={!!detailTask} onOpenChange={(open) => !open && onCloseDetail()}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Task Details</DialogTitle>
@@ -40,7 +51,7 @@ const TaskDialogs = ({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!editTask} onOpenChange={() => onCloseEdit()}>
+      <Dialog open={!!editTask} onOpenChange={(open) => !open && onCloseEdit()}>
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
@@ -48,9 +59,9 @@ const TaskDialogs = ({
               Make changes to your task
             </DialogDescription>
           </DialogHeader>
-          {editTask && (
+          {currentEditTask && (
             <TaskForm 
-              task={editTask} 
+              task={currentEditTask} 
               onSuccess={onCloseEdit} 
               onCancel={onCloseEdit} 
             />

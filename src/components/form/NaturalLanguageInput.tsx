@@ -96,48 +96,81 @@ const NaturalLanguageInput = ({
       });
     }
     
-    // Match priority keywords
-    const priorityRegex = /(high priority|low priority|urgent|important)/gi;
+    // Match priority keywords with no overlap
+    const priorityRegex = /\b(high priority|low priority|urgent|important)\b/gi;
     let priorityMatch;
     while ((priorityMatch = priorityRegex.exec(value)) !== null) {
-      newTokens.push({
-        type: 'priority',
-        value: priorityMatch[1].toLowerCase(),
-        original: priorityMatch[0],
-        start: priorityMatch.index,
-        end: priorityMatch.index + priorityMatch[0].length,
-        color: priorityMatch[0].toLowerCase().includes('high') || priorityMatch[0].toLowerCase().includes('urgent') 
-          ? 'rgba(234, 56, 76, 0.3)' // Light red background
-          : 'rgba(126, 105, 171, 0.3)' // Light purple background
-      });
+      const start = priorityMatch.index;
+      const end = start + priorityMatch[0].length;
+      
+      // Check if this match overlaps with any existing token
+      const overlaps = newTokens.some(token => 
+        (start >= token.start && start < token.end) || 
+        (end > token.start && end <= token.end)
+      );
+      
+      if (!overlaps) {
+        newTokens.push({
+          type: 'priority',
+          value: priorityMatch[1].toLowerCase(),
+          original: priorityMatch[0],
+          start,
+          end,
+          color: priorityMatch[0].toLowerCase().includes('high') || priorityMatch[0].toLowerCase().includes('urgent') 
+            ? 'rgba(234, 56, 76, 0.3)' // Light red background
+            : 'rgba(126, 105, 171, 0.3)' // Light purple background
+        });
+      }
     }
     
-    // Match date keywords
-    const dateRegex = /(tomorrow|today|due tomorrow|due today|due (on )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday))/gi;
+    // Match date keywords with no overlap
+    const dateRegex = /\b(tomorrow|today|due tomorrow|due today|due (on )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/gi;
     let dateMatch;
     while ((dateMatch = dateRegex.exec(value)) !== null) {
-      newTokens.push({
-        type: 'date',
-        value: dateMatch[0].toLowerCase(),
-        original: dateMatch[0],
-        start: dateMatch.index,
-        end: dateMatch.index + dateMatch[0].length,
-        color: 'rgba(249, 115, 22, 0.3)' // Light orange background
-      });
+      const start = dateMatch.index;
+      const end = start + dateMatch[0].length;
+      
+      // Check if this match overlaps with any existing token
+      const overlaps = newTokens.some(token => 
+        (start >= token.start && start < token.end) || 
+        (end > token.start && end <= token.end)
+      );
+      
+      if (!overlaps) {
+        newTokens.push({
+          type: 'date',
+          value: dateMatch[0].toLowerCase(),
+          original: dateMatch[0],
+          start,
+          end,
+          color: 'rgba(249, 115, 22, 0.3)' // Light orange background
+        });
+      }
     }
     
-    // Match effort keywords
-    const effortRegex = /(quick|few minutes|5 minutes|30 minutes|half hour|short|couple hours|few hours|all day|one day|full day|this week|several days|couple weeks|few weeks|month|long term|big project)/gi;
+    // Match effort keywords with no overlap
+    const effortRegex = /\b(5 minutes|15 minutes|30 minutes|half hour|couple hours|few hours|all day|one day|full day|this week|several days|couple weeks|few weeks|month|long term|big project)\b/gi;
     let effortMatch;
     while ((effortMatch = effortRegex.exec(value)) !== null) {
-      newTokens.push({
-        type: 'effort',
-        value: effortMatch[0].toLowerCase(),
-        original: effortMatch[0],
-        start: effortMatch.index,
-        end: effortMatch.index + effortMatch[0].length,
-        color: 'rgba(30, 174, 219, 0.3)' // Light blue background
-      });
+      const start = effortMatch.index;
+      const end = start + effortMatch[0].length;
+      
+      // Check if this match overlaps with any existing token
+      const overlaps = newTokens.some(token => 
+        (start >= token.start && start < token.end) || 
+        (end > token.start && end <= token.end)
+      );
+      
+      if (!overlaps) {
+        newTokens.push({
+          type: 'effort',
+          value: effortMatch[0].toLowerCase(),
+          original: effortMatch[0],
+          start,
+          end,
+          color: 'rgba(30, 174, 219, 0.3)' // Light blue background
+        });
+      }
     }
     
     setTokens(newTokens);

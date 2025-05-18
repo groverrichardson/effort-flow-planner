@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash } from 'lucide-react';
+import { Trash } from 'lucide-react';
 import PersonForm from '@/components/PersonForm';
 
 const ManagePeople = () => {
@@ -30,25 +30,20 @@ const ManagePeople = () => {
                   />
                 ) : (
                   <div className="flex w-full items-center justify-between">
-                    <span className="truncate">{person.name}</span>
-                    <div className="flex items-center space-x-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => setEditingPerson(person)}
-                        className="h-7 w-7"
-                      >
-                        <Edit size={14} />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="text-red-500 hover:text-red-700 h-7 w-7"
-                        onClick={() => deletePerson(person.id)}
-                      >
-                        <Trash size={14} />
-                      </Button>
-                    </div>
+                    <span 
+                      className="truncate cursor-pointer flex-grow py-1 px-2 hover:bg-muted rounded"
+                      onClick={() => setEditingPerson(person)}
+                    >
+                      {person.name}
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="text-red-500 hover:text-red-700 h-7 w-7"
+                      onClick={() => deletePerson(person.id)}
+                    >
+                      <Trash size={14} />
+                    </Button>
                   </div>
                 )}
               </div>

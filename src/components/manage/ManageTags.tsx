@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash } from 'lucide-react';
+import { Trash } from 'lucide-react';
 import GroupForm from '@/components/GroupForm';
 
 const ManageTags = () => {
@@ -30,25 +30,20 @@ const ManageTags = () => {
                   />
                 ) : (
                   <div className="flex w-full items-center justify-between">
-                    <span className="truncate">{tag.name}</span>
-                    <div className="flex items-center space-x-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => setEditingTag(tag)}
-                        className="h-7 w-7"
-                      >
-                        <Edit size={14} />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="text-red-500 hover:text-red-700 h-7 w-7"
-                        onClick={() => deleteTag(tag.id)}
-                      >
-                        <Trash size={14} />
-                      </Button>
-                    </div>
+                    <span 
+                      className="truncate cursor-pointer flex-grow py-1 px-2 hover:bg-muted rounded"
+                      onClick={() => setEditingTag(tag)}
+                    >
+                      {tag.name}
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="text-red-500 hover:text-red-700 h-7 w-7"
+                      onClick={() => deleteTag(tag.id)}
+                    >
+                      <Trash size={14} />
+                    </Button>
                   </div>
                 )}
               </div>

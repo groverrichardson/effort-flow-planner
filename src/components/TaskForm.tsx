@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task, Priority, EffortLevel } from '@/types';
@@ -256,11 +255,11 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
             <SelectContent>
               <SelectItem value="1">15min</SelectItem>
               <SelectItem value="2">30min</SelectItem>
-              <SelectItem value="4">A few hours</SelectItem>
+              <SelectItem value="4">Few hours</SelectItem>
               <SelectItem value="8">1 day</SelectItem>
               <SelectItem value="16">1 week</SelectItem>
               <SelectItem value="32">2 weeks</SelectItem>
-              <SelectItem value="64">1+ month</SelectItem>
+              <SelectItem value="64">1 month</SelectItem>
             </SelectContent>
           </Select>
         </div>
