@@ -1,120 +1,58 @@
 
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
-import { Task, Priority } from '@/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { toast } from '@/components/ui/use-toast';
-import { format, isToday, isPast, isFuture, addDays, isWithinInterval } from 'date-fns';
-import TaskDetail from './TaskDetail';
-import TaskForm from './TaskForm';
-import TaskFilters from './filters/TaskFilters';
-import TaskListHeader from './headers/TaskListHeader';
-import TaskCard from './cards/TaskCard';
-import TaskListEmpty from './empty/TaskListEmpty';
+import { Task } from '@/types';
+import { useTaskFiltering } from '@/hooks/useTaskFiltering';
+import TaskListControls from './headers/TaskListControls';
+import TaskListContent from './list/TaskListContent';
+import TaskDialogs from './dialogs/TaskDialogs';
 
 const TaskList = () => {
   const { tasks, completeTask, getTodaysCompletedTasks } = useTaskContext();
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [editTask, setEditTask] = useState<Task | null>(null);
-  const [viewingCompleted, setViewingCompleted] = useState(false);
-  const [showTodaysTasks, setShowTodaysTasks] = useState(false);
   
-  // Filter states
-  const [selectedPriorities, setSelectedPriorities] = useState<Priority[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
-  const [filterByDueDate, setFilterByDueDate] = useState<string>('all');
-  const [filterByGoLive, setFilterByGoLive] = useState<boolean>(false);
-  
-  const activeTasks = tasks.filter(task => !task.completed);
-  const completedTasks = getTodaysCompletedTasks();
-  
-  // Get today's tasks (due today or with today as go-live)
-  const todaysTasks = activeTasks.filter(task => {
-    if (!task.dueDate && !task.goLiveDate && !task.targetDeadline) return false;
-    
-    return (task.dueDate && isToday(new Date(task.dueDate))) || 
-           (task.goLiveDate && isToday(new Date(task.goLiveDate))) ||
-           (task.targetDeadline && isToday(new Date(task.targetDeadline)));
-  });
-  
-  // Base display tasks on view mode
-  let displayTasks = viewingCompleted ? completedTasks : 
-                     showTodaysTasks ? todaysTasks : activeTasks;
+  const {
+    viewingCompleted,
+    showTodaysTasks,
+    selectedPriorities,
+    selectedTags,
+    selectedPeople,
+    filterByDueDate,
+    filterByGoLive,
+    activeTasks,
+    todaysTasks,
+    filteredTasks,
+    handleTogglePriority,
+    handleToggleTag,
+    handleTogglePerson,
+    setFilterByDueDate,
+    setFilterByGoLive,
+    clearAllFilters,
+    handleShowAllActive,
+    handleShowToday,
+    handleShowCompleted
+  } = useTaskFiltering({ tasks, getTodaysCompletedTasks });
 
-  // Apply filters to display tasks
-  const filteredTasks = displayTasks.filter(task => {
-    // Skip filtering for completed tasks view
-    if (viewingCompleted) return true;
-    
-    // Priority filter
-    if (selectedPriorities.length > 0 && !selectedPriorities.includes(task.priority)) {
-      return false;
-    }
-    
-    // Tag filter
-    if (selectedTags.length > 0 && !task.tags.some(tag => selectedTags.includes(tag.id))) {
-      return false;
-    }
-    
-    // People filter
-    if (selectedPeople.length > 0 && !task.people.some(person => selectedPeople.includes(person.id))) {
-      return false;
-    }
-    
-    // Due date filter
-    if (filterByDueDate !== 'all' && task.dueDate) {
-      const dueDate = new Date(task.dueDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (filterByDueDate === 'today' && !isToday(dueDate)) {
-        return false;
+  // Get all unique tags from tasks
+  const allTags = tasks.reduce((allTags, task) => {
+    task.tags.forEach(tag => {
+      if (!allTags.some(t => t.id === tag.id)) {
+        allTags.push(tag);
       }
-      
-      if (filterByDueDate === 'week' && !isWithinInterval(dueDate, {
-        start: today,
-        end: addDays(today, 7)
-      })) {
-        return false;
+    });
+    return allTags;
+  }, [] as { id: string; name: string }[]);
+
+  // Get all unique people from tasks
+  const allPeople = tasks.reduce((allPeople, task) => {
+    task.people.forEach(person => {
+      if (!allPeople.some(p => p.id === person.id)) {
+        allPeople.push(person);
       }
-      
-      if (filterByDueDate === 'overdue' && !isPast(dueDate)) {
-        return false;
-      }
-    }
-    
-    // Go-live date filter
-    if (filterByGoLive && !task.goLiveDate) {
-      return false;
-    }
-    
-    return true;
-  });
-
-  const handleTogglePriority = (priority: Priority) => {
-    setSelectedPriorities(prev => 
-      prev.includes(priority)
-        ? prev.filter(p => p !== priority)
-        : [...prev, priority]
-    );
-  };
-
-  const handleToggleTag = (tagId: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagId)
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    );
-  };
-
-  const handleTogglePerson = (personId: string) => {
-    setSelectedPeople(prev => 
-      prev.includes(personId)
-        ? prev.filter(id => id !== personId)
-        : [...prev, personId]
-    );
-  };
+    });
+    return allPeople;
+  }, [] as { id: string; name: string }[]);
 
   const handleTaskClick = (task: Task) => {
     setDetailTask(task);
@@ -133,136 +71,46 @@ const TaskList = () => {
     setEditTask(null);
   };
 
-  const handleComplete = (task: Task) => {
-    completeTask(task.id);
-    toast({ 
-      title: "Task completed", 
-      description: `"${task.title}" marked as completed` 
-    });
-  };
-
-  const clearAllFilters = () => {
-    setSelectedPriorities([]);
-    setSelectedTags([]);
-    setSelectedPeople([]);
-    setFilterByDueDate('all');
-    setFilterByGoLive(false);
-  };
-
-  const handleShowAllActive = () => {
-    setViewingCompleted(false);
-    setShowTodaysTasks(false);
-  };
-
-  const handleShowToday = () => {
-    setShowTodaysTasks(true);
-    setViewingCompleted(false);
-  };
-
-  const handleShowCompleted = () => {
-    setViewingCompleted(true);
-    setShowTodaysTasks(false);
-  };
-
   return (
     <div className="space-y-6">
-      {/* Header with view selectors and filter button */}
-      <div className="flex flex-col space-y-4">
-        <div className="flex flex-wrap justify-between items-center gap-2">
-          <TaskListHeader 
-            showTodaysTasks={showTodaysTasks}
-            viewingCompleted={viewingCompleted}
-            todaysCount={todaysTasks.length}
-            completedCount={completedTasks.length}
-            onShowAllActive={handleShowAllActive}
-            onShowToday={handleShowToday}
-            onShowCompleted={handleShowCompleted}
-          />
-          
-          {!viewingCompleted && (
-            <TaskFilters 
-              selectedTags={selectedTags}
-              selectedPeople={selectedPeople} 
-              selectedPriorities={selectedPriorities}
-              filterByDueDate={filterByDueDate}
-              filterByGoLive={filterByGoLive}
-              onToggleTag={handleToggleTag}
-              onTogglePerson={handleTogglePerson}
-              onTogglePriority={handleTogglePriority}
-              onSetFilterByDueDate={setFilterByDueDate}
-              onSetFilterByGoLive={setFilterByGoLive}
-              onResetFilters={clearAllFilters}
-              tags={tasks.reduce((allTags, task) => {
-                task.tags.forEach(tag => {
-                  if (!allTags.some(t => t.id === tag.id)) {
-                    allTags.push(tag);
-                  }
-                });
-                return allTags;
-              }, [] as { id: string; name: string }[])}
-              people={tasks.reduce((allPeople, task) => {
-                task.people.forEach(person => {
-                  if (!allPeople.some(p => p.id === person.id)) {
-                    allPeople.push(person);
-                  }
-                });
-                return allPeople;
-              }, [] as { id: string; name: string }[])}
-            />
-          )}
-        </div>
-      </div>
+      <TaskListControls 
+        viewingCompleted={viewingCompleted}
+        showTodaysTasks={showTodaysTasks}
+        todaysCount={todaysTasks.length}
+        completedCount={getTodaysCompletedTasks().length}
+        selectedTags={selectedTags}
+        selectedPeople={selectedPeople}
+        selectedPriorities={selectedPriorities}
+        filterByDueDate={filterByDueDate}
+        filterByGoLive={filterByGoLive}
+        onShowAllActive={handleShowAllActive}
+        onShowToday={handleShowToday}
+        onShowCompleted={handleShowCompleted}
+        onToggleTag={handleToggleTag}
+        onTogglePerson={handleTogglePerson}
+        onTogglePriority={handleTogglePriority}
+        onSetFilterByDueDate={setFilterByDueDate}
+        onSetFilterByGoLive={setFilterByGoLive}
+        onResetFilters={clearAllFilters}
+        tags={allTags}
+        people={allPeople}
+      />
 
-      <div className="space-y-4">
-        {filteredTasks.length > 0 ? (
-          <div className="space-y-4">
-            {filteredTasks.map(task => (
-              <TaskCard 
-                key={task.id}
-                task={task}
-                viewingCompleted={viewingCompleted}
-                onClick={handleTaskClick}
-                onComplete={handleComplete}
-              />
-            ))}
-          </div>
-        ) : (
-          <TaskListEmpty 
-            viewingCompleted={viewingCompleted} 
-            showTodaysTasks={showTodaysTasks} 
-          />
-        )}
-      </div>
+      <TaskListContent 
+        tasks={filteredTasks}
+        viewingCompleted={viewingCompleted}
+        showTodaysTasks={showTodaysTasks}
+        onTaskClick={handleTaskClick}
+        onCompleteTask={completeTask}
+      />
 
-      <Dialog open={!!detailTask} onOpenChange={() => setDetailTask(null)}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Task Details</DialogTitle>
-          </DialogHeader>
-          {detailTask && (
-            <TaskDetail 
-              task={detailTask} 
-              onClose={handleCloseDetail}
-              onEdit={() => handleEditClick(detailTask)} 
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!editTask} onOpenChange={() => setEditTask(null)}>
-        <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-          </DialogHeader>
-          {editTask && (
-            <TaskForm 
-              task={editTask} 
-              onSuccess={handleCloseEdit} 
-              onCancel={handleCloseEdit} 
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <TaskDialogs 
+        detailTask={detailTask}
+        editTask={editTask}
+        onCloseDetail={handleCloseDetail}
+        onCloseEdit={handleCloseEdit}
+        onEditClick={handleEditClick}
+      />
     </div>
   );
 };
