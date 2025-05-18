@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, KeyboardEvent, useEffect, useRef } from 'react';
 import { createEditor, Descendant, Editor, Element as SlateElement, Node as SlateNode, Range, Text, Transforms } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
@@ -190,10 +191,10 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
       }
     }
 
-    // Check for people suggestions
+    // Check for people suggestions - fixed to properly look for @ symbol
     if (word.startsWith('@')) {
       const personQuery = word.substring(1).toLowerCase();
-      if (personQuery.length > 0) {
+      if (personQuery.length >= 0) {  // Show suggestions even when just @ is typed
         const matchingPeople = people.filter(
           person => person.name.toLowerCase().includes(personQuery)
         );
@@ -241,8 +242,8 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     
     const text = node.text;
     
-    // Match tags (#tag)
-    const tagRegex = /#(\w+)/g;
+    // Match tags (#tag) - Updated to support multi-word tags with spaces
+    const tagRegex = /#([^\s#@]+(?:\s+[^\s#@]+)*)/g;
     let tagMatch;
     while ((tagMatch = tagRegex.exec(text)) !== null) {
       ranges.push({
@@ -252,8 +253,8 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
       } as CustomRange);
     }
     
-    // Match people (@person)
-    const personRegex = /@(\w+)/g;
+    // Match people (@person) - Updated to support multi-word names with spaces
+    const personRegex = /@([^\s#@]+(?:\s+[^\s#@]+)*)/g;
     let personMatch;
     while ((personMatch = personRegex.exec(text)) !== null) {
       ranges.push({

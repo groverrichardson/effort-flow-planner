@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -20,6 +20,8 @@ const TagSelector = ({
   onAddNewTag 
 }: TagSelectorProps) => {
   const [tagSearch, setTagSearch] = useState('');
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const filteredTags = availableTags.filter(g => 
     g.name.toLowerCase().includes(tagSearch.toLowerCase()) && 
@@ -30,6 +32,28 @@ const TagSelector = ({
     if (tagSearch.trim()) {
       onAddNewTag(tagSearch.trim());
       setTagSearch('');
+      setIsPopoverOpen(false);
+    }
+  };
+
+  // Handle input focus and showing suggestions
+  const handleInputFocus = () => {
+    setIsPopoverOpen(true);
+  };
+
+  // Handle input changes and filtering
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTagSearch(e.target.value);
+    setIsPopoverOpen(true);
+  };
+
+  // Handle key press events for better UX
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && tagSearch.trim()) {
+      e.preventDefault();
+      handleAddNewTag();
+    } else if (e.key === 'Escape') {
+      setIsPopoverOpen(false);
     }
   };
 
@@ -50,20 +74,22 @@ const TagSelector = ({
           </Badge>
         ))}
       </div>
-      <Popover>
+      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
         <PopoverTrigger asChild>
           <div className="relative">
             <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={inputRef}
               placeholder="Search or add tags..."
               value={tagSearch}
-              onChange={(e) => setTagSearch(e.target.value)}
+              onChange={handleInputChange}
+              onFocus={handleInputFocus}
+              onKeyDown={handleKeyDown}
               className="pl-8 h-8 text-xs"
-              onClick={(e) => e.stopPropagation()}
             />
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start" onInteractOutside={(e) => e.preventDefault()}>
+        <PopoverContent className="w-full p-0" align="start">
           <div className="p-2 max-h-[150px] overflow-y-auto">
             {filteredTags.length > 0 ? (
               <div className="space-y-1">
@@ -74,6 +100,7 @@ const TagSelector = ({
                     onClick={() => {
                       onToggleTag(tag.id);
                       setTagSearch('');
+                      inputRef.current?.focus();
                     }}
                   >
                     {tag.name}
