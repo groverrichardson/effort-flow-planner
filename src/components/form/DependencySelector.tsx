@@ -62,7 +62,7 @@ const DependencySelector = ({
       <ScrollArea className="border border-input rounded-md h-[120px]">
         <div className="p-2">
           {searchTerm.trim() === '' ? (
-            <p className="text-xs text-muted-foreground p-1">Type to search for tasks</p>
+            <div className="p-1"></div>
           ) : filteredTasks.length > 0 ? (
             <div className="space-y-1">
               {filteredTasks.map(task => (
