@@ -11,62 +11,71 @@ const QuickTaskInput = () => {
   const [quickTaskInput, setQuickTaskInput] = useState('');
   const isMobile = useIsMobile();
   
-  const handleQuickTaskSubmit = () => {
+  const handleQuickTaskSubmit = async () => {
     if (!quickTaskInput.trim()) return;
     
-    const taskData = naturalLanguageToTask(quickTaskInput);
-    
-    // Process tags from names - create new tags if needed
-    if (taskData.tagNames && taskData.tagNames.length > 0) {
-      taskData.tags = taskData.tagNames.map(tagName => {
-        // Try to find an existing tag
-        const existingTag = tags.find(t => 
-          t.name.toLowerCase() === tagName.toLowerCase()
-        );
-        // Create a new tag if it doesn't exist
-        return existingTag || addTag(tagName);
+    try {
+      const taskData = naturalLanguageToTask(quickTaskInput);
+      
+      // Process tags from names - create new tags if needed
+      if (taskData.tagNames && taskData.tagNames.length > 0) {
+        taskData.tags = await Promise.all(taskData.tagNames.map(async tagName => {
+          // Try to find an existing tag
+          const existingTag = tags.find(t => 
+            t.name.toLowerCase() === tagName.toLowerCase()
+          );
+          // Create a new tag if it doesn't exist
+          return existingTag || await addTag(tagName);
+        }));
+        delete taskData.tagNames;
+      } else {
+        taskData.tags = [];
+      }
+      
+      // Process people from names - create new people if needed
+      if (taskData.peopleNames && taskData.peopleNames.length > 0) {
+        taskData.people = await Promise.all(taskData.peopleNames.map(async personName => {
+          // Try to find an existing person
+          const existingPerson = people.find(p => 
+            p.name.toLowerCase() === personName.toLowerCase()
+          );
+          // Create a new person if they don't exist
+          return existingPerson || await addPerson(personName);
+        }));
+        delete taskData.peopleNames;
+      } else {
+        taskData.people = [];
+      }
+      
+      // Set default values for required fields
+      const newTask = {
+        title: taskData.title || quickTaskInput,
+        description: taskData.description || '',
+        priority: taskData.priority || 'normal',
+        dueDate: taskData.dueDate || null,
+        targetDeadline: taskData.targetDeadline || null,
+        goLiveDate: taskData.goLiveDate || null,
+        effortLevel: taskData.effortLevel || 4,
+        completed: false,
+        completedDate: null,
+        tags: taskData.tags,
+        people: taskData.people,
+      };
+      
+      addTask(newTask);
+      toast({ 
+        title: "Task created", 
+        description: `"${newTask.title}" has been created` 
       });
-      delete taskData.tagNames;
-    } else {
-      taskData.tags = [];
-    }
-    
-    // Process people from names - create new people if needed
-    if (taskData.peopleNames && taskData.peopleNames.length > 0) {
-      taskData.people = taskData.peopleNames.map(personName => {
-        // Try to find an existing person
-        const existingPerson = people.find(p => 
-          p.name.toLowerCase() === personName.toLowerCase()
-        );
-        // Create a new person if they don't exist
-        return existingPerson || addPerson(personName);
+      setQuickTaskInput('');
+    } catch (error) {
+      console.error("Error creating task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create task",
+        variant: "destructive"
       });
-      delete taskData.peopleNames;
-    } else {
-      taskData.people = [];
     }
-    
-    // Set default values for required fields
-    const newTask = {
-      title: taskData.title || quickTaskInput,
-      description: taskData.description || '',
-      priority: taskData.priority || 'normal',
-      dueDate: taskData.dueDate || null,
-      targetDeadline: taskData.targetDeadline || null,
-      goLiveDate: taskData.goLiveDate || null,
-      effortLevel: taskData.effortLevel || 4,
-      completed: false,
-      completedDate: null,
-      tags: taskData.tags,
-      people: taskData.people,
-    };
-    
-    addTask(newTask);
-    toast({ 
-      title: "Task created", 
-      description: `"${newTask.title}" has been created` 
-    });
-    setQuickTaskInput('');
   };
   
   if (isMobile) {

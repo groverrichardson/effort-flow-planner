@@ -63,12 +63,19 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Task priorities
+				// Task priorities with updated colors to match the DoNext palette
 				priority: {
 					high: '#F87171',
-					normal: '#60A5FA',
-					low: '#34D399',
-					lowest: '#A3E635'
+					normal: '#7F3FBF', // Purple from logo
+					low: '#34A8E0',    // Blue from logo
+					lowest: '#00B25B'  // Green from logo
+				},
+				// Logo colors
+				donext: {
+					purple: '#7F3FBF',
+					blue: '#34A8E0',
+					green: '#00B25B',
+					black: '#000000',
 				}
 			},
 			borderRadius: {

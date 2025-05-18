@@ -81,7 +81,13 @@ const Login = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome to TaskApp</CardTitle>
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/lovable-uploads/df8e6029-f2da-4281-bd02-198de6b96226.png" 
+              alt="Do Next Logo" 
+              className="h-12"
+            />
+          </div>
           <CardDescription>Sign in or create an account to manage your tasks</CardDescription>
         </CardHeader>
         <CardContent>

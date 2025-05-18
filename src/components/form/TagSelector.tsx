@@ -21,7 +21,9 @@ const TagSelector = ({
 }: TagSelectorProps) => {
   const [tagSearch, setTagSearch] = useState('');
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [forceOpen, setForceOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   const filteredTags = availableTags.filter(g => 
     g.name.toLowerCase().includes(tagSearch.toLowerCase()) && 
@@ -37,15 +39,13 @@ const TagSelector = ({
 
   // Handle input focus and showing suggestions
   const handleInputFocus = () => {
-    setIsPopoverOpen(true);
+    setForceOpen(true);
   };
 
   // Handle input changes and filtering
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTagSearch(e.target.value);
-    if (!isPopoverOpen) {
-      setIsPopoverOpen(true);
-    }
+    setForceOpen(true);
   };
 
   // Handle key press events for better UX
@@ -54,6 +54,7 @@ const TagSelector = ({
       e.preventDefault();
       handleAddNewTag();
     } else if (e.key === 'Escape') {
+      setForceOpen(false);
       setIsPopoverOpen(false);
     } else if (e.key === 'Tab' && filteredTags.length > 0) {
       e.preventDefault();
@@ -70,6 +71,37 @@ const TagSelector = ({
       }, 100);
     }
   }, [isPopoverOpen]);
+
+  // Handle clicks outside to close popover
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      // Don't close if clicking the input or the trigger
+      if (
+        inputRef.current && 
+        !inputRef.current.contains(event.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node)
+      ) {
+        setForceOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, []);
+
+  // When clicking the trigger, force the popover open
+  const handleTriggerClick = () => {
+    setForceOpen(true);
+    // Give focus to the input after a small delay
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 50);
+  };
 
   return (
     <div>
@@ -88,9 +120,14 @@ const TagSelector = ({
           </Badge>
         ))}
       </div>
-      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+      <Popover open={isPopoverOpen || forceOpen} onOpenChange={(open) => {
+        setIsPopoverOpen(open);
+        if (open) {
+          setForceOpen(true);
+        }
+      }}>
         <PopoverTrigger asChild>
-          <div className="relative">
+          <div className="relative" ref={triggerRef} onClick={handleTriggerClick}>
             <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={inputRef}

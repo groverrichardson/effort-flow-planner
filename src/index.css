@@ -5,6 +5,7 @@
 
 @layer base {
   :root {
+    /* Updated color scheme to match the DoNext logo */
     --background: 210 40% 98%;
     --foreground: 222.2 84% 4.9%;
 
@@ -14,7 +15,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 221.2 83% 53.3%;
+    /* Using purple and multicolor from logo */
+    --primary: 264 84% 74%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -23,7 +25,8 @@
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 221.2 83% 53.3%;
+    /* Accent color uses the logo's purple hue */
+    --accent: 264 84% 74%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84.2% 60.2%;
@@ -31,7 +34,7 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83% 53.3%;
+    --ring: 264 84% 74%;
 
     --radius: 0.5rem;
   }
@@ -46,7 +49,8 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217.2 91.2% 59.8%;
+    /* Using purple from logo */
+    --primary: 264 84% 74%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -55,7 +59,7 @@
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 217.2 91.2% 59.8%;
+    --accent: 264 84% 74%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 62.8% 30.6%;
@@ -63,7 +67,7 @@
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 264 84% 74%;
   }
 }
 
@@ -117,4 +121,15 @@
   .people-tag {
     @apply inline-flex items-center rounded-md bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 mr-1;
   }
+}
+
+/* Custom button styles to match the DoNext logo colors */
+.btn-donext {
+  background: linear-gradient(90deg, #000000, #7F3FBF, #34A8E0, #00B25B);
+  background-size: 300% 100%;
+  transition: background-position 0.5s;
+}
+
+.btn-donext:hover {
+  background-position: 100% 0;
 }

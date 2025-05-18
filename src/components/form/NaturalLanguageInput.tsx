@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface NaturalLanguageInputProps {
   value: string;
@@ -36,9 +37,9 @@ const NaturalLanguageInput = ({
   const [suggestions, setSuggestions] = useState<{ type: string, items: { id: string, name: string }[] }>({ type: '', items: [] });
   const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [tokens, setTokens] = useState<Token[]>([]);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const suggestionRef = useRef<HTMLDivElement>(null);
-  const highlightRef = useRef<HTMLDivElement>(null);
   
   // Process tokens when value changes
   useEffect(() => {
@@ -50,6 +51,7 @@ const NaturalLanguageInput = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (suggestionRef.current && !suggestionRef.current.contains(e.target as Node)) {
         setSuggestions({ type: '', items: [] });
+        setPopoverOpen(false);
       }
     };
 
@@ -189,6 +191,7 @@ const NaturalLanguageInput = ({
     if (e.key === 'Escape' && suggestions.items.length > 0) {
       e.preventDefault();
       setSuggestions({ type: '', items: [] });
+      setPopoverOpen(false);
       return;
     }
 
@@ -215,6 +218,7 @@ const NaturalLanguageInput = ({
   const checkForSuggestions = () => {
     if (!value || cursorPosition === 0) {
       setSuggestions({ type: '', items: [] });
+      setPopoverOpen(false);
       return;
     }
 
@@ -231,9 +235,11 @@ const NaturalLanguageInput = ({
           tag => tag.name.toLowerCase().includes(tagQuery)
         );
         setSuggestions({ type: 'tag', items: matchingTags });
+        setPopoverOpen(true);
       } else if (currentWord === '#') {
         // Show all tags when just the # is typed
         setSuggestions({ type: 'tag', items: tags });
+        setPopoverOpen(true);
       }
       return;
     }
@@ -246,15 +252,18 @@ const NaturalLanguageInput = ({
           person => person.name.toLowerCase().includes(personQuery)
         );
         setSuggestions({ type: 'person', items: matchingPeople });
+        setPopoverOpen(true);
       } else if (currentWord === '@') {
         // Show all people when just the @ is typed
         setSuggestions({ type: 'person', items: people });
+        setPopoverOpen(true);
       }
       return;
     }
 
     // No suggestions
     setSuggestions({ type: '', items: [] });
+    setPopoverOpen(false);
   };
 
   // Apply a suggestion
@@ -273,6 +282,7 @@ const NaturalLanguageInput = ({
     
     onChange(newText);
     setSuggestions({ type: '', items: [] });
+    setPopoverOpen(false);
   };
 
   // Track cursor position for suggestions
@@ -289,92 +299,53 @@ const NaturalLanguageInput = ({
     checkForSuggestions();
   };
 
-  // Create highlighted content with spans
-  const renderHighlightedContent = () => {
-    if (!value) return null;
-    
-    // Sort tokens by start position to process them in order
-    const sortedTokens = [...tokens].sort((a, b) => a.start - b.start);
-    
-    let result = [];
-    let lastIndex = 0;
-    
-    for (const token of sortedTokens) {
-      // Add text before the token
-      if (token.start > lastIndex) {
-        result.push(
-          <span key={`text-${lastIndex}`}>
-            {value.substring(lastIndex, token.start)}
-          </span>
-        );
-      }
-      
-      // Add the highlighted token
-      result.push(
-        <span 
-          key={`token-${token.start}`} 
-          style={{ 
-            backgroundColor: token.color,
-            borderRadius: '2px',
-          }}
-        >
-          {value.substring(token.start, token.end)}
-        </span>
-      );
-      
-      lastIndex = token.end;
-    }
-    
-    // Add remaining text after last token
-    if (lastIndex < value.length) {
-      result.push(
-        <span key={`text-end`}>
-          {value.substring(lastIndex)}
-        </span>
-      );
-    }
-    
-    // Always add a space at the end to ensure proper cursor positioning
-    result.push(
-      <span key="space-at-end">&nbsp;</span>
-    );
-    
-    return result;
-  };
-
   return (
     <div className="flex flex-col gap-2">
       <div className="relative">
-        <div className="relative">
-          {/* Background highlighting layer */}
-          <div 
-            ref={highlightRef}
-            className="absolute inset-0 p-2.5 whitespace-pre-wrap break-words pointer-events-none"
-            style={{ 
-              fontFamily: 'inherit',
-              fontSize: 'inherit',
-              lineHeight: '1.5rem'
-            }}
-          >
-            {renderHighlightedContent()}
-          </div>
-          
-          <Textarea
-            ref={textareaRef}
-            value={value}
-            onChange={handleInputChange}
-            placeholder={placeholder}
-            className="min-h-[60px] text-sm resize-none bg-transparent text-transparent caret-black"
-            onKeyDown={handleKeyDown}
-            autoFocus={autoFocus}
-            onSelect={handleCursorPositionChange}
-            onClick={handleCursorPositionChange}
-            style={{ caretColor: 'black' }}
-          />
+        <Textarea
+          ref={textareaRef}
+          value={value}
+          onChange={handleInputChange}
+          placeholder={placeholder}
+          className="min-h-[60px] text-sm resize-none"
+          onKeyDown={handleKeyDown}
+          autoFocus={autoFocus}
+          onSelect={handleCursorPositionChange}
+          onClick={handleCursorPositionChange}
+          style={{
+            caretColor: 'currentColor',
+          }}
+        />
+        
+        {/* Apply token highlighting with absolute positioned spans over the textarea */}
+        <div className="pointer-events-none absolute inset-0 p-3 text-sm">
+          {tokens.map((token, index) => {
+            // Create a marker element for highlighting
+            const beforeToken = value.substring(0, token.start);
+            const tokenText = value.substring(token.start, token.end);
+            
+            return (
+              <span 
+                key={`token-${index}`}
+                style={{
+                  position: 'absolute',
+                  left: '0',
+                  top: '0',
+                  padding: '12px',
+                  opacity: '0.3',
+                  backgroundColor: token.color,
+                  borderRadius: '2px',
+                  visibility: 'hidden', // Hide these markers, we're changing approach
+                }}
+              >
+                {tokenText}
+              </span>
+            );
+          })}
         </div>
         
-        {/* Display suggestions as a popup modal if available */}
-        {suggestions.items.length > 0 && (
+        {/* Display suggestions as a dropdown rather than a popover */}
+        {popoverOpen && suggestions.items.length > 0 && (
           <div 
             ref={suggestionRef}
             className="absolute z-50 bg-popover border rounded-md shadow-lg mt-1 w-60 max-h-[200px] overflow-y-auto"
@@ -386,22 +357,24 @@ const NaturalLanguageInput = ({
             <div className="px-3 py-2 border-b text-sm font-medium">
               {suggestions.type === 'tag' ? 'Tag Suggestions' : 'People Suggestions'}
             </div>
-            {suggestions.items.length === 0 ? (
-              <div className="px-3 py-2.5 text-sm text-muted-foreground">
-                No {suggestions.type === 'tag' ? 'tags' : 'people'} found
-              </div>
-            ) : (
-              suggestions.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="px-3 py-2.5 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
-                  onClick={() => applySuggestion(item)}
-                >
-                  <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>
-                  {item.name}
+            <div className="p-2 max-h-[150px] overflow-y-auto">
+              {suggestions.items.length === 0 ? (
+                <div className="px-3 py-2.5 text-sm text-muted-foreground">
+                  No {suggestions.type === 'tag' ? 'tags' : 'people'} found
                 </div>
-              ))
-            )}
+              ) : (
+                suggestions.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="px-3 py-2.5 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
+                    onClick={() => applySuggestion(item)}
+                  >
+                    <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>
+                    {item.name}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
       </div>
