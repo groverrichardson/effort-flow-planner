@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
-import { Task, Priority, EffortLevel } from '@/types';
+import { Task, Priority, EffortLevel, DueDateType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,17 +16,19 @@ import { format, addDays, addWeeks, addMonths } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
 import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
 
-// Import our new components
+// Import our components
 import DatePickerField from './form/DatePickerField';
 import TagSelector from './form/TagSelector';
 import PeopleSelector from './form/PeopleSelector';
 import TaskFormActions from './form/TaskFormActions';
+import DependenciesSelector from './form/DependenciesSelector';
+import DueDateTypeSelector from './form/DueDateTypeSelector';
 
 interface TaskFormProps {
   task?: Task;
   onSuccess?: () => void;
   onCancel?: () => void;
-  onDelete?: (taskId: string) => void; // Added this property
+  onDelete?: (taskId: string) => void;
 }
 
 const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -33,17 +36,19 @@ const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
   description: '',
   priority: 'normal' as Priority,
   dueDate: null,
+  dueDateType: 'by' as DueDateType,
   targetDeadline: null,
   goLiveDate: null,
   effortLevel: 1 as EffortLevel,
   completed: false,
   completedDate: null,
   tags: [],
-  people: []
+  people: [],
+  dependencies: []
 };
 
 const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
-  const { addTask, updateTask, tags, people, addTag, addPerson } = useTaskContext();
+  const { addTask, updateTask, tags, people, addTag, addPerson, tasks } = useTaskContext();
   const [formData, setFormData] = useState(task || defaultTask);
   const isEditing = !!task;
 
@@ -83,6 +88,7 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
     }
   }, [formData.effortLevel, isEditing, task?.targetDeadline]);
 
+  // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -100,6 +106,10 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
     setFormData(prev => ({ ...prev, [field]: date }));
     // Auto-close the popover after selection by triggering a click outside event
     document.body.click();
+  };
+
+  const handleDueDateTypeChange = (value: DueDateType) => {
+    setFormData(prev => ({ ...prev, dueDateType: value }));
   };
 
   const handleTagToggle = (tagId: string) => {
@@ -130,6 +140,19 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
         people: isSelected 
           ? prev.people.filter(p => p.id !== personId)
           : [...prev.people, selectedPerson]
+      };
+    });
+  };
+
+  const handleDependencyToggle = (taskId: string) => {
+    setFormData(prev => {
+      const isSelected = prev.dependencies.includes(taskId);
+      
+      return {
+        ...prev,
+        dependencies: isSelected 
+          ? prev.dependencies.filter(id => id !== taskId)
+          : [...prev.dependencies, taskId]
       };
     });
   };
@@ -288,11 +311,19 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <DatePickerField 
-          label="Due Date" 
-          value={formData.dueDate} 
-          onChange={(date) => handleDateChange(date, 'dueDate')} 
-        />
+        <div className="flex items-end gap-1">
+          <DatePickerField 
+            label="Due Date" 
+            value={formData.dueDate} 
+            onChange={(date) => handleDateChange(date, 'dueDate')} 
+          />
+          {formData.dueDate && (
+            <DueDateTypeSelector 
+              value={formData.dueDateType} 
+              onChange={handleDueDateTypeChange} 
+            />
+          )}
+        </div>
         <DatePickerField 
           label="Target Deadline" 
           value={formData.targetDeadline} 
@@ -317,6 +348,13 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
         availablePeople={people}
         onTogglePerson={handlePersonToggle}
         onAddNewPerson={handleAddNewPerson}
+      />
+      
+      <DependenciesSelector 
+        selectedDependencies={formData.dependencies}
+        availableTasks={tasks}
+        currentTaskId={isEditing ? task?.id : undefined}
+        onToggleDependency={handleDependencyToggle}
       />
 
       <TaskFormActions 

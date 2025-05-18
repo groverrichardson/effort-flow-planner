@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Task, Tag, Person, Priority, EffortLevel } from '@/types';
+import { Task, Tag, Person, Priority, EffortLevel, DueDateType } from '@/types';
 
 export const TaskService = {
   // Tasks
@@ -34,6 +34,7 @@ export const TaskService = {
         description: task.description || '',
         priority: task.priority as Priority,
         dueDate: task.due_date ? new Date(task.due_date) : null,
+        dueDateType: (task.due_date_type as DueDateType) || 'by', // Default to 'by' for backward compatibility
         targetDeadline: task.target_deadline ? new Date(task.target_deadline) : null,
         goLiveDate: task.go_live_date ? new Date(task.go_live_date) : null,
         effortLevel: task.effort_level as EffortLevel,
@@ -41,6 +42,7 @@ export const TaskService = {
         completedDate: task.completed_date ? new Date(task.completed_date) : null,
         tags: (tagData || []).map(tag => ({ id: tag.tag_id, name: tag.tag_name })),
         people: (peopleData || []).map(person => ({ id: person.person_id, name: person.person_name })),
+        dependencies: task.dependencies || [], // Get dependencies or default to empty array
         createdAt: new Date(task.created_at),
         updatedAt: new Date(task.updated_at)
       };
@@ -63,11 +65,13 @@ export const TaskService = {
         description: task.description,
         priority: task.priority,
         due_date: task.dueDate ? task.dueDate.toISOString() : null,
+        due_date_type: task.dueDateType || 'by', // Store due date type
         target_deadline: task.targetDeadline ? task.targetDeadline.toISOString() : null,
         go_live_date: task.goLiveDate ? task.goLiveDate.toISOString() : null,
         effort_level: task.effortLevel,
         completed: task.completed,
-        completed_date: task.completedDate ? task.completedDate.toISOString() : null
+        completed_date: task.completedDate ? task.completedDate.toISOString() : null,
+        dependencies: task.dependencies || [] // Store dependencies
       })
       .select()
       .single();
@@ -118,6 +122,7 @@ export const TaskService = {
       description: data.description || '',
       priority: data.priority as Priority,
       dueDate: data.due_date ? new Date(data.due_date) : null,
+      dueDateType: (data.due_date_type as DueDateType) || 'by',
       targetDeadline: data.target_deadline ? new Date(data.target_deadline) : null,
       goLiveDate: data.go_live_date ? new Date(data.go_live_date) : null,
       effortLevel: data.effort_level as EffortLevel,
@@ -125,6 +130,7 @@ export const TaskService = {
       completedDate: data.completed_date ? new Date(data.completed_date) : null,
       tags: task.tags,
       people: task.people,
+      dependencies: data.dependencies || [],
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
@@ -139,11 +145,13 @@ export const TaskService = {
         description: task.description,
         priority: task.priority,
         due_date: task.dueDate ? task.dueDate.toISOString() : null,
+        due_date_type: task.dueDateType || 'by',
         target_deadline: task.targetDeadline ? task.targetDeadline.toISOString() : null,
         go_live_date: task.goLiveDate ? task.goLiveDate.toISOString() : null,
         effort_level: task.effortLevel,
         completed: task.completed,
         completed_date: task.completedDate ? task.completedDate.toISOString() : null,
+        dependencies: task.dependencies || [],
         updated_at: new Date().toISOString()
       })
       .eq('id', task.id);
