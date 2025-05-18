@@ -35,11 +35,15 @@ const QuickTaskInput = () => {
       // Process people from names - create new people if needed
       let peopleToAdd = [];
       if (taskData.peopleNames && taskData.peopleNames.length > 0) {
-        peopleToAdd = await Promise.all(taskData.peopleNames.map(async personName => {
-          // Try to find an existing person
+        // Limit to a maximum of 2 people
+        const limitedPeopleNames = taskData.peopleNames.slice(0, 2);
+        
+        peopleToAdd = await Promise.all(limitedPeopleNames.map(async personName => {
+          // Try to find an existing person by exact match
           const existingPerson = people.find(p => 
             p.name.toLowerCase() === personName.toLowerCase()
           );
+          
           // Create a new person if they don't exist
           return existingPerson || await addPerson(personName);
         }));

@@ -1,4 +1,3 @@
-
 import { useState, KeyboardEvent, useEffect, useRef } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -59,10 +58,9 @@ const NaturalLanguageInput = ({
         regex: /#([^\s#@]+)/g, 
         type: 'tag' 
       },
-      // People (@person - limit to 2 names max with better boundary detection)
-      // This regex will match up to 2 @ mentions, each followed by words until space, @, or # is encountered
+      // People (@person - improved to handle full names better)
       { 
-        regex: /@([^\s#@]+)/g,
+        regex: /@([^\s#@]+(?:\s+[^\s#@]+)*)/g,
         type: 'person' 
       },
       // Priority keywords
@@ -89,17 +87,39 @@ const NaturalLanguageInput = ({
       const regex = new RegExp(pattern.regex);
       let match;
       
-      // For person type, only capture first two matches
       if (pattern.type === 'person') {
-        let personCount = 0;
-        while ((match = regex.exec(value)) !== null && personCount < 2) {
-          matches.push({
-            start: match.index,
-            end: match.index + match[0].length,
-            text: match[0],
-            type: pattern.type
-          });
-          personCount++;
+        // Find all @ mentions in the text
+        const atPositions: number[] = [];
+        let position = -1;
+        while ((position = value.indexOf('@', position + 1)) !== -1) {
+          atPositions.push(position);
+        }
+        
+        // Only process the first two @ mentions (limit to 2 people)
+        const limitedAtPositions = atPositions.slice(0, 2);
+        
+        for (const position of limitedAtPositions) {
+          // Find the start of the next @ or # after this position
+          const nextAtPos = value.indexOf('@', position + 1);
+          const nextHashPos = value.indexOf('#', position + 1);
+          
+          let endPos = value.length;
+          if (nextAtPos !== -1) endPos = Math.min(endPos, nextAtPos);
+          if (nextHashPos !== -1) endPos = Math.min(endPos, nextHashPos);
+          
+          // Extract the potential name including @ symbol
+          const potentialNameWithAt = value.substring(position, endPos).trim();
+          
+          // Use regex to match the name part
+          const nameMatch = potentialNameWithAt.match(/@([^\s#@]+(?:\s+[^\s#@]+)*)/);
+          if (nameMatch) {
+            matches.push({
+              start: position,
+              end: position + nameMatch[0].length,
+              text: nameMatch[0],
+              type: pattern.type
+            });
+          }
         }
       } else {
         // Normal processing for other token types
@@ -182,49 +202,54 @@ const NaturalLanguageInput = ({
 
     // Get the word being typed
     const textBeforeCursor = value.substring(0, cursorPosition);
-    const words = textBeforeCursor.split(/\s+/);
-    const currentWord = words[words.length - 1];
-
-    // Check for tag suggestions
-    if (currentWord.startsWith('#')) {
-      const tagQuery = currentWord.substring(1).toLowerCase();
-      if (tagQuery.length > 0) {
-        const matchingTags = tags.filter(
-          tag => tag.name.toLowerCase().includes(tagQuery)
-        );
-        setSuggestions({ type: 'tag', items: matchingTags });
-        setPopoverOpen(true);
-      } else if (currentWord === '#') {
-        // Show all tags when just the # is typed
-        setSuggestions({ type: 'tag', items: tags });
-        setPopoverOpen(true);
-      }
-      return;
-    }
-
-    // Check for people suggestions, but only if we haven't already matched 2 people
-    if (currentWord.startsWith('@')) {
-      // Count existing person tokens to make sure we don't suggest more than 2
-      const existingPersonTokens = tokens.filter(t => t.type === 'person').length;
+    
+    // Check for @ mentions and suggest people
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      // Count existing @ symbols to enforce the limit of 2 people
+      const atCount = (value.match(/@/g) || []).length;
       
-      if (existingPersonTokens < 2) {
-        const personQuery = currentWord.substring(1).toLowerCase();
-        if (personQuery.length > 0) {
+      // Only show suggestions if we have fewer than 2 @ symbols or if we're editing an existing one
+      if (atCount <= 2) {
+        // Get text from @ to cursor as the search query
+        const query = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
+        
+        // Show matching people or all people if just @ is typed
+        if (query.length > 0) {
           const matchingPeople = people.filter(
-            person => person.name.toLowerCase().includes(personQuery)
+            person => person.name.toLowerCase().includes(query)
           );
           setSuggestions({ type: 'person', items: matchingPeople });
-          setPopoverOpen(true);
-        } else if (currentWord === '@') {
-          // Show all people when just the @ is typed
+          setPopoverOpen(matchingPeople.length > 0);
+        } else {
+          // When just @ is typed, show all people
           setSuggestions({ type: 'person', items: people });
-          setPopoverOpen(true);
+          setPopoverOpen(people.length > 0);
         }
       }
       return;
     }
+    
+    // Check for tag suggestions
+    const lastHashIndex = textBeforeCursor.lastIndexOf('#');
+    if (lastHashIndex !== -1) {
+      const query = textBeforeCursor.substring(lastHashIndex + 1).toLowerCase();
+      
+      if (query.length > 0) {
+        const matchingTags = tags.filter(
+          tag => tag.name.toLowerCase().includes(query)
+        );
+        setSuggestions({ type: 'tag', items: matchingTags });
+        setPopoverOpen(matchingTags.length > 0);
+      } else {
+        // Show all tags when just # is typed
+        setSuggestions({ type: 'tag', items: tags });
+        setPopoverOpen(tags.length > 0);
+      }
+      return;
+    }
 
-    // No suggestions
+    // No suggestions if not typing a tag or person
     setSuggestions({ type: '', items: [] });
     setPopoverOpen(false);
   };
@@ -276,19 +301,21 @@ const NaturalLanguageInput = ({
     
     if (lastAtIndex >= 0 && (lastHashIndex < 0 || lastAtIndex > lastHashIndex)) {
       // Count existing person mentions to enforce limit of 2
-      const existingPersons = (value.match(/@[^\s#@]+/g) || []).length;
-      if (existingPersons < 2 || beforeCursor.substring(lastAtIndex).includes('@')) {
+      const atCount = (value.match(/@/g) || []).length;
+      
+      // If we have less than 2 mentions or we're editing an existing one
+      if (atCount < 3) {
         // Replace from @ to cursor position with suggestion and add a space
         const newText = beforeCursor.substring(0, lastAtIndex) + 
-                        '@' + suggestion.name + ' ' + 
-                        afterCursor;
+                      '@' + suggestion.name + ' ' + 
+                      afterCursor;
         onChange(newText);
       }
     } else if (lastHashIndex >= 0) {
       // Replace from # to cursor position with suggestion and add a space
       const newText = beforeCursor.substring(0, lastHashIndex) + 
-                      '#' + suggestion.name + ' ' + 
-                      afterCursor;
+                    '#' + suggestion.name + ' ' + 
+                    afterCursor;
       onChange(newText);
     }
     

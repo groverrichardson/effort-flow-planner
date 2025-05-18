@@ -25,7 +25,7 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
   // If we're rendering as buttons (for mobile)
   if (size) {
     return (
-      <div className={className}>
+      <div className={`${className} flex flex-wrap gap-1`}>
         {people.length > 0 ? (
           people.map((person) => (
             <Button
@@ -33,7 +33,7 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
               variant={selectedPeople.includes(person.id) ? "default" : "outline"}
               size={compact ? "xs" : size}
               onClick={() => onTogglePerson(person.id)}
-              className={`${fullWidth ? "w-full justify-between" : ""} ${compact ? "h-6 text-xs py-0" : ""}`}
+              className={`${fullWidth ? "justify-between" : ""} ${compact ? "h-6 text-xs py-0" : ""}`}
             >
               {person.name}
             </Button>
