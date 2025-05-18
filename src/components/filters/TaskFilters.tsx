@@ -37,8 +37,8 @@ interface TaskFiltersProps {
 }
 
 const TaskFilters: React.FC<TaskFiltersProps> = ({
-  selectedTags,
-  selectedPeople,
+  selectedTags = [],
+  selectedPeople = [],
   selectedPriorities = [],
   filterByDueDate = 'all',
   filterByGoLive = false,
@@ -50,8 +50,8 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
   onResetFilters,
   showCompleted = false,
   onToggleShowCompleted = () => {},
-  tags,
-  people,
+  tags = [],
+  people = [],
   inMobileMenu = false,
   
   // View options
@@ -92,8 +92,8 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
         onShowAllActive={onShowAllActive}
         onShowToday={onShowToday}
         onShowCompleted={onShowCompleted}
-        tags={tags}
-        people={people}
+        tags={tags || []}
+        people={people || []}
         hasActiveFilters={hasActiveFilters}
         onCreateTask={onCreateTask}
       />
@@ -119,8 +119,8 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
           onResetFilters={onResetFilters}
           onToggleShowCompleted={onToggleShowCompleted}
           hasActiveFilters={hasActiveFilters}
-          tags={tags}
-          people={people}
+          tags={tags || []}
+          people={people || []}
           viewingCompleted={viewingCompleted}
           showTodaysTasks={showTodaysTasks}
           onShowAllActive={onShowAllActive}
@@ -139,8 +139,8 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
           onTogglePriority={onTogglePriority}
           onSetFilterByDueDate={onSetFilterByDueDate}
           onSetFilterByGoLive={onSetFilterByGoLive}
-          tags={tags}
-          people={people}
+          tags={tags || []}
+          people={people || []}
         />
       </div>
     </div>
