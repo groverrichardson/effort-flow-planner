@@ -22,22 +22,40 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
   fullWidth,
   compact = false
 }) => {
+  // Helper function to get initials from full name
+  const getInitials = (name: string): string => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2); // Limit to 2 characters
+  };
+  
   // If we're rendering as buttons (for mobile)
   if (size) {
     return (
       <div className={`${className} flex flex-wrap gap-1`}>
         {people.length > 0 ? (
-          people.map((person) => (
-            <Button
-              key={person.id}
-              variant={selectedPeople.includes(person.id) ? "default" : "outline"}
-              size={compact ? "xs" : size}
-              onClick={() => onTogglePerson(person.id)}
-              className={`${fullWidth ? "justify-between" : ""} ${compact ? "h-6 text-xs py-0" : ""}`}
-            >
-              {person.name}
-            </Button>
-          ))
+          people.map((person) => {
+            // For buttons, show initials for names longer than 10 characters
+            const displayName = person.name.length > 10 
+              ? getInitials(person.name) 
+              : person.name;
+            
+            return (
+              <Button
+                key={person.id}
+                variant={selectedPeople.includes(person.id) ? "default" : "outline"}
+                size={compact ? "xs" : size}
+                onClick={() => onTogglePerson(person.id)}
+                className={`${fullWidth ? "justify-between" : ""} ${compact ? "h-6 text-xs py-0" : ""}`}
+                title={person.name} // Show full name on hover
+              >
+                {displayName}
+              </Button>
+            );
+          })
         ) : (
           <div className="text-muted-foreground text-xs">No people available</div>
         )}

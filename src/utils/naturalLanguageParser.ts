@@ -1,8 +1,196 @@
+
 import { addDays, addWeeks, addMonths, parse, isValid, getDay } from 'date-fns';
 import { Priority, EffortLevel } from '@/types';
+import { supabase } from "@/integrations/supabase/client";
 
-// Improved natural language task parser
-export const naturalLanguageToTask = (input: string) => {
+// Helper function to use Gemini for enhanced parsing
+async function enhanceWithGemini(input: string) {
+  try {
+    const { data, error } = await supabase.functions.invoke('parse-natural-language', {
+      body: { text: input },
+    });
+
+    if (error) {
+      console.error('Error calling parse-natural-language function:', error);
+      return null;
+    }
+
+    if (!data.success) {
+      console.error('Parse function unsuccessful:', data);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in enhanceWithGemini:', error);
+    return null;
+  }
+}
+
+// Converts date strings from Gemini to actual Date objects
+function parseDateFromGemini(dateString: string | null): Date | null {
+  if (!dateString) return null;
+  
+  const today = new Date();
+  
+  // Check for common date patterns
+  if (dateString.toLowerCase().includes('today')) {
+    return today;
+  } else if (dateString.toLowerCase().includes('tomorrow')) {
+    return addDays(today, 1);
+  } else if (dateString.toLowerCase().includes('next week')) {
+    return addWeeks(today, 1);
+  }
+  
+  // Try to parse with date-fns
+  try {
+    const formats = ['MMM d yyyy', 'M/d/yyyy', 'M-d-yyyy', 'yyyy-MM-dd'];
+    for (const format of formats) {
+      const parsedDate = parse(dateString, format, new Date());
+      if (isValid(parsedDate)) return parsedDate;
+    }
+  } catch (e) {
+    console.error("Error parsing date from Gemini:", e);
+  }
+  
+  return null;
+}
+
+// Map effort string from Gemini to EffortLevel
+function mapEffortLevelFromGemini(effortString: string | null): EffortLevel | null {
+  if (!effortString) return null;
+  
+  const effortLower = effortString.toLowerCase();
+  
+  if (effortLower.includes('minute') || effortLower.includes('quick')) {
+    return effortLower.includes('30') ? 2 : 1;
+  } else if (effortLower.includes('hour')) {
+    return 4;
+  } else if (effortLower.includes('day')) {
+    return 8;
+  } else if (effortLower.includes('week')) {
+    return effortLower.includes('couple') || effortLower.includes('few') ? 32 : 16;
+  } else if (effortLower.includes('month')) {
+    return 64;
+  }
+  
+  return null;
+}
+
+// Map priority string from Gemini to Priority
+function mapPriorityFromGemini(priorityString: string | null): Priority | null {
+  if (!priorityString) return null;
+  
+  const priorityLower = priorityString.toLowerCase();
+  
+  if (priorityLower === 'high') {
+    return 'high' as Priority;
+  } else if (priorityLower === 'normal') {
+    return 'normal' as Priority;
+  } else if (priorityLower === 'low') {
+    return 'low' as Priority;
+  } else if (priorityLower === 'lowest') {
+    return 'lowest' as Priority;
+  }
+  
+  return null;
+}
+
+// Enhanced natural language task parser
+export const naturalLanguageToTask = async (input: string) => {
+  const taskData: any = {};
+  let title = input;
+  
+  // First try to enhance with Gemini
+  try {
+    const enhancedData = await enhanceWithGemini(input);
+    
+    if (enhancedData) {
+      console.log('Enhanced data from Gemini:', enhancedData);
+      
+      // Process people (full names supported through Gemini)
+      if (enhancedData.people && enhancedData.people.length > 0) {
+        // Limit to 2 people
+        const limitedPeople = enhancedData.people.slice(0, 2);
+        taskData.peopleNames = limitedPeople;
+        
+        // Remove the @mentions from the title
+        limitedPeople.forEach(person => {
+          const personWithAt = `@${person}`;
+          title = title.replace(new RegExp(personWithAt, 'gi'), '');
+        });
+      }
+      
+      // Process tags
+      if (enhancedData.tags && enhancedData.tags.length > 0) {
+        taskData.tagNames = enhancedData.tags;
+        
+        // Remove the hashtags from the title
+        enhancedData.tags.forEach(tag => {
+          const tagWithHash = `#${tag}`;
+          title = title.replace(new RegExp(tagWithHash, 'gi'), '');
+        });
+      }
+      
+      // Process priority
+      const priority = mapPriorityFromGemini(enhancedData.priority);
+      if (priority) {
+        taskData.priority = priority;
+        
+        // Remove priority mentions from title
+        const priorityRegex = new RegExp(`\\b(${enhancedData.priority} priority|${enhancedData.priority})\\b`, 'gi');
+        title = title.replace(priorityRegex, '');
+      }
+      
+      // Process due date
+      const dueDate = parseDateFromGemini(enhancedData.dueDate);
+      if (dueDate) {
+        taskData.dueDate = dueDate;
+        
+        // Remove due date mentions from title (this is a simplification, actual implementation would be more complex)
+        if (enhancedData.dueDate) {
+          const dueDateRegex = new RegExp(`\\bdue\\s+${enhancedData.dueDate}\\b|\\b${enhancedData.dueDate}\\b`, 'gi');
+          title = title.replace(dueDateRegex, '');
+        }
+      }
+      
+      // Process effort level
+      const effortLevel = mapEffortLevelFromGemini(enhancedData.effort);
+      if (effortLevel) {
+        taskData.effortLevel = effortLevel;
+        
+        // Remove effort mentions from title (also a simplification)
+        if (enhancedData.effort) {
+          const effortRegex = new RegExp(`\\b${enhancedData.effort}\\b`, 'gi');
+          title = title.replace(effortRegex, '');
+        }
+      }
+      
+      // Fall back to traditional parsing if needed for certain fields
+      // ...
+    } else {
+      console.log('Falling back to traditional parsing');
+      return traditionalNaturalLanguageToTask(input);
+    }
+  } catch (error) {
+    console.error('Error in enhanced parsing, falling back to traditional parsing:', error);
+    return traditionalNaturalLanguageToTask(input);
+  }
+  
+  // Clean up the title by removing extra spaces and trimming
+  title = title.replace(/\s+/g, ' ').trim();
+  taskData.title = title;
+  
+  // Add a description if the original input is significantly different from the title
+  if (input.length > title.length + 10) {
+    taskData.description = `Original input: ${input}`;
+  }
+  
+  return taskData;
+};
+
+// The original parser function renamed as fallback
+function traditionalNaturalLanguageToTask(input: string) {
   const taskData: any = {};
   const lowerInput = input.toLowerCase();
   
@@ -215,4 +403,4 @@ export const naturalLanguageToTask = (input: string) => {
   }
   
   return taskData;
-};
+}

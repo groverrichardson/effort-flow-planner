@@ -5,17 +5,23 @@ import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
 import NaturalLanguageInput from '@/components/form/NaturalLanguageInput';
 import { toast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 const QuickTaskInput = () => {
   const { addTask, tags, people, addTag, addPerson } = useTaskContext();
   const [quickTaskInput, setQuickTaskInput] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const isMobile = useIsMobile();
   
   const handleQuickTaskSubmit = async () => {
     if (!quickTaskInput.trim()) return;
     
     try {
-      const taskData = naturalLanguageToTask(quickTaskInput);
+      setIsProcessing(true);
+      
+      // Use the enhanced natural language parser (now async)
+      const taskData = await naturalLanguageToTask(quickTaskInput);
       
       // Process tags from names - create new tags if needed
       if (taskData.tagNames && taskData.tagNames.length > 0) {
@@ -81,18 +87,27 @@ const QuickTaskInput = () => {
         description: "Failed to create task",
         variant: "destructive"
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
   
   if (isMobile) {
     return (
       <div>
-        <NaturalLanguageInput
-          value={quickTaskInput}
-          onChange={setQuickTaskInput}
-          onSubmit={handleQuickTaskSubmit}
-          placeholder="What would you like to get done?"
-        />
+        {isProcessing ? (
+          <div className="flex items-center space-x-2 mb-4 p-2 border border-input rounded-md bg-muted/20">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <p className="text-sm">Processing your task with AI...</p>
+          </div>
+        ) : (
+          <NaturalLanguageInput
+            value={quickTaskInput}
+            onChange={setQuickTaskInput}
+            onSubmit={handleQuickTaskSubmit}
+            placeholder="What would you like to get done?"
+          />
+        )}
         <div className="mt-1 text-xs text-muted-foreground">
           Use #tag for tags, @person for people, "high priority" or dates like "due tomorrow"
         </div>
@@ -102,12 +117,19 @@ const QuickTaskInput = () => {
   
   return (
     <div className="mb-6">
-      <NaturalLanguageInput
-        value={quickTaskInput}
-        onChange={setQuickTaskInput}
-        onSubmit={handleQuickTaskSubmit}
-        autoFocus={true}
-      />
+      {isProcessing ? (
+        <div className="flex items-center space-x-2 mb-4 p-2 border border-input rounded-md bg-muted/20">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <p className="text-sm">Processing your task with AI...</p>
+        </div>
+      ) : (
+        <NaturalLanguageInput
+          value={quickTaskInput}
+          onChange={setQuickTaskInput}
+          onSubmit={handleQuickTaskSubmit}
+          autoFocus={true}
+        />
+      )}
       <div className="mt-1 text-xs text-muted-foreground">
         Pro tip: Use #tag for tags, @person for people, "high priority" or dates like "due tomorrow"
       </div>
