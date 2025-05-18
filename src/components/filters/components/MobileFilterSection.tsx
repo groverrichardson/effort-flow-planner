@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FilterX } from 'lucide-react';
+import { FilterX, Plus } from 'lucide-react';
 import { Priority } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -45,6 +45,9 @@ interface MobileFiltersProps {
   onShowAllActive?: () => void;
   onShowToday?: () => void;
   onShowCompleted?: () => void;
+  
+  // Create task button option
+  onCreateTask?: () => void;
 }
 
 export const MobileFilters: React.FC<MobileFiltersProps> = ({
@@ -63,7 +66,8 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
   onToggleShowCompleted,
   tags,
   people,
-  hasActiveFilters
+  hasActiveFilters,
+  onCreateTask
 }) => {
   return (
     <div className="space-y-4 pr-1">
@@ -164,6 +168,19 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
         >
           {showCompleted ? "Hide Completed" : "Show Completed"}
         </Button>
+      )}
+      
+      {/* New Task button - positioned above logout button in mobile menu */}
+      {onCreateTask && (
+        <div className="pt-4 border-t mt-4">
+          <Button 
+            onClick={onCreateTask}
+            className="w-full flex items-center justify-center"
+          >
+            <Plus size={18} className="mr-2" />
+            New Task
+          </Button>
+        </div>
       )}
     </div>
   );

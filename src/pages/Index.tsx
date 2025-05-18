@@ -72,7 +72,8 @@ const Index = () => {
     onTogglePriority: handleTogglePriority,
     onSetFilterByDueDate: setFilterByDueDate,
     onSetFilterByGoLive: setFilterByGoLive,
-    onResetFilters: clearAllFilters
+    onResetFilters: clearAllFilters,
+    onCreateTask: () => setCreateTaskOpen(true)
   };
   
   return (

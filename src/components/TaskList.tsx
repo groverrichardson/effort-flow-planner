@@ -36,10 +36,10 @@ const TaskList = () => {
     handleShowCompleted
   } = useTaskFiltering({ tasks, getTodaysCompletedTasks });
 
-  // Memoize the filtered tasks to prevent unnecessary re-renders
+  // Update visible tasks whenever filters change
   useEffect(() => {
     setVisibleTasks(filteredTasks);
-  }, [filteredTasks]);
+  }, [filteredTasks, selectedPriorities, selectedTags, selectedPeople, filterByDueDate, filterByGoLive]);
 
   // Get all unique tags from tasks
   const allTags = tasks.reduce((allTags, task) => {
@@ -103,7 +103,9 @@ const TaskList = () => {
     showTodaysTasks,
     onShowAllActive: handleShowAllActive,
     onShowToday: handleShowToday,
-    onShowCompleted: handleShowCompleted
+    onShowCompleted: handleShowCompleted,
+    tags: allTags,
+    people: allPeople
   };
 
   return (

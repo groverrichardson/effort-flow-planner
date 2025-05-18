@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Task } from '@/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -34,6 +35,7 @@ const TaskDialogs = ({
   const handleDelete = () => {
     if (currentEditTask) {
       onDeleteTask(currentEditTask.id);
+      // Single toast with auto-dismissal
       toast({ 
         title: "Task deleted", 
         description: `"${currentEditTask.title}" has been removed` 

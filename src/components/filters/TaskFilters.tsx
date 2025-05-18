@@ -31,6 +31,9 @@ interface TaskFiltersProps {
   onShowAllActive?: () => void;
   onShowToday?: () => void;
   onShowCompleted?: () => void;
+  
+  // Add create task option for mobile
+  onCreateTask?: () => void;
 }
 
 const TaskFilters: React.FC<TaskFiltersProps> = ({
@@ -57,6 +60,9 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
   onShowAllActive = () => {},
   onShowToday = () => {},
   onShowCompleted = () => {},
+  
+  // Create task option
+  onCreateTask
 }) => {
   const isMobile = useIsMobile();
   const hasActiveFilters = selectedTags.length > 0 || 
@@ -90,6 +96,7 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
         onShowAllActive={onShowAllActive}
         onShowToday={onShowToday}
         onShowCompleted={onShowCompleted}
+        onCreateTask={onCreateTask}
       />
     );
   }
