@@ -23,6 +23,7 @@ export const naturalLanguageToTask = (input: string) => {
   const peopleMatches = input.match(/(@\w+)/g) || [];
   if (peopleMatches.length > 0) {
     peopleMatches.forEach(person => {
+      // Remove @people completely from the title
       title = title.replace(person, '');
     });
     taskData.peopleNames = peopleMatches.map(person => person.replace('@', ''));

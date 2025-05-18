@@ -44,16 +44,6 @@ const QuickTaskInput = () => {
           return existingPerson || await addPerson(personName);
         }));
         taskData.people = peopleToAdd;
-        
-        // Clean up the title by removing @people references
-        if (taskData.title) {
-          taskData.peopleNames.forEach(personName => {
-            const personRegex = new RegExp(`@${personName}\\s*`, 'gi');
-            taskData.title = taskData.title.replace(personRegex, '');
-          });
-          taskData.title = taskData.title.trim();
-        }
-        
         delete taskData.peopleNames;
       } else {
         taskData.people = [];

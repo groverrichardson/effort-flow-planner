@@ -36,58 +36,107 @@ const NaturalLanguageInput = ({
   const [suggestions, setSuggestions] = useState<{ type: string, items: { id: string, name: string }[] }>({ type: '', items: [] });
   const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState<string>('');
+  const [tokens, setTokens] = useState<Token[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const suggestionRef = useRef<HTMLDivElement>(null);
+  const displayRef = useRef<HTMLDivElement>(null);
   
-  // Process text for highlighting when value changes
+  // Process text for tokenization and highlighting when value changes
   useEffect(() => {
     if (!value) {
-      setHighlighted('');
+      setTokens([]);
       return;
     }
     
-    let highlightedText = value;
+    const newTokens: Token[] = [];
+    let currentPosition = 0;
+    let remainingText = value;
     
-    // Match tags (#tag)
-    highlightedText = highlightedText.replace(
-      /#(\w+)/g, 
-      '<span class="bg-purple-100 text-purple-800 rounded-sm px-0.5">$&</span>'
-    );
-    
-    // Match people (@person)
-    highlightedText = highlightedText.replace(
-      /@(\w+)/g, 
-      '<span class="bg-blue-100 text-blue-800 rounded-sm px-0.5">$&</span>'
-    );
-    
-    // Match priority keywords
-    const priorityRegex = /\b(high priority|low priority|urgent|important)\b/gi;
-    highlightedText = highlightedText.replace(
-      priorityRegex,
-      (match) => {
-        const color = match.toLowerCase().includes('high') || match.toLowerCase().includes('urgent') 
-          ? 'bg-red-100 text-red-800' 
-          : 'bg-purple-100 text-purple-800';
-        return `<span class="${color} rounded-sm px-0.5">${match}</span>`;
+    // Match all tokens
+    const tokenPatterns = [
+      // Tags (#tag)
+      { 
+        regex: /#([^\s#@]+)/g, 
+        type: 'tag' 
+      },
+      // People (@person)
+      { 
+        regex: /@([^\s#@]+)/g, 
+        type: 'person' 
+      },
+      // Priority keywords
+      { 
+        regex: /\b(high priority|low priority|urgent|important)\b/gi, 
+        type: 'priority' 
+      },
+      // Date keywords
+      { 
+        regex: /\b(tomorrow|today|due tomorrow|due today|due (on )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/gi, 
+        type: 'date' 
+      },
+      // Effort keywords
+      { 
+        regex: /\b(5 minutes|15 minutes|30 minutes|half hour|couple hours|few hours|all day|one day|full day|this week|several days|couple weeks|few weeks|month|long term|big project)\b/gi, 
+        type: 'effort' 
       }
-    );
+    ];
     
-    // Match date keywords
-    const dateRegex = /\b(tomorrow|today|due tomorrow|due today|due (on )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/gi;
-    highlightedText = highlightedText.replace(
-      dateRegex,
-      '<span class="bg-orange-100 text-orange-800 rounded-sm px-0.5">$&</span>'
-    );
+    // Find all matches for all patterns
+    const matches: {start: number, end: number, text: string, type: string}[] = [];
     
-    // Match effort keywords
-    const effortRegex = /\b(5 minutes|15 minutes|30 minutes|half hour|couple hours|few hours|all day|one day|full day|this week|several days|couple weeks|few weeks|month|long term|big project)\b/gi;
-    highlightedText = highlightedText.replace(
-      effortRegex,
-      '<span class="bg-blue-100 text-blue-800 rounded-sm px-0.5">$&</span>'
-    );
+    tokenPatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.regex.exec(value)) !== null) {
+        matches.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          text: match[0],
+          type: pattern.type
+        });
+      }
+    });
     
-    setHighlighted(highlightedText);
+    // Sort matches by start position
+    matches.sort((a, b) => a.start - b.start);
+    
+    // Process matches in order
+    let lastEnd = 0;
+    matches.forEach(match => {
+      if (match.start > lastEnd) {
+        // Add regular text token for text between matches
+        newTokens.push({
+          type: 'text',
+          value: value.substring(lastEnd, match.start),
+          original: value.substring(lastEnd, match.start),
+          start: lastEnd,
+          end: match.start
+        });
+      }
+      
+      // Add the token
+      newTokens.push({
+        type: match.type as Token['type'],
+        value: match.text,
+        original: match.text,
+        start: match.start,
+        end: match.end
+      });
+      
+      lastEnd = match.end;
+    });
+    
+    // Add any remaining text
+    if (lastEnd < value.length) {
+      newTokens.push({
+        type: 'text',
+        value: value.substring(lastEnd),
+        original: value.substring(lastEnd),
+        start: lastEnd,
+        end: value.length
+      });
+    }
+    
+    setTokens(newTokens);
   }, [value]);
 
   // Close suggestions when clicking outside
@@ -226,6 +275,24 @@ const NaturalLanguageInput = ({
     checkForSuggestions();
   };
 
+  // Get token color based on type
+  const getTokenColor = (type: Token['type']) => {
+    switch (type) {
+      case 'tag':
+        return 'bg-purple-100 text-purple-800';
+      case 'person':
+        return 'bg-blue-100 text-blue-800';
+      case 'priority':
+        return 'bg-red-100 text-red-800';
+      case 'date':
+        return 'bg-orange-100 text-orange-800';
+      case 'effort':
+        return 'bg-cyan-100 text-cyan-800';
+      default:
+        return '';
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <div className="relative">
@@ -242,12 +309,23 @@ const NaturalLanguageInput = ({
           onClick={handleCursorPositionChange}
         />
         
-        {/* Highlighted preview - non-interactive */}
-        {highlighted && (
+        {/* Tokenized display (shown below textarea for reference) */}
+        {tokens.length > 0 && (
           <div 
-            className="pointer-events-none absolute inset-0 p-3 text-sm opacity-0"
-            dangerouslySetInnerHTML={{ __html: highlighted }}
-          />
+            ref={displayRef}
+            className="mt-2 text-sm rounded-md border border-transparent p-1 flex flex-wrap gap-1"
+          >
+            {tokens.map((token, index) => (
+              token.type !== 'text' ? (
+                <span 
+                  key={index}
+                  className={`rounded-sm px-1 ${getTokenColor(token.type)}`}
+                >
+                  {token.value}
+                </span>
+              ) : null
+            ))}
+          </div>
         )}
         
         {/* Display suggestions as a dropdown */}
