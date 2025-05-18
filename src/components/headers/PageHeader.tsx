@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Tag, User, LogOut, Menu, Filter } from 'lucide-react';
+import { PlusCircle, Tag, User, LogOut, Menu } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -15,6 +15,7 @@ import TaskFilters from '@/components/filters/TaskFilters';
 import { useTaskContext } from '@/context/TaskContext';
 import { Priority } from '@/types';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface PageHeaderProps {
   onCreateTaskClick: () => void;
@@ -32,6 +33,11 @@ interface PageHeaderProps {
     onSetFilterByDueDate: (value: string) => void;
     onSetFilterByGoLive: (value: boolean) => void;
     onResetFilters: () => void;
+    viewingCompleted?: boolean;
+    showTodaysTasks?: boolean;
+    onShowAllActive?: () => void;
+    onShowToday?: () => void;
+    onShowCompleted?: () => void;
   };
 }
 
@@ -54,83 +60,92 @@ const PageHeader = ({
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Menu</SheetTitle>
-        </SheetHeader>
-        <div className="flex flex-col gap-3 mt-6 flex-1">
-          <Button 
-            onClick={() => {
-              onManageTagsClick();
-              setMobileMenuOpen(false);
-            }} 
-            variant="outline"
-            className="w-full justify-start gap-2"
-          >
-            <Tag size={16} />
-            Manage Tags
-          </Button>
-          
-          <Button 
-            onClick={() => {
-              onManagePeopleClick();
-              setMobileMenuOpen(false);
-            }} 
-            variant="outline"
-            className="w-full justify-start gap-2"
-          >
-            <User size={16} />
-            Manage People
-          </Button>
-
-          <Button 
-            onClick={() => {
-              onCreateTaskClick();
-              setMobileMenuOpen(false);
-            }}
-            className="w-full justify-start gap-2"
-          >
-            <PlusCircle size={16} />
-            New Task
-          </Button>
-          
-          {isMobile && filterProps && (
-            <>
-              <Separator className="my-2" />
+      <SheetContent side="right" className="flex flex-col p-0">
+        <ScrollArea className="h-full">
+          <div className="p-6 flex flex-col gap-3 h-full">
+            <SheetHeader className="text-left">
+              <SheetTitle>Menu</SheetTitle>
+            </SheetHeader>
+            
+            <div className="flex flex-col gap-3 mt-4">
+              <Button 
+                onClick={() => {
+                  onManageTagsClick();
+                  setMobileMenuOpen(false);
+                }} 
+                variant="outline"
+                className="w-full justify-start gap-2"
+              >
+                <Tag size={16} />
+                Manage Tags
+              </Button>
               
-              <div className="px-1">
-                <TaskFilters
-                  selectedTags={filterProps.selectedTags}
-                  selectedPeople={filterProps.selectedPeople}
-                  selectedPriorities={filterProps.selectedPriorities}
-                  filterByDueDate={filterProps.filterByDueDate}
-                  filterByGoLive={filterProps.filterByGoLive}
-                  onToggleTag={filterProps.onToggleTag}
-                  onTogglePerson={filterProps.onTogglePerson}
-                  onTogglePriority={filterProps.onTogglePriority}
-                  onSetFilterByDueDate={filterProps.onSetFilterByDueDate}
-                  onSetFilterByGoLive={filterProps.onSetFilterByGoLive}
-                  onResetFilters={filterProps.onResetFilters}
-                  tags={tags}
-                  people={people}
-                  inMobileMenu={true}
-                />
-              </div>
-            </>
-          )}
-          
-          {/* Spacer to push Sign Out to the bottom */}
-          <div className="flex-grow" />
-          
-          <Button
-            onClick={() => signOut()}
-            variant="outline"
-            className="w-full justify-start gap-2 mt-auto"
-          >
-            <LogOut size={16} />
-            Sign Out
-          </Button>
-        </div>
+              <Button 
+                onClick={() => {
+                  onManagePeopleClick();
+                  setMobileMenuOpen(false);
+                }} 
+                variant="outline"
+                className="w-full justify-start gap-2"
+              >
+                <User size={16} />
+                Manage People
+              </Button>
+
+              <Button 
+                onClick={() => {
+                  onCreateTaskClick();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full justify-start gap-2"
+              >
+                <PlusCircle size={16} />
+                New Task
+              </Button>
+            </div>
+            
+            {isMobile && filterProps && (
+              <>
+                <Separator className="my-4" />
+                
+                <div className="flex-1 overflow-y-auto">
+                  <TaskFilters
+                    selectedTags={filterProps.selectedTags}
+                    selectedPeople={filterProps.selectedPeople}
+                    selectedPriorities={filterProps.selectedPriorities}
+                    filterByDueDate={filterProps.filterByDueDate}
+                    filterByGoLive={filterProps.filterByGoLive}
+                    onToggleTag={filterProps.onToggleTag}
+                    onTogglePerson={filterProps.onTogglePerson}
+                    onTogglePriority={filterProps.onTogglePriority}
+                    onSetFilterByDueDate={filterProps.onSetFilterByDueDate}
+                    onSetFilterByGoLive={filterProps.onSetFilterByGoLive}
+                    onResetFilters={filterProps.onResetFilters}
+                    tags={tags}
+                    people={people}
+                    inMobileMenu={true}
+                    viewingCompleted={filterProps.viewingCompleted}
+                    showTodaysTasks={filterProps.showTodaysTasks}
+                    onShowAllActive={filterProps.onShowAllActive}
+                    onShowToday={filterProps.onShowToday}
+                    onShowCompleted={filterProps.onShowCompleted}
+                  />
+                </div>
+              </>
+            )}
+            
+            <div className="mt-auto">
+              <Button
+                onClick={() => signOut()}
+                variant="outline"
+                className="w-full justify-start gap-2"
+              >
+                <LogOut size={16} />
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );

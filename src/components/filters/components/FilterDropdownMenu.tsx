@@ -78,118 +78,124 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
           Filter Tasks
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="bg-background max-h-[70vh]">
-        <ScrollArea className="max-h-[60vh]">
-          {/* View options */}
-          <DropdownMenuLabel>View Options</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <div className="px-2 pb-2 space-y-2">
-            {onShowAllActive && (
-              <Button
-                onClick={() => {
-                  onShowAllActive();
-                  setFiltersOpen(true);
-                }}
-                variant={!showTodaysTasks && !viewingCompleted ? "default" : "outline"}
-                size="sm"
-                className="w-full justify-start"
-              >
-                All Active Tasks
-              </Button>
-            )}
-            
-            {onShowToday && (
-              <Button
-                onClick={() => {
-                  onShowToday();
-                  setFiltersOpen(true);
-                }}
-                variant={showTodaysTasks ? "default" : "outline"}
-                size="sm"
-                className="w-full justify-start"
-              >
-                Due Today
-              </Button>
-            )}
-            
-            {onShowCompleted && (
-              <Button
-                onClick={() => {
-                  onShowCompleted();
-                  setFiltersOpen(true);
-                }}
-                variant={viewingCompleted ? "default" : "outline"}
-                size="sm"
-                className="w-full justify-start"
-              >
-                Completed Today
-              </Button>
+      <DropdownMenuContent align="start" className="w-64 bg-background">
+        <ScrollArea className="max-h-[70vh]">
+          <div className="p-1">
+            {/* View options */}
+            {(onShowAllActive || onShowToday || onShowCompleted) && (
+              <>
+                <DropdownMenuLabel>View Options</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="px-2 pb-2 space-y-2">
+                  {onShowAllActive && (
+                    <Button
+                      onClick={() => {
+                        onShowAllActive();
+                        setFiltersOpen(false);
+                      }}
+                      variant={!showTodaysTasks && !viewingCompleted ? "default" : "outline"}
+                      size="sm"
+                      className="w-full justify-start"
+                    >
+                      All Active Tasks
+                    </Button>
+                  )}
+                  
+                  {onShowToday && (
+                    <Button
+                      onClick={() => {
+                        onShowToday();
+                        setFiltersOpen(false);
+                      }}
+                      variant={showTodaysTasks ? "default" : "outline"}
+                      size="sm"
+                      className="w-full justify-start"
+                    >
+                      Due Today
+                    </Button>
+                  )}
+                  
+                  {onShowCompleted && (
+                    <Button
+                      onClick={() => {
+                        onShowCompleted();
+                        setFiltersOpen(false);
+                      }}
+                      variant={viewingCompleted ? "default" : "outline"}
+                      size="sm"
+                      className="w-full justify-start"
+                    >
+                      Completed Today
+                    </Button>
+                  )}
+
+                  {onToggleShowCompleted && (
+                    <Button
+                      onClick={() => {
+                        onToggleShowCompleted();
+                        setFiltersOpen(false);
+                      }}
+                      variant={showCompleted ? "default" : "outline"}
+                      size="sm"
+                      className="w-full justify-start"
+                    >
+                      {showCompleted ? "Hide Completed" : "Show Completed"}
+                    </Button>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+              </>
             )}
 
-            {onToggleShowCompleted && (
-              <Button
-                onClick={() => {
-                  onToggleShowCompleted();
-                  setFiltersOpen(true);
-                }}
-                variant={showCompleted ? "default" : "outline"}
-                size="sm"
-                className="w-full justify-start"
-              >
-                {showCompleted ? "Hide Completed" : "Show Completed"}
-              </Button>
-            )}
+            <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            
+            <TagFilterItems
+              tags={tags}
+              selectedTags={selectedTags}
+              onToggleTag={(tagId) => {
+                onToggleTag(tagId);
+                setFiltersOpen(true);
+              }}
+            />
+
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Filter by People</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            
+            <PeopleFilterItems
+              people={people}
+              selectedPeople={selectedPeople}
+              onTogglePerson={(personId) => {
+                onTogglePerson(personId);
+                setFiltersOpen(true);
+              }}
+            />
+
+            <PriorityFilterItems 
+              selectedPriorities={selectedPriorities}
+              onTogglePriority={(priority) => {
+                onTogglePriority(priority);
+                setFiltersOpen(true);
+              }}
+            />
+
+            <DueDateFilterItems
+              filterByDueDate={filterByDueDate}
+              onSetFilterByDueDate={(value) => {
+                onSetFilterByDueDate(value);
+                setFiltersOpen(true);
+              }}
+            />
+
+            <GoLiveFilterItem
+              filterByGoLive={filterByGoLive}
+              onSetFilterByGoLive={(value) => {
+                onSetFilterByGoLive(value);
+                setFiltersOpen(true);
+              }}
+            />
           </div>
-          <DropdownMenuSeparator />
-          
-          <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          
-          <TagFilterItems
-            tags={tags}
-            selectedTags={selectedTags}
-            onToggleTag={(tagId) => {
-              onToggleTag(tagId);
-              setFiltersOpen(true);
-            }}
-          />
-
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel>Filter by People</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          
-          <PeopleFilterItems
-            people={people}
-            selectedPeople={selectedPeople}
-            onTogglePerson={(personId) => {
-              onTogglePerson(personId);
-              setFiltersOpen(true);
-            }}
-          />
-
-          <PriorityFilterItems 
-            selectedPriorities={selectedPriorities}
-            onTogglePriority={(priority) => {
-              onTogglePriority(priority);
-              setFiltersOpen(true);
-            }}
-          />
-
-          <DueDateFilterItems
-            filterByDueDate={filterByDueDate}
-            onSetFilterByDueDate={(value) => {
-              onSetFilterByDueDate(value);
-              setFiltersOpen(true);
-            }}
-          />
-
-          <GoLiveFilterItem
-            filterByGoLive={filterByGoLive}
-            onSetFilterByGoLive={(value) => {
-              onSetFilterByGoLive(value);
-              setFiltersOpen(true);
-            }}
-          />
         </ScrollArea>
 
         {hasActiveFilters && (

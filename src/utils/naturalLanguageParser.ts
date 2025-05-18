@@ -1,5 +1,5 @@
 
-import { addDays, addWeeks, addMonths, parse, isValid } from 'date-fns';
+import { addDays, addWeeks, addMonths, parse, isValid, getDay } from 'date-fns';
 import { Priority, EffortLevel } from '@/types';
 
 // Improved natural language task parser
@@ -37,7 +37,7 @@ export const naturalLanguageToTask = (input: string) => {
     taskData.peopleNames = personMatches;
   }
   
-  // Extract priority keywords and remove from title - Enhanced to catch all priority levels
+  // Extract priority keywords and remove from title - Enhanced to catch ALL priority levels
   if (lowerInput.includes('high priority') || lowerInput.includes('urgent') || lowerInput.includes('important')) {
     title = title.replace(/high priority|urgent|important/gi, '');
     taskData.priority = 'high' as Priority;
@@ -73,7 +73,7 @@ export const naturalLanguageToTask = (input: string) => {
   // Extract date related information
   const today = new Date();
   
-  // Due date patterns - Enhanced
+  // Due date patterns - Enhanced with more variations
   const dueDatePatterns = [
     { regex: /due today/gi, date: today },
     { regex: /due tomorrow/gi, date: addDays(today, 1) },
@@ -91,7 +91,7 @@ export const naturalLanguageToTask = (input: string) => {
     }
   }
   
-  // Day of week patterns
+  // Enhanced day of week patterns with "next" variations
   const dayOfWeekPatterns = [
     { day: 'monday', dayNum: 1 },
     { day: 'tuesday', dayNum: 2 },
@@ -102,33 +102,43 @@ export const naturalLanguageToTask = (input: string) => {
     { day: 'sunday', dayNum: 0 }
   ];
   
-  // Handle "on <day>" and "this <day>" formats
+  // Handle "on <day>", "this <day>", and "next <day>" formats
   for (const pattern of dayOfWeekPatterns) {
-    const regex1 = new RegExp(`due (on )?${pattern.day}|on ${pattern.day}`, 'gi');
-    const regex2 = new RegExp(`this ${pattern.day}`, 'gi');
+    // Regular day mention
+    const regularRegex = new RegExp(`(?:due (?:on )?)?(${pattern.day})(?:\\b|\\s|$)`, 'gi');
+    // "This day" pattern
+    const thisRegex = new RegExp(`this ${pattern.day}`, 'gi');
+    // "Next day" pattern
+    const nextRegex = new RegExp(`next ${pattern.day}`, 'gi');
     
-    if (regex1.test(lowerInput) || regex2.test(lowerInput)) {
-      title = title.replace(regex1, '').replace(regex2, '');
-      const dayOfWeek = today.getDay();
-      let daysToAdd = (pattern.dayNum - dayOfWeek + 7) % 7;
+    if (regularRegex.test(lowerInput) || thisRegex.test(lowerInput) || nextRegex.test(lowerInput)) {
+      title = title.replace(regularRegex, '').replace(thisRegex, '').replace(nextRegex, '');
       
-      // If it's the same day and we use "next", add a week
-      if (daysToAdd === 0 && regex2.test(lowerInput)) {
-        daysToAdd = 7;
+      const currentDayOfWeek = getDay(today);
+      let daysToAdd = 0;
+      
+      if (nextRegex.test(lowerInput)) {
+        // "Next day" means next week for that day
+        daysToAdd = (pattern.dayNum - currentDayOfWeek + 7) % 7;
+        if (daysToAdd === 0) daysToAdd = 7; // If it's the same day, add a week
+      } else {
+        // Regular or "this day" - find next occurrence
+        daysToAdd = (pattern.dayNum - currentDayOfWeek + 7) % 7;
+        if (daysToAdd === 0 && !thisRegex.test(lowerInput)) daysToAdd = 7;
       }
       
       taskData.dueDate = addDays(today, daysToAdd);
     }
   }
   
-  // Try to parse date formats like MM/DD, MM/DD/YYYY, Month Day, etc.
+  // Enhanced date formats: MM/DD, MM/DD/YYYY, Month Day, Month Day Year, etc.
   const dateRegexes = [
-    { regex: /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* \d{1,2}(st|nd|rd|th)?(\s*,?\s*\d{4})?\b/gi, format: 'MMM d yyyy' },
-    { regex: /\b\d{1,2}[\/\-]\d{1,2}([\/\-]\d{2,4})?\b/g, format: 'MM/dd/yyyy' }
+    { regex: /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* \d{1,2}(?:st|nd|rd|th)?(?:\s*,?\s*\d{4})?\b/gi, format: 'MMM d yyyy' },
+    { regex: /\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, format: 'MM/dd/yyyy' }
   ];
   
   for (const dateRegex of dateRegexes) {
-    const matches = lowerInput.match(dateRegex.regex);
+    const matches = input.match(dateRegex.regex);
     if (matches) {
       for (const match of matches) {
         // Try to parse the date

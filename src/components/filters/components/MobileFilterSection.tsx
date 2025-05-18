@@ -39,7 +39,7 @@ interface MobileFiltersProps {
   people: { id: string; name: string }[];
   hasActiveFilters: boolean;
   
-  // New view options
+  // View options
   viewingCompleted?: boolean;
   showTodaysTasks?: boolean;
   onShowAllActive?: () => void;
@@ -65,7 +65,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
   people,
   hasActiveFilters,
   
-  // New view options
+  // View options
   viewingCompleted = false,
   showTodaysTasks = false,
   onShowAllActive,
@@ -74,7 +74,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
 }) => {
   return (
     <ScrollArea className="max-h-[70vh] pr-4">
-      <div className="space-y-4">
+      <div className="space-y-4 p-1">
         <div className="flex justify-between items-center">
           <h3 className="text-sm font-medium">Filters</h3>
           {hasActiveFilters && (
@@ -91,51 +91,53 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
         </div>
 
         {/* View Options Section */}
-        <MobileFilterSection title="View Options">
-          {onShowAllActive && (
-            <Button
-              onClick={onShowAllActive}
-              variant={!showTodaysTasks && !viewingCompleted ? "default" : "outline"}
-              size="sm"
-              className="text-xs px-2 py-0 h-7"
-            >
-              All Active Tasks
-            </Button>
-          )}
-          
-          {onShowToday && (
-            <Button
-              onClick={onShowToday}
-              variant={showTodaysTasks ? "default" : "outline"}
-              size="sm"
-              className="text-xs px-2 py-0 h-7"
-            >
-              Due Today
-            </Button>
-          )}
-          
-          {onShowCompleted && (
-            <Button
-              onClick={onShowCompleted}
-              variant={viewingCompleted ? "default" : "outline"}
-              size="sm"
-              className="text-xs px-2 py-0 h-7"
-            >
-              Completed Today
-            </Button>
-          )}
-          
-          {onToggleShowCompleted && (
-            <Button
-              onClick={onToggleShowCompleted}
-              variant={showCompleted ? "default" : "outline"}
-              size="sm"
-              className="text-xs px-2 py-0 h-7"
-            >
-              {showCompleted ? "Hide Completed" : "Show Completed"}
-            </Button>
-          )}
-        </MobileFilterSection>
+        {(onShowAllActive || onShowToday || onShowCompleted) && (
+          <MobileFilterSection title="View Options">
+            {onShowAllActive && (
+              <Button
+                onClick={onShowAllActive}
+                variant={!showTodaysTasks && !viewingCompleted ? "default" : "outline"}
+                size="sm"
+                className="text-xs px-2 py-0 h-7"
+              >
+                All Active Tasks
+              </Button>
+            )}
+            
+            {onShowToday && (
+              <Button
+                onClick={onShowToday}
+                variant={showTodaysTasks ? "default" : "outline"}
+                size="sm"
+                className="text-xs px-2 py-0 h-7"
+              >
+                Due Today
+              </Button>
+            )}
+            
+            {onShowCompleted && (
+              <Button
+                onClick={onShowCompleted}
+                variant={viewingCompleted ? "default" : "outline"}
+                size="sm"
+                className="text-xs px-2 py-0 h-7"
+              >
+                Completed Today
+              </Button>
+            )}
+            
+            {onToggleShowCompleted && (
+              <Button
+                onClick={onToggleShowCompleted}
+                variant={showCompleted ? "default" : "outline"}
+                size="sm"
+                className="text-xs px-2 py-0 h-7"
+              >
+                {showCompleted ? "Hide Completed" : "Show Completed"}
+              </Button>
+            )}
+          </MobileFilterSection>
+        )}
 
         <MobileFilterSection title="Filter by Priority">
           {['high', 'normal', 'low', 'lowest'].map((priority) => (

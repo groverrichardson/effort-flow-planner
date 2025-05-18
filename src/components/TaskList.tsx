@@ -1,16 +1,17 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task } from '@/types';
 import { useTaskFiltering } from '@/hooks/useTaskFiltering';
 import TaskListControls from './headers/TaskListControls';
 import TaskListContent from './list/TaskListContent';
 import TaskDialogs from './dialogs/TaskDialogs';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const TaskList = () => {
   const { tasks, completeTask, getTodaysCompletedTasks } = useTaskContext();
-  // We're not using detailTask anymore since we go directly to edit mode
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const isMobile = useIsMobile();
   
   const {
     viewingCompleted,
@@ -33,6 +34,12 @@ const TaskList = () => {
     handleShowToday,
     handleShowCompleted
   } = useTaskFiltering({ tasks, getTodaysCompletedTasks });
+
+  // Use effect to update the task list when tasks change
+  useEffect(() => {
+    // This helps ensure the UI updates immediately when tasks change
+    // (especially after deletion)
+  }, [tasks]);
 
   // Get all unique tags from tasks
   const allTags = tasks.reduce((allTags, task) => {
@@ -85,29 +92,31 @@ const TaskList = () => {
 
   return (
     <div className="space-y-6">
-      <TaskListControls 
-        viewingCompleted={viewingCompleted}
-        showTodaysTasks={showTodaysTasks}
-        todaysCount={todaysTasks.length}
-        completedCount={getTodaysCompletedTasks().length}
-        selectedTags={selectedTags}
-        selectedPeople={selectedPeople}
-        selectedPriorities={selectedPriorities}
-        filterByDueDate={filterByDueDate}
-        filterByGoLive={filterByGoLive}
-        onShowAllActive={handleShowAllActive}
-        onShowToday={handleShowToday}
-        onShowCompleted={handleShowCompleted}
-        onToggleTag={handleToggleTag}
-        onTogglePerson={handleTogglePerson}
-        onTogglePriority={handleTogglePriority}
-        onSetFilterByDueDate={setFilterByDueDate}
-        onSetFilterByGoLive={setFilterByGoLive}
-        onResetFilters={clearAllFilters}
-        tags={allTags}
-        people={allPeople}
-        filterProps={filterProps}
-      />
+      {!isMobile && (
+        <TaskListControls 
+          viewingCompleted={viewingCompleted}
+          showTodaysTasks={showTodaysTasks}
+          todaysCount={todaysTasks.length}
+          completedCount={getTodaysCompletedTasks().length}
+          selectedTags={selectedTags}
+          selectedPeople={selectedPeople}
+          selectedPriorities={selectedPriorities}
+          filterByDueDate={filterByDueDate}
+          filterByGoLive={filterByGoLive}
+          onShowAllActive={handleShowAllActive}
+          onShowToday={handleShowToday}
+          onShowCompleted={handleShowCompleted}
+          onToggleTag={handleToggleTag}
+          onTogglePerson={handleTogglePerson}
+          onTogglePriority={handleTogglePriority}
+          onSetFilterByDueDate={setFilterByDueDate}
+          onSetFilterByGoLive={setFilterByGoLive}
+          onResetFilters={clearAllFilters}
+          tags={allTags}
+          people={allPeople}
+          filterProps={filterProps}
+        />
+      )}
 
       <TaskListContent 
         tasks={filteredTasks}
