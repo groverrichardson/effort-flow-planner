@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Tag, User, LogOut, Menu } from 'lucide-react';
+import { PlusCircle, Tag, User, LogOut, Menu, Filter } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -15,6 +15,7 @@ import { useTaskContext } from '@/context/TaskContext';
 import { Priority } from '@/types';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import TaskFilters from '../filters/TaskFilters';
 
 interface PageHeaderProps {
   onCreateTaskClick: () => void;
@@ -108,67 +109,100 @@ const PageHeader = ({
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="flex flex-col p-0">
-        <div className="p-6 flex flex-col gap-3 h-full overflow-hidden">
-          {/* Use ScrollArea for scrollability */}
-          <ScrollArea className="h-full -mr-4 pr-4">
-            <div className="space-y-6">
-              <div className="flex flex-col gap-3">
-                <Button 
-                  onClick={() => {
-                    onCreateTaskClick();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full justify-start gap-2"
-                >
-                  <PlusCircle size={16} />
-                  New Task
-                </Button>
-                
-                <Button 
-                  onClick={() => {
-                    onManageTagsClick();
-                    setMobileMenuOpen(false);
-                  }} 
-                  variant="outline"
-                  className="w-full justify-start gap-2"
-                >
-                  <Tag size={16} />
-                  Manage Tags
-                </Button>
-                
-                <Button 
-                  onClick={() => {
-                    onManagePeopleClick();
-                    setMobileMenuOpen(false);
-                  }} 
-                  variant="outline"
-                  className="w-full justify-start gap-2"
-                >
-                  <User size={16} />
-                  Manage People
-                </Button>
-              </div>
+        <ScrollArea className="h-full px-4">
+          <div className="space-y-6 py-6">
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={() => {
+                  onCreateTaskClick();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full justify-start gap-2"
+              >
+                <PlusCircle size={16} />
+                New Task
+              </Button>
               
-              {isMobile && filterProps && (
-                <>
-                  <Separator />
-                  <ViewOptions />
-                </>
-              )}
-              
-              <Separator />
-              
-              <Button
-                onClick={() => signOut()}
+              <Button 
+                onClick={() => {
+                  onManageTagsClick();
+                  setMobileMenuOpen(false);
+                }} 
                 variant="outline"
                 className="w-full justify-start gap-2"
               >
-                <LogOut size={16} />
-                Sign Out
+                <Tag size={16} />
+                Manage Tags
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  onManagePeopleClick();
+                  setMobileMenuOpen(false);
+                }} 
+                variant="outline"
+                className="w-full justify-start gap-2"
+              >
+                <User size={16} />
+                Manage People
               </Button>
             </div>
-          </ScrollArea>
-        </div>
+            
+            {isMobile && filterProps && (
+              <>
+                <Separator />
+                <ViewOptions />
+                <Separator />
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <h3 className="text-xs font-medium text-muted-foreground">Filters</h3>
+                    {filterProps && filterProps.onResetFilters && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          filterProps.onResetFilters();
+                        }}
+                        className="ml-auto h-6 px-2 text-xs"
+                      >
+                        Reset
+                      </Button>
+                    )}
+                  </div>
+                  {filterProps && (
+                    <TaskFilters
+                      selectedTags={filterProps.selectedTags}
+                      selectedPeople={filterProps.selectedPeople}
+                      selectedPriorities={filterProps.selectedPriorities}
+                      filterByDueDate={filterProps.filterByDueDate}
+                      filterByGoLive={filterProps.filterByGoLive}
+                      onToggleTag={filterProps.onToggleTag}
+                      onTogglePerson={filterProps.onTogglePerson}
+                      onTogglePriority={filterProps.onTogglePriority}
+                      onSetFilterByDueDate={filterProps.onSetFilterByDueDate}
+                      onSetFilterByGoLive={filterProps.onSetFilterByGoLive}
+                      onResetFilters={filterProps.onResetFilters}
+                      tags={tags}
+                      people={people}
+                      inMobileMenu={true}
+                    />
+                  )}
+                </div>
+              </>
+            )}
+            
+            <Separator />
+            
+            <Button
+              onClick={() => signOut()}
+              variant="outline"
+              className="w-full justify-start gap-2"
+            >
+              <LogOut size={16} />
+              Sign Out
+            </Button>
+          </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );

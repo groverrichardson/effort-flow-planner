@@ -9,7 +9,7 @@ import TaskDialogs from './dialogs/TaskDialogs';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const TaskList = () => {
-  const { tasks, completeTask, getTodaysCompletedTasks } = useTaskContext();
+  const { tasks, completeTask, deleteTask, getTodaysCompletedTasks } = useTaskContext();
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [visibleTasks, setVisibleTasks] = useState<Task[]>([]);
   const isMobile = useIsMobile();
@@ -77,6 +77,14 @@ const TaskList = () => {
     // Then call the actual completion function
     completeTask(taskId);
   }, [completeTask]);
+  
+  // Handle task deletion with optimistic UI update
+  const handleDeleteTask = useCallback((taskId: string) => {
+    // Immediately remove the task from the visible list
+    setVisibleTasks(currentTasks => currentTasks.filter(t => t.id !== taskId));
+    // Then call the actual deletion function
+    deleteTask(taskId);
+  }, [deleteTask]);
 
   // Make filter props available for both mobile menu and desktop view
   const filterProps = {
@@ -132,11 +140,13 @@ const TaskList = () => {
         showTodaysTasks={showTodaysTasks}
         onTaskClick={handleTaskClick}
         onCompleteTask={handleCompleteTask}
+        onDeleteTask={handleDeleteTask}
       />
 
       <TaskDialogs 
         editTask={editTask}
         onCloseEdit={handleCloseEdit}
+        onDeleteTask={handleDeleteTask}
       />
     </div>
   );

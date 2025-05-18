@@ -10,6 +10,7 @@ interface TaskListContentProps {
   showTodaysTasks: boolean;
   onTaskClick: (task: Task) => void;
   onCompleteTask: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
 }
 
 const TaskListContent = ({ 
@@ -17,7 +18,8 @@ const TaskListContent = ({
   viewingCompleted,
   showTodaysTasks,
   onTaskClick,
-  onCompleteTask
+  onCompleteTask,
+  onDeleteTask
 }: TaskListContentProps) => {
   const handleComplete = (task: Task) => {
     onCompleteTask(task.id);
@@ -38,6 +40,7 @@ const TaskListContent = ({
               viewingCompleted={viewingCompleted}
               onClick={onTaskClick}
               onComplete={handleComplete}
+              onDelete={onDeleteTask}
             />
           ))}
         </div>
