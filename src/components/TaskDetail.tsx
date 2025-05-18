@@ -37,11 +37,8 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
     setTagModalOpen(true);
   };
 
-  const handleUpdateTag = (name: string) => {
-    if (editingTag) {
-      toast({ title: "Success", description: "Tag updated successfully" });
-      setTagModalOpen(false);
-    }
+  const handleCloseTagModal = () => {
+    setTagModalOpen(false);
   };
 
   const handleEditPerson = (person: Person) => {
@@ -49,11 +46,8 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
     setPersonModalOpen(true);
   };
 
-  const handleUpdatePerson = (name: string) => {
-    if (editingPerson) {
-      toast({ title: "Success", description: "Person updated successfully" });
-      setPersonModalOpen(false);
-    }
+  const handleClosePersonModal = () => {
+    setPersonModalOpen(false);
   };
 
   const handleDelete = () => {
@@ -175,8 +169,8 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
           </DialogHeader>
           <GroupForm 
             group={editingTag} 
-            onSave={handleUpdateTag}
-            onCancel={() => setTagModalOpen(false)} 
+            onSave={handleCloseTagModal}
+            onCancel={handleCloseTagModal} 
           />
         </DialogContent>
       </Dialog>
@@ -188,8 +182,8 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
           </DialogHeader>
           <PersonForm 
             person={editingPerson} 
-            onSave={handleUpdatePerson}
-            onCancel={() => setPersonModalOpen(false)} 
+            onSave={handleClosePersonModal}
+            onCancel={handleClosePersonModal} 
           />
         </DialogContent>
       </Dialog>
