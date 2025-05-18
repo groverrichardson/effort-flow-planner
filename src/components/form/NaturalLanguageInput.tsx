@@ -1,9 +1,13 @@
-import { useState, KeyboardEvent, useEffect, useRef } from 'react';
+
+import { useState, KeyboardEvent, useEffect, useRef, useCallback } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Send } from 'lucide-react';
+import { Send, Wand2 } from 'lucide-react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from "@/integrations/supabase/client";
+import { debounce } from '@/lib/utils';
+import { toast } from '@/components/ui/use-toast';
 
 interface NaturalLanguageInputProps {
   value: string;
@@ -23,6 +27,15 @@ interface Token {
   color?: string;
 }
 
+interface GeminiResponse {
+  success: boolean;
+  people: string[];
+  tags: string[];
+  priority: string | null;
+  dueDate: string | null;
+  effort: string | null;
+}
+
 const NaturalLanguageInput = ({ 
   value, 
   onChange, 
@@ -36,6 +49,8 @@ const NaturalLanguageInput = ({
   const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [tokens, setTokens] = useState<Token[]>([]);
+  const [isGeminiProcessing, setIsGeminiProcessing] = useState(false);
+  const [geminiEntities, setGeminiEntities] = useState<{people: string[], tags: string[]}>({people: [], tags: []});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const suggestionRef = useRef<HTMLDivElement>(null);
   const displayRef = useRef<HTMLDivElement>(null);
@@ -47,11 +62,87 @@ const NaturalLanguageInput = ({
       return;
     }
     
+    // Combine both regex highlighting and Gemini entities for best results
+    const newTokens: Token[] = regexHighlighting(value, geminiEntities);
+    setTokens(newTokens);
+  }, [value, geminiEntities]);
+
+  // Function to perform regex-based highlighting
+  const regexHighlighting = (text: string, geminiEntities: {people: string[], tags: string[]}) => {
     const newTokens: Token[] = [];
     let currentPosition = 0;
-    let remainingText = value;
+    let remainingText = text;
     
-    // Match all tokens
+    // First, handle Gemini entities for more accurate highlighting
+    if (geminiEntities.people && geminiEntities.people.length > 0) {
+      for (const personName of geminiEntities.people) {
+        const personPattern = new RegExp(`@${personName}\\b`, 'i');
+        const match = text.match(personPattern);
+        
+        if (match && match.index !== undefined) {
+          const start = match.index;
+          const end = start + match[0].length;
+          
+          // Add text before the entity if needed
+          if (start > currentPosition) {
+            newTokens.push({
+              type: 'text',
+              value: text.substring(currentPosition, start),
+              original: text.substring(currentPosition, start),
+              start: currentPosition,
+              end: start
+            });
+          }
+          
+          // Add the entity token
+          newTokens.push({
+            type: 'person',
+            value: match[0],
+            original: match[0],
+            start: start,
+            end: end
+          });
+          
+          currentPosition = end;
+        }
+      }
+    }
+    
+    if (geminiEntities.tags && geminiEntities.tags.length > 0) {
+      for (const tagName of geminiEntities.tags) {
+        const tagPattern = new RegExp(`#${tagName}\\b`, 'i');
+        const match = text.match(tagPattern);
+        
+        if (match && match.index !== undefined) {
+          const start = match.index;
+          const end = start + match[0].length;
+          
+          // Add text before the entity if needed
+          if (start > currentPosition) {
+            newTokens.push({
+              type: 'text',
+              value: text.substring(currentPosition, start),
+              original: text.substring(currentPosition, start),
+              start: currentPosition,
+              end: start
+            });
+          }
+          
+          // Add the entity token
+          newTokens.push({
+            type: 'tag',
+            value: match[0],
+            original: match[0],
+            start: start,
+            end: end
+          });
+          
+          currentPosition = end;
+        }
+      }
+    }
+
+    // Then match all other tokens with regex for the rest of the text
     const tokenPatterns = [
       // Tags (#tag)
       { 
@@ -80,57 +171,33 @@ const NaturalLanguageInput = ({
       }
     ];
     
-    // Find all matches for all patterns
+    // Handle remaining text with regex patterns
+    if (currentPosition < text.length) {
+      const remainingText = text.substring(currentPosition);
+      const remainingTokens = processTextWithRegex(remainingText, currentPosition, tokenPatterns);
+      newTokens.push(...remainingTokens);
+    }
+    
+    return newTokens;
+  };
+  
+  // Helper function to process text with regex patterns
+  const processTextWithRegex = (text: string, startOffset: number, patterns: {regex: RegExp, type: string}[]) => {
+    const tokens: Token[] = [];
     const matches: {start: number, end: number, text: string, type: string}[] = [];
     
-    tokenPatterns.forEach(pattern => {
+    // Find all matches for all patterns
+    patterns.forEach(pattern => {
       const regex = new RegExp(pattern.regex);
       let match;
       
-      if (pattern.type === 'person') {
-        // Find all @ mentions in the text
-        const atPositions: number[] = [];
-        let position = -1;
-        while ((position = value.indexOf('@', position + 1)) !== -1) {
-          atPositions.push(position);
-        }
-        
-        // Only process the first two @ mentions (limit to 2 people)
-        const limitedAtPositions = atPositions.slice(0, 2);
-        
-        for (const position of limitedAtPositions) {
-          // Find the start of the next @ or # after this position
-          const nextAtPos = value.indexOf('@', position + 1);
-          const nextHashPos = value.indexOf('#', position + 1);
-          
-          let endPos = value.length;
-          if (nextAtPos !== -1) endPos = Math.min(endPos, nextAtPos);
-          if (nextHashPos !== -1) endPos = Math.min(endPos, nextHashPos);
-          
-          // Extract the potential name including @ symbol
-          const potentialNameWithAt = value.substring(position, endPos).trim();
-          
-          // Use regex to match the name part
-          const nameMatch = potentialNameWithAt.match(/@([^\s#@]+(?:\s+[^\s#@]+)*)/);
-          if (nameMatch) {
-            matches.push({
-              start: position,
-              end: position + nameMatch[0].length,
-              text: nameMatch[0],
-              type: pattern.type
-            });
-          }
-        }
-      } else {
-        // Normal processing for other token types
-        while ((match = regex.exec(value)) !== null) {
-          matches.push({
-            start: match.index,
-            end: match.index + match[0].length,
-            text: match[0],
-            type: pattern.type
-          });
-        }
+      while ((match = regex.exec(text)) !== null) {
+        matches.push({
+          start: match.index + startOffset,
+          end: match.index + match[0].length + startOffset,
+          text: match[0],
+          type: pattern.type
+        });
       }
     });
     
@@ -138,21 +205,21 @@ const NaturalLanguageInput = ({
     matches.sort((a, b) => a.start - b.start);
     
     // Process matches in order
-    let lastEnd = 0;
+    let lastEnd = startOffset;
     matches.forEach(match => {
       if (match.start > lastEnd) {
         // Add regular text token for text between matches
-        newTokens.push({
+        tokens.push({
           type: 'text',
-          value: value.substring(lastEnd, match.start),
-          original: value.substring(lastEnd, match.start),
+          value: text.substring(lastEnd - startOffset, match.start - startOffset),
+          original: text.substring(lastEnd - startOffset, match.start - startOffset),
           start: lastEnd,
           end: match.start
         });
       }
       
       // Add the token
-      newTokens.push({
+      tokens.push({
         type: match.type as Token['type'],
         value: match.text,
         original: match.text,
@@ -164,18 +231,70 @@ const NaturalLanguageInput = ({
     });
     
     // Add any remaining text
-    if (lastEnd < value.length) {
-      newTokens.push({
+    if (lastEnd < text.length + startOffset) {
+      tokens.push({
         type: 'text',
-        value: value.substring(lastEnd),
-        original: value.substring(lastEnd),
+        value: text.substring(lastEnd - startOffset),
+        original: text.substring(lastEnd - startOffset),
         start: lastEnd,
-        end: value.length
+        end: text.length + startOffset
       });
     }
     
-    setTokens(newTokens);
-  }, [value]);
+    return tokens;
+  };
+
+  // Create a debounced version of the Gemini call
+  const debouncedGeminiCall = useCallback(
+    debounce(async (inputText: string) => {
+      if (!inputText || inputText.length < 3) {
+        return;
+      }
+      
+      // If no @ or # symbols, don't bother calling Gemini during live typing
+      if (!inputText.includes('@') && !inputText.includes('#')) {
+        return;
+      }
+      
+      try {
+        setIsGeminiProcessing(true);
+        console.log("Calling Gemini for live suggestions...");
+        
+        const { data, error } = await supabase.functions.invoke('parse-natural-language', {
+          body: { 
+            text: inputText,
+            isLiveTyping: true 
+          },
+        });
+
+        if (error) {
+          console.error("Error calling Gemini during typing:", error);
+          return;
+        }
+        
+        if (data && data.success) {
+          console.log("Received Gemini live suggestions:", data);
+          setGeminiEntities({
+            people: data.people || [],
+            tags: data.tags || []
+          });
+        }
+      } catch (err) {
+        console.error("Exception in live Gemini processing:", err);
+      } finally {
+        setIsGeminiProcessing(false);
+      }
+    }, 500), // 500ms debounce delay
+    []
+  );
+
+  // Trigger Gemini processing on specific events
+  useEffect(() => {
+    // Call when value changes and has @ or # symbol
+    if (value && (value.includes('@') || value.includes('#'))) {
+      debouncedGeminiCall(value);
+    }
+  }, [value, debouncedGeminiCall]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -280,6 +399,11 @@ const NaturalLanguageInput = ({
       return;
     }
 
+    // Handle space key to trigger Gemini processing
+    if (e.key === ' ' && value.includes('@')) {
+      // This will be handled by the useEffect watching value changes
+    }
+
     // Handle arrow keys for suggestion navigation
     if (suggestions.items.length > 0) {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -370,6 +494,14 @@ const NaturalLanguageInput = ({
           onSelect={handleCursorPositionChange}
           onClick={handleCursorPositionChange}
         />
+
+        {/* AI-enhanced indicator */}
+        {isGeminiProcessing && (
+          <div className="absolute right-2 top-2 text-xs flex items-center gap-1 text-muted-foreground">
+            <Wand2 size={14} className="animate-pulse" />
+            <span>AI enhancing...</span>
+          </div>
+        )}
         
         {/* Tokenized display (shown below textarea for reference) */}
         {tokens.length > 0 && (

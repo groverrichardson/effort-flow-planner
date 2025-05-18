@@ -24,9 +24,10 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
 }) => {
   // Helper function to get initials from full name
   const getInitials = (name: string): string => {
+    // Improved to handle multi-word names better
     return name
       .split(' ')
-      .map(part => part[0])
+      .map(part => part.charAt(0))
       .join('')
       .toUpperCase()
       .substring(0, 2); // Limit to 2 characters
@@ -38,8 +39,9 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
       <div className={`${className} flex flex-wrap gap-1`}>
         {people.length > 0 ? (
           people.map((person) => {
-            // For buttons, show initials for names longer than 10 characters
-            const displayName = person.name.length > 10 
+            // For buttons, show initials for names longer than 10 characters or with multiple words
+            const hasMultipleWords = person.name.trim().includes(' ');
+            const displayName = (person.name.length > 10 || hasMultipleWords)
               ? getInitials(person.name) 
               : person.name;
             

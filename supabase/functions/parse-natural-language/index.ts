@@ -20,15 +20,16 @@ serve(async (req) => {
       throw new Error('GEMINI_API_KEY not found');
     }
 
-    const { text } = await req.json();
+    const { text, isLiveTyping = false } = await req.json();
     if (!text || typeof text !== 'string') {
       throw new Error('Invalid input: text field is required');
     }
 
-    console.log(`Parsing text with Gemini: ${text}`);
+    const requestType = isLiveTyping ? 'live typing' : 'final submission';
+    console.log(`Parsing text with Gemini (${requestType}): ${text}`);
 
-    // Call Gemini API to extract entities
-    const response = await callGeminiApi(text, geminiApiKey);
+    // Call Gemini API to extract entities with optimized settings based on request type
+    const response = await callGeminiApi(text, geminiApiKey, isLiveTyping);
     
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -48,31 +49,15 @@ serve(async (req) => {
   }
 });
 
-async function callGeminiApi(text: string, apiKey: string) {
+async function callGeminiApi(text: string, apiKey: string, isLiveTyping = false) {
   try {
-    const prompt = `
-      You are a task parser assistant. Extract structured information from the following task description.
-      
-      Task: "${text}"
-      
-      Extract the following information in JSON format:
-      1. People mentioned (with @ symbol): Identify all full names after @ symbols (like @John Smith, @Mary Johnson). Extract these as an array of complete names.
-      2. Tags mentioned (with # symbol): Extract all hashtags (like #work, #personal).
-      3. Priority level: High, Normal, Low, or Lowest.
-      4. Due date or deadline: Any date or time reference.
-      5. Effort level: Extract mentions of time effort (quick, 30 minutes, few hours, day, week, etc.)
+    // Optimize prompt based on request type
+    const prompt = isLiveTyping 
+      ? getLiveTypingPrompt(text)
+      : getFullSubmissionPrompt(text);
 
-      Return ONLY valid JSON in this format:
-      {
-        "people": ["Full Name 1", "Full Name 2"],
-        "tags": ["tag1", "tag2"],
-        "priority": "high|normal|low|lowest",
-        "dueDate": "extracted date string or null",
-        "effort": "extracted effort or null"
-      }
-
-      If any field is not found, use null or an empty array as appropriate.
-    `;
+    const maxTokens = isLiveTyping ? 256 : 1024;
+    const temperature = isLiveTyping ? 0.1 : 0.2;
 
     const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent', {
       method: 'POST',
@@ -91,10 +76,10 @@ async function callGeminiApi(text: string, apiKey: string) {
           }
         ],
         generationConfig: {
-          temperature: 0.2,
+          temperature: temperature,
           topP: 0.8,
           topK: 40,
-          maxOutputTokens: 1024,
+          maxOutputTokens: maxTokens,
         },
       }),
     });
@@ -129,10 +114,61 @@ async function callGeminiApi(text: string, apiKey: string) {
       priority: extractedJson.priority || null,
       dueDate: extractedJson.dueDate || null,
       effort: extractedJson.effort || null,
-      rawResponse: textResponse, // Include for debugging
+      rawResponse: isLiveTyping ? null : textResponse, // Include full response only for final submissions
     };
   } catch (error) {
     console.error('Error calling Gemini API:', error);
     throw error;
   }
+}
+
+// Optimized prompt for live typing - focuses on parsing entities only
+function getLiveTypingPrompt(text: string) {
+  return `
+    You are a task parsing assistant. Extract structured information from this text as the user is typing it.
+    
+    Text: "${text}"
+    
+    Extract only these entities in JSON format:
+    1. People mentioned (with @ symbol): Extract full names after @ symbols (like @John Smith, @Mary Johnson). 
+       Capture COMPLETE names with spaces (e.g. "@Kyle Dudley" should be extracted as "Kyle Dudley", not just "Kyle").
+    2. Tags mentioned (with # symbol): Extract all hashtags (like #work, #personal).
+    
+    Return ONLY valid JSON in this format:
+    {
+      "people": ["Full Name 1", "Full Name 2"],
+      "tags": ["tag1", "tag2"]
+    }
+
+    If any field is not found, use an empty array.
+  `;
+}
+
+// Comprehensive prompt for final submission - extracts all entities in detail
+function getFullSubmissionPrompt(text: string) {
+  return `
+    You are a task parser assistant. Extract structured information from the following task description.
+    
+    Task: "${text}"
+    
+    Extract the following information in JSON format:
+    1. People mentioned (with @ symbol): Identify all full names after @ symbols (like @John Smith, @Mary Johnson). 
+       Extract these as an array of complete names including all words until the next @ symbol, hashtag, or end of text.
+       For example, in "@Kyle Dudley needs to review the report", extract "Kyle Dudley" as a complete name.
+    2. Tags mentioned (with # symbol): Extract all hashtags (like #work, #personal).
+    3. Priority level: High, Normal, Low, or Lowest.
+    4. Due date or deadline: Any date or time reference. Watch for phrases like "due on Tuesday" or "by next week".
+    5. Effort level: Extract mentions of time effort (quick, 30 minutes, few hours, day, week, etc.)
+
+    Return ONLY valid JSON in this format:
+    {
+      "people": ["Full Name 1", "Full Name 2"],
+      "tags": ["tag1", "tag2"],
+      "priority": "high|normal|low|lowest",
+      "dueDate": "extracted date string or null",
+      "effort": "extracted effort or null"
+    }
+
+    If any field is not found, use null or an empty array as appropriate.
+  `;
 }

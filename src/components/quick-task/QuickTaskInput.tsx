@@ -23,6 +23,8 @@ const QuickTaskInput = () => {
       // Use the enhanced natural language parser (now async)
       const taskData = await naturalLanguageToTask(quickTaskInput);
       
+      console.log("Parsed task data:", taskData);
+      
       // Process tags from names - create new tags if needed
       if (taskData.tagNames && taskData.tagNames.length > 0) {
         taskData.tags = await Promise.all(taskData.tagNames.map(async tagName => {
@@ -43,6 +45,8 @@ const QuickTaskInput = () => {
       if (taskData.peopleNames && taskData.peopleNames.length > 0) {
         // Limit to a maximum of 2 people
         const limitedPeopleNames = taskData.peopleNames.slice(0, 2);
+        
+        console.log("Processing people:", limitedPeopleNames);
         
         peopleToAdd = await Promise.all(limitedPeopleNames.map(async personName => {
           // Try to find an existing person by exact match
@@ -73,6 +77,8 @@ const QuickTaskInput = () => {
         tags: taskData.tags,
         people: taskData.people,
       };
+      
+      console.log("Creating task:", newTask);
       
       addTask(newTask);
       toast({ 

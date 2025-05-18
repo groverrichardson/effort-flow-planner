@@ -1,4 +1,3 @@
-
 import { addDays, addWeeks, addMonths, parse, isValid, getDay } from 'date-fns';
 import { Priority, EffortLevel } from '@/types';
 import { supabase } from "@/integrations/supabase/client";
@@ -6,8 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 // Helper function to use Gemini for enhanced parsing
 async function enhanceWithGemini(input: string) {
   try {
+    console.log("Calling Gemini for final task submission...");
     const { data, error } = await supabase.functions.invoke('parse-natural-language', {
-      body: { text: input },
+      body: { 
+        text: input,
+        isLiveTyping: false // This is a full submission
+      },
     });
 
     if (error) {
@@ -20,6 +23,7 @@ async function enhanceWithGemini(input: string) {
       return null;
     }
 
+    console.log("Gemini extraction results:", data);
     return data;
   } catch (error) {
     console.error('Error in enhanceWithGemini:', error);
@@ -117,7 +121,8 @@ export const naturalLanguageToTask = async (input: string) => {
         // Remove the @mentions from the title
         limitedPeople.forEach(person => {
           const personWithAt = `@${person}`;
-          title = title.replace(new RegExp(personWithAt, 'gi'), '');
+          const personRegex = new RegExp(personWithAt, 'gi');
+          title = title.replace(personRegex, '').trim();
         });
       }
       
@@ -128,7 +133,8 @@ export const naturalLanguageToTask = async (input: string) => {
         // Remove the hashtags from the title
         enhancedData.tags.forEach(tag => {
           const tagWithHash = `#${tag}`;
-          title = title.replace(new RegExp(tagWithHash, 'gi'), '');
+          const tagRegex = new RegExp(tagWithHash, 'gi');
+          title = title.replace(tagRegex, '').trim();
         });
       }
       
@@ -139,7 +145,7 @@ export const naturalLanguageToTask = async (input: string) => {
         
         // Remove priority mentions from title
         const priorityRegex = new RegExp(`\\b(${enhancedData.priority} priority|${enhancedData.priority})\\b`, 'gi');
-        title = title.replace(priorityRegex, '');
+        title = title.replace(priorityRegex, '').trim();
       }
       
       // Process due date
@@ -150,7 +156,7 @@ export const naturalLanguageToTask = async (input: string) => {
         // Remove due date mentions from title (this is a simplification, actual implementation would be more complex)
         if (enhancedData.dueDate) {
           const dueDateRegex = new RegExp(`\\bdue\\s+${enhancedData.dueDate}\\b|\\b${enhancedData.dueDate}\\b`, 'gi');
-          title = title.replace(dueDateRegex, '');
+          title = title.replace(dueDateRegex, '').trim();
         }
       }
       
@@ -162,7 +168,7 @@ export const naturalLanguageToTask = async (input: string) => {
         // Remove effort mentions from title (also a simplification)
         if (enhancedData.effort) {
           const effortRegex = new RegExp(`\\b${enhancedData.effort}\\b`, 'gi');
-          title = title.replace(effortRegex, '');
+          title = title.replace(effortRegex, '').trim();
         }
       }
       
@@ -404,3 +410,24 @@ function traditionalNaturalLanguageToTask(input: string) {
   
   return taskData;
 }
+
+// Add a utility function to help with debouncing in components
+export const debounce = <F extends (...args: any[]) => any>(
+  func: F,
+  waitFor: number
+) => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Parameters<F>): Promise<ReturnType<F>> => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+
+    return new Promise(resolve => {
+      timeout = setTimeout(() => {
+        const result = func(...args);
+        resolve(result);
+      }, waitFor);
+    });
+  };
+};
