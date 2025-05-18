@@ -298,21 +298,25 @@ const NaturalLanguageInput = ({
         
         {/* Visualization of parsed tokens */}
         {tokens.length > 0 && (
-          <div className="absolute top-0 left-0 w-full h-full pointer-events-none p-2 pt-[9px]">
-            <div className="space-x-1">
+          <div className="absolute top-0 left-0 w-full h-full pointer-events-none p-2.5">
+            <div className="space-x-1 flex flex-wrap items-center">
               {tokens.map((token, index) => (
                 token.type === 'text' ? (
                   <span key={index} className="text-transparent">
                     {token.value}
                   </span>
                 ) : (
-                  <Badge 
+                  <span 
                     key={index} 
-                    className="pointer-events-none text-sm"
-                    style={{ backgroundColor: token.color, color: 'white' }}
+                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white leading-none"
+                    style={{ 
+                      backgroundColor: token.color,
+                      height: '1.25rem',
+                      margin: '0.125rem 0'
+                    }}
                   >
                     {token.value}
-                  </Badge>
+                  </span>
                 )
               ))}
             </div>
