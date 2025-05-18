@@ -24,6 +24,13 @@ interface TaskFiltersProps {
   tags: { id: string; name: string }[];
   people: { id: string; name: string }[];
   inMobileMenu?: boolean;
+  
+  // Add view options
+  viewingCompleted?: boolean;
+  showTodaysTasks?: boolean;
+  onShowAllActive?: () => void;
+  onShowToday?: () => void;
+  onShowCompleted?: () => void;
 }
 
 const TaskFilters: React.FC<TaskFiltersProps> = ({
@@ -43,6 +50,13 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
   tags,
   people,
   inMobileMenu = false,
+  
+  // View options
+  viewingCompleted = false,
+  showTodaysTasks = false,
+  onShowAllActive = () => {},
+  onShowToday = () => {},
+  onShowCompleted = () => {},
 }) => {
   const isMobile = useIsMobile();
   const hasActiveFilters = selectedTags.length > 0 || 
@@ -71,6 +85,11 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
         tags={tags}
         people={people}
         hasActiveFilters={hasActiveFilters}
+        viewingCompleted={viewingCompleted}
+        showTodaysTasks={showTodaysTasks}
+        onShowAllActive={onShowAllActive}
+        onShowToday={onShowToday}
+        onShowCompleted={onShowCompleted}
       />
     );
   }
@@ -96,6 +115,11 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
           hasActiveFilters={hasActiveFilters}
           tags={tags}
           people={people}
+          viewingCompleted={viewingCompleted}
+          showTodaysTasks={showTodaysTasks}
+          onShowAllActive={onShowAllActive}
+          onShowToday={onShowToday}
+          onShowCompleted={onShowCompleted}
         />
 
         <ActiveFilterPills

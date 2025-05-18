@@ -59,17 +59,17 @@ const NaturalLanguageInput = ({
         regex: /#([^\s#@]+)/g, 
         type: 'tag' 
       },
-      // People (@person)
+      // People (@person - can include spaces for multi-word names)
       { 
-        regex: /@([^\s#@]+)/g, 
+        regex: /@([^\s#@]+(?:\s+[^\s#@]+)*)/g,
         type: 'person' 
       },
-      // Priority keywords
+      // Priority keywords - Enhanced to match all priority levels
       { 
-        regex: /\b(high priority|low priority|urgent|important)\b/gi, 
+        regex: /\b(high priority|normal priority|medium priority|low priority|lowest priority|urgent|important|not urgent|when you have time|whenever)\b/gi, 
         type: 'priority' 
       },
-      // Date keywords - Improved to catch more date formats
+      // Date keywords - Enhanced to catch more date formats
       { 
         regex: /\b(tomorrow|today|next week|next month|on (monday|tuesday|wednesday|thursday|friday|saturday|sunday)|this (monday|tuesday|wednesday|thursday|friday|saturday|sunday)|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* \d{1,2}(st|nd|rd|th)?|\d{1,2}[\/\-]\d{1,2}([\/\-]\d{2,4})?|due (tomorrow|today|next week|on|by|this) ?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)?)\b/gi, 
         type: 'date' 
@@ -85,8 +85,9 @@ const NaturalLanguageInput = ({
     const matches: {start: number, end: number, text: string, type: string}[] = [];
     
     tokenPatterns.forEach(pattern => {
-      let match;
       const regex = new RegExp(pattern.regex);
+      let match;
+      
       while ((match = regex.exec(value)) !== null) {
         matches.push({
           start: match.index,
@@ -94,6 +95,11 @@ const NaturalLanguageInput = ({
           text: match[0],
           type: pattern.type
         });
+        
+        // Reset regex to prevent infinite loop with global flag
+        if (pattern.type === 'person') {
+          regex.lastIndex = match.index + match[0].length;
+        }
       }
     });
     
@@ -248,16 +254,24 @@ const NaturalLanguageInput = ({
     const beforeCursor = value.substring(0, cursorPosition);
     const afterCursor = value.substring(cursorPosition);
     
-    const words = beforeCursor.split(/\s+/);
-    const lastWord = words[words.length - 1];
-    const prefix = lastWord.startsWith('#') ? '#' : '@';
+    // Find the @ or # symbol
+    const lastAtIndex = beforeCursor.lastIndexOf('@');
+    const lastHashIndex = beforeCursor.lastIndexOf('#');
     
-    // Replace the current word with the suggestion
-    const newText = beforeCursor.substring(0, beforeCursor.length - lastWord.length) + 
-                     prefix + suggestion.name + ' ' + 
-                     afterCursor;
+    if (lastAtIndex >= 0 && (lastHashIndex < 0 || lastAtIndex > lastHashIndex)) {
+      // Replace from @ to cursor position with suggestion
+      const newText = beforeCursor.substring(0, lastAtIndex) + 
+                       '@' + suggestion.name + ' ' + 
+                       afterCursor;
+      onChange(newText);
+    } else if (lastHashIndex >= 0) {
+      // Replace from # to cursor position with suggestion
+      const newText = beforeCursor.substring(0, lastHashIndex) + 
+                       '#' + suggestion.name + ' ' + 
+                       afterCursor;
+      onChange(newText);
+    }
     
-    onChange(newText);
     setSuggestions({ type: '', items: [] });
     setPopoverOpen(false);
   };

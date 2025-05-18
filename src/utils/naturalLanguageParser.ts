@@ -19,20 +19,31 @@ export const naturalLanguageToTask = (input: string) => {
     taskData.tagNames = tagMatches.map(tag => tag.replace('#', ''));
   }
   
-  // Extract people references and remove from title
-  const peopleMatches = input.match(/(@\w+)/g) || [];
-  if (peopleMatches.length > 0) {
-    peopleMatches.forEach(person => {
-      // Remove @people completely from the title
-      title = title.replace(person, '');
-    });
-    taskData.peopleNames = peopleMatches.map(person => person.replace('@', ''));
+  // Extract people references (support multi-word names)
+  const personMatches = [];
+  const personRegex = /@([^\s@#]+(?:\s+[^\s@#]+)*)/g;
+  let match;
+  
+  while ((match = personRegex.exec(input)) !== null) {
+    const fullMatch = match[0]; // The entire match including the @ symbol
+    const nameOnly = match[1]; // Just the name without the @ symbol
+    
+    // Remove from title and add to personMatches array
+    title = title.replace(fullMatch, '');
+    personMatches.push(nameOnly);
   }
   
-  // Extract priority keywords and remove from title
+  if (personMatches.length > 0) {
+    taskData.peopleNames = personMatches;
+  }
+  
+  // Extract priority keywords and remove from title - Enhanced to catch all priority levels
   if (lowerInput.includes('high priority') || lowerInput.includes('urgent') || lowerInput.includes('important')) {
     title = title.replace(/high priority|urgent|important/gi, '');
     taskData.priority = 'high' as Priority;
+  } else if (lowerInput.includes('normal priority') || lowerInput.includes('medium priority')) {
+    title = title.replace(/normal priority|medium priority/gi, '');
+    taskData.priority = 'normal' as Priority;
   } else if (lowerInput.includes('low priority') || lowerInput.includes('not urgent') || lowerInput.includes('when you have time')) {
     title = title.replace(/low priority|not urgent|when you have time/gi, '');
     taskData.priority = 'low' as Priority;

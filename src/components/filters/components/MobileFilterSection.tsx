@@ -38,6 +38,13 @@ interface MobileFiltersProps {
   tags: { id: string; name: string }[];
   people: { id: string; name: string }[];
   hasActiveFilters: boolean;
+  
+  // New view options
+  viewingCompleted?: boolean;
+  showTodaysTasks?: boolean;
+  onShowAllActive?: () => void;
+  onShowToday?: () => void;
+  onShowCompleted?: () => void;
 }
 
 export const MobileFilters: React.FC<MobileFiltersProps> = ({
@@ -56,7 +63,14 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
   onToggleShowCompleted,
   tags,
   people,
-  hasActiveFilters
+  hasActiveFilters,
+  
+  // New view options
+  viewingCompleted = false,
+  showTodaysTasks = false,
+  onShowAllActive,
+  onShowToday,
+  onShowCompleted
 }) => {
   return (
     <ScrollArea className="max-h-[70vh] pr-4">
@@ -76,18 +90,52 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
           )}
         </div>
 
-        {onToggleShowCompleted && (
-          <MobileFilterSection title="View Options">
+        {/* View Options Section */}
+        <MobileFilterSection title="View Options">
+          {onShowAllActive && (
+            <Button
+              onClick={onShowAllActive}
+              variant={!showTodaysTasks && !viewingCompleted ? "default" : "outline"}
+              size="sm"
+              className="text-xs px-2 py-0 h-7"
+            >
+              All Active Tasks
+            </Button>
+          )}
+          
+          {onShowToday && (
+            <Button
+              onClick={onShowToday}
+              variant={showTodaysTasks ? "default" : "outline"}
+              size="sm"
+              className="text-xs px-2 py-0 h-7"
+            >
+              Due Today
+            </Button>
+          )}
+          
+          {onShowCompleted && (
+            <Button
+              onClick={onShowCompleted}
+              variant={viewingCompleted ? "default" : "outline"}
+              size="sm"
+              className="text-xs px-2 py-0 h-7"
+            >
+              Completed Today
+            </Button>
+          )}
+          
+          {onToggleShowCompleted && (
             <Button
               onClick={onToggleShowCompleted}
               variant={showCompleted ? "default" : "outline"}
               size="sm"
-              className="w-full justify-start"
+              className="text-xs px-2 py-0 h-7"
             >
               {showCompleted ? "Hide Completed" : "Show Completed"}
             </Button>
-          </MobileFilterSection>
-        )}
+          )}
+        </MobileFilterSection>
 
         <MobileFilterSection title="Filter by Priority">
           {['high', 'normal', 'low', 'lowest'].map((priority) => (

@@ -34,6 +34,11 @@ interface FilterDropdownMenuProps {
   people: { id: string; name: string }[];
   showCompleted?: boolean;
   onToggleShowCompleted?: () => void;
+  onShowAllActive?: () => void;
+  onShowToday?: () => void;
+  onShowCompleted?: () => void;
+  showTodaysTasks?: boolean;
+  viewingCompleted?: boolean;
 }
 
 export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
@@ -52,7 +57,12 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
   tags,
   people,
   showCompleted,
-  onToggleShowCompleted
+  onToggleShowCompleted,
+  onShowAllActive,
+  onShowToday,
+  onShowCompleted,
+  showTodaysTasks,
+  viewingCompleted
 }) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   
@@ -70,24 +80,68 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="bg-background max-h-[70vh]">
         <ScrollArea className="max-h-[60vh]">
-          {onToggleShowCompleted && (
-            <>
-              <DropdownMenuLabel>View Options</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="px-2 pb-2">
-                <Button
-                  onClick={onToggleShowCompleted}
-                  variant={showCompleted ? "default" : "outline"}
-                  size="sm"
-                  className="w-full justify-start"
-                >
-                  {showCompleted ? "Hide Completed" : "Show Completed"}
-                </Button>
-              </div>
-              <DropdownMenuSeparator />
-            </>
-          )}
-        
+          {/* View options */}
+          <DropdownMenuLabel>View Options</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <div className="px-2 pb-2 space-y-2">
+            {onShowAllActive && (
+              <Button
+                onClick={() => {
+                  onShowAllActive();
+                  setFiltersOpen(true);
+                }}
+                variant={!showTodaysTasks && !viewingCompleted ? "default" : "outline"}
+                size="sm"
+                className="w-full justify-start"
+              >
+                All Active Tasks
+              </Button>
+            )}
+            
+            {onShowToday && (
+              <Button
+                onClick={() => {
+                  onShowToday();
+                  setFiltersOpen(true);
+                }}
+                variant={showTodaysTasks ? "default" : "outline"}
+                size="sm"
+                className="w-full justify-start"
+              >
+                Due Today
+              </Button>
+            )}
+            
+            {onShowCompleted && (
+              <Button
+                onClick={() => {
+                  onShowCompleted();
+                  setFiltersOpen(true);
+                }}
+                variant={viewingCompleted ? "default" : "outline"}
+                size="sm"
+                className="w-full justify-start"
+              >
+                Completed Today
+              </Button>
+            )}
+
+            {onToggleShowCompleted && (
+              <Button
+                onClick={() => {
+                  onToggleShowCompleted();
+                  setFiltersOpen(true);
+                }}
+                variant={showCompleted ? "default" : "outline"}
+                size="sm"
+                className="w-full justify-start"
+              >
+                {showCompleted ? "Hide Completed" : "Show Completed"}
+              </Button>
+            )}
+          </div>
+          <DropdownMenuSeparator />
+          
           <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
           <DropdownMenuSeparator />
           

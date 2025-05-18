@@ -87,6 +87,7 @@ const QuickTaskInput = () => {
           value={quickTaskInput}
           onChange={setQuickTaskInput}
           onSubmit={handleQuickTaskSubmit}
+          placeholder="What would you like to get done?"
         />
         <div className="mt-1 text-xs text-muted-foreground">
           Use #tag for tags, @person for people, "high priority" or dates like "due tomorrow"

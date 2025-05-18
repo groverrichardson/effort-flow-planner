@@ -75,7 +75,12 @@ const TaskList = () => {
     onTogglePriority: handleTogglePriority,
     onSetFilterByDueDate: setFilterByDueDate,
     onSetFilterByGoLive: setFilterByGoLive,
-    onResetFilters: clearAllFilters
+    onResetFilters: clearAllFilters,
+    viewingCompleted,
+    showTodaysTasks,
+    onShowAllActive: handleShowAllActive,
+    onShowToday: handleShowToday,
+    onShowCompleted: handleShowCompleted
   };
 
   return (
