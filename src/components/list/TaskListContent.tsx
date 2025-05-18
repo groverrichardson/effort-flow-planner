@@ -40,7 +40,6 @@ const TaskListContent = ({
               viewingCompleted={viewingCompleted}
               onClick={onTaskClick}
               onComplete={handleComplete}
-              onDelete={onDeleteTask}
             />
           ))}
         </div>

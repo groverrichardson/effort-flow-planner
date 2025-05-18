@@ -11,10 +11,9 @@ interface TaskCardProps {
   viewingCompleted: boolean;
   onClick: (task: Task) => void;
   onComplete: (task: Task) => void;
-  onDelete: (taskId: string) => void;
 }
 
-const TaskCard = ({ task, viewingCompleted, onClick, onComplete, onDelete }: TaskCardProps) => {
+const TaskCard = ({ task, viewingCompleted, onClick, onComplete }: TaskCardProps) => {
   const renderPriorityBadge = (priority: Priority) => {
     let className = '';
     switch (priority) {
@@ -58,14 +57,6 @@ const TaskCard = ({ task, viewingCompleted, onClick, onComplete, onDelete }: Tas
     }
     
     return null;
-  };
-
-  const handleDelete = () => {
-    onDelete(task.id);
-    toast({ 
-      title: "Task deleted", 
-      description: `"${task.title}" has been removed` 
-    });
   };
 
   return (

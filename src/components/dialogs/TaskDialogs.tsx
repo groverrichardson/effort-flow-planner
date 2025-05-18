@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Task } from '@/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -59,17 +58,8 @@ const TaskDialogs = ({
                 task={currentEditTask} 
                 onSuccess={onCloseEdit} 
                 onCancel={onCloseEdit} 
+                onDelete={handleDelete}
               />
-              <div className="mt-4 border-t pt-4">
-                <Button 
-                  variant="destructive" 
-                  onClick={handleDelete}
-                  className="w-full sm:w-auto"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Task
-                </Button>
-              </div>
             </>
           )}
         </DialogContent>
