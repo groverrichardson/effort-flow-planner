@@ -131,7 +131,7 @@ const NaturalLanguageInput = ({
           newTokens.push({ 
             type: 'date', 
             value: `due ${nextWord}`, 
-            original: `due ${nextWord}`,
+            original: `due ${words[i]} ${words[i+1]}`,
             color: '#F97316'  // Bright orange
           });
           i++; // Skip the day word
@@ -142,7 +142,7 @@ const NaturalLanguageInput = ({
       // Time effort indicators
       if (['quick', 'few minutes', '5 minutes', '30 minutes', 'half hour', 'short', 'couple hours', 'few hours',
            'all day', 'one day', 'full day', 'this week', 'several days', 'couple weeks', 'few weeks',
-           'month', 'long term', 'big project'].includes(word.toLowerCase())) {
+           'month', 'long term', 'big project'].some(phrase => word.toLowerCase().includes(phrase))) {
         if (currentText) {
           newTokens.push({ type: 'text', value: currentText, original: currentText });
           currentText = '';
@@ -271,23 +271,25 @@ const NaturalLanguageInput = ({
           onClick={handleCursorPositionChange}
         />
         
-        {/* Visualization of parsed tokens */}
+        {/* Visualization of parsed tokens with improved styling */}
         {tokens.length > 0 && (
-          <div className="absolute top-0 left-0 w-full h-full pointer-events-none p-2.5 flex items-start overflow-hidden">
-            <div className="inline-flex flex-wrap gap-1 items-center">
+          <div className="absolute top-0 left-0 w-full h-full pointer-events-none p-2.5 flex flex-wrap gap-0 items-start overflow-hidden">
+            <div className="inline whitespace-normal break-words">
               {tokens.map((token, index) => (
                 token.type === 'text' ? (
-                  <span key={index} className="text-transparent whitespace-pre-wrap">
+                  <span key={index} className="text-transparent inline">
                     {token.value}
                   </span>
                 ) : (
                   <span 
                     key={index} 
-                    className="inline-flex items-center rounded-full px-1 py-0 text-xs font-medium text-white leading-normal"
+                    className="inline-block rounded-md px-1.5 py-0 text-xs font-medium text-white leading-tight"
                     style={{ 
                       backgroundColor: token.color,
-                      height: '1.15rem', // Make pills close to text height
-                      lineHeight: '1rem'
+                      height: '1rem', // Make pills same as text height
+                      lineHeight: '1rem',
+                      margin: '0 1px',
+                      transform: 'translateY(-1px)'
                     }}
                   >
                     {token.value}

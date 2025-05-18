@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
 import TaskList from '@/components/TaskList';
@@ -38,41 +38,45 @@ import {
   Edit,
   Trash
 } from 'lucide-react';
+import { useMobile } from '@/hooks/use-mobile';
 
 const Index = () => {
-  const { addTask, tags, people } = useTaskContext();
+  const { addTask, tags, people, addTag, addPerson } = useTaskContext();
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('tags');
   const [quickTaskInput, setQuickTaskInput] = useState('');
+  const isMobile = useMobile();
   
   const handleQuickTaskSubmit = () => {
     if (!quickTaskInput.trim()) return;
     
     const taskData = naturalLanguageToTask(quickTaskInput);
     
-    // Process tags from names
+    // Process tags from names - create new tags if needed
     if (taskData.tagNames && taskData.tagNames.length > 0) {
       taskData.tags = taskData.tagNames.map(tagName => {
         // Try to find an existing tag
         const existingTag = tags.find(t => 
           t.name.toLowerCase() === tagName.toLowerCase()
         );
-        return existingTag || { id: crypto.randomUUID(), name: tagName };
+        // Create a new tag if it doesn't exist
+        return existingTag || addTag(tagName);
       });
       delete taskData.tagNames;
     } else {
       taskData.tags = [];
     }
     
-    // Process people from names
+    // Process people from names - create new people if needed
     if (taskData.peopleNames && taskData.peopleNames.length > 0) {
       taskData.people = taskData.peopleNames.map(personName => {
         // Try to find an existing person
         const existingPerson = people.find(p => 
           p.name.toLowerCase() === personName.toLowerCase()
         );
-        return existingPerson || { id: crypto.randomUUID(), name: personName };
+        // Create a new person if they don't exist
+        return existingPerson || addPerson(personName);
       });
       delete taskData.peopleNames;
     } else {
@@ -103,7 +107,7 @@ const Index = () => {
   };
   
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
+    <div className="container max-w-4xl mx-auto px-4 py-8 pb-20 md:pb-8 relative">
       <div className="flex justify-between items-center gap-4 mb-8">
         <h1 className="text-2xl md:text-3xl font-bold">Task Manager</h1>
         <div className="flex items-center gap-2">
@@ -148,20 +152,23 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Natural language quick task input */}
-      <div className="mb-6">
+      {/* Task list appears first on mobile */}
+      <div className="mb-6 md:mb-0">
+        <TaskList />
+      </div>
+
+      {/* Natural language quick task input - sticky on mobile */}
+      <div className={`${isMobile ? 'fixed bottom-0 left-0 right-0 p-4 bg-background z-50 border-t' : 'mt-8 mb-6'}`}>
         <NaturalLanguageInput
           value={quickTaskInput}
           onChange={setQuickTaskInput}
           onSubmit={handleQuickTaskSubmit}
-          autoFocus
+          autoFocus={!isMobile}
         />
         <div className="mt-1 text-xs text-muted-foreground">
           Pro tip: Use #tag for tags, @person for people, "high priority" or dates like "due tomorrow"
         </div>
       </div>
-
-      <TaskList />
 
       {/* Create Task Dialog - NO natural language input here */}
       <Dialog open={createTaskOpen} onOpenChange={setCreateTaskOpen}>
