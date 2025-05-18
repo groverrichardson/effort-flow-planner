@@ -1,5 +1,5 @@
 
-import { Priority } from '@/types';
+import { Priority, Tag, Person } from '@/types';
 import TaskFilters from '../filters/TaskFilters';
 import TaskListHeader from './TaskListHeader';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -37,8 +37,8 @@ interface TaskListControlsProps {
   onSetFilterByDueDate: (value: string) => void;
   onSetFilterByGoLive: (value: boolean) => void;
   onResetFilters: () => void;
-  tags: { id: string; name: string; color?: string }[];
-  people: { id: string; name: string }[];
+  tags: Tag[];
+  people: Person[];
   filterProps?: FilterProps;
 }
 

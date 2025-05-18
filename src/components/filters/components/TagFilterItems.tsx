@@ -3,9 +3,10 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenuCheckboxItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
+import { Tag } from '@/types';
 
 interface TagFilterItemsProps {
-  tags: { id: string; name: string; color?: string }[];
+  tags: Tag[];
   selectedTags: string[];
   onToggleTag: (tagId: string) => void;
   size?: "sm" | "default";

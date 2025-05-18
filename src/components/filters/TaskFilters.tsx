@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Priority } from '@/types';
+import { Priority, Tag, Person } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FilterDropdownMenu } from './components/FilterDropdownMenu';
 import { ActiveFilterPills } from './components/ActiveFilterPills';
@@ -21,8 +21,8 @@ interface TaskFiltersProps {
   onResetFilters: () => void;
   showCompleted?: boolean;
   onToggleShowCompleted?: () => void;
-  tags: { id: string; name: string; color?: string }[];
-  people: { id: string; name: string }[];
+  tags: Tag[];
+  people: Person[];
   inMobileMenu?: boolean;
   
   // Add view options
