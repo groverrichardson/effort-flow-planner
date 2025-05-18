@@ -62,8 +62,7 @@ const TaskListControls = ({
   onSetFilterByGoLive,
   onResetFilters,
   tags,
-  people,
-  filterProps
+  people
 }: TaskListControlsProps) => {
   const isMobile = useIsMobile();
   

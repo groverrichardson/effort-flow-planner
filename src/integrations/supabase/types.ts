@@ -147,8 +147,10 @@ export type Database = {
           completed: boolean
           completed_date: string | null
           created_at: string
+          dependencies: string[]
           description: string | null
           due_date: string | null
+          due_date_type: string
           effort_level: number
           go_live_date: string | null
           id: string
@@ -162,8 +164,10 @@ export type Database = {
           completed?: boolean
           completed_date?: string | null
           created_at?: string
+          dependencies?: string[]
           description?: string | null
           due_date?: string | null
+          due_date_type?: string
           effort_level: number
           go_live_date?: string | null
           id?: string
@@ -177,8 +181,10 @@ export type Database = {
           completed?: boolean
           completed_date?: string | null
           created_at?: string
+          dependencies?: string[]
           description?: string | null
           due_date?: string | null
+          due_date_type?: string
           effort_level?: number
           go_live_date?: string | null
           id?: string

@@ -26,7 +26,7 @@ interface TaskFormProps {
   task?: Task;
   onSuccess?: () => void;
   onCancel?: () => void;
-  onDelete?: (taskId: string) => void; // Added this property
+  onDelete?: (taskId: string) => void;
 }
 
 const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -46,7 +46,7 @@ const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
 };
 
 const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
-  const { addTask, updateTask, tags, people, addTag, addPerson } = useTaskContext();
+  const { addTask, updateTask, tags, people, addTag, addPerson, tasks } = useTaskContext();
   const [formData, setFormData] = useState(task || defaultTask);
   const isEditing = !!task;
 
@@ -99,6 +99,10 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
     setFormData(prev => ({ ...prev, effortLevel: Number(value) as EffortLevel }));
   };
 
+  const handleDueDateTypeChange = (value: string) => {
+    setFormData(prev => ({ ...prev, dueDateType: value as DueDateType }));
+  };
+
   const handleDateChange = (date: Date | null, field: 'dueDate' | 'targetDeadline' | 'goLiveDate') => {
     setFormData(prev => ({ ...prev, [field]: date }));
     // Auto-close the popover after selection by triggering a click outside event
@@ -133,6 +137,19 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
         people: isSelected 
           ? prev.people.filter(p => p.id !== personId)
           : [...prev.people, selectedPerson]
+      };
+    });
+  };
+
+  const handleDependencyToggle = (taskId: string) => {
+    setFormData(prev => {
+      const isSelected = prev.dependencies.includes(taskId);
+      
+      return {
+        ...prev,
+        dependencies: isSelected 
+          ? prev.dependencies.filter(id => id !== taskId)
+          : [...prev.dependencies, taskId]
       };
     });
   };
@@ -233,6 +250,11 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
     }
   };
 
+  // Get available tasks for dependencies (excluding current task and completed tasks)
+  const availableTasks = tasks.filter(t => 
+    !t.completed && (!isEditing || t.id !== task?.id)
+  );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
@@ -291,11 +313,29 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <DatePickerField 
-          label="Due Date" 
-          value={formData.dueDate} 
-          onChange={(date) => handleDateChange(date, 'dueDate')} 
-        />
+        <div className="flex-1 min-w-[180px]">
+          <label className="block text-xs font-medium mb-1">Due Date</label>
+          <div className="flex gap-1">
+            <div className="flex-1">
+              <DatePickerField 
+                label="Date" 
+                value={formData.dueDate} 
+                onChange={(date) => handleDateChange(date, 'dueDate')} 
+              />
+            </div>
+            <div className="w-16">
+              <Select value={formData.dueDateType} onValueChange={handleDueDateTypeChange}>
+                <SelectTrigger className="h-10 text-xs w-16">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="by">By</SelectItem>
+                  <SelectItem value="on">On</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
         <DatePickerField 
           label="Target Deadline" 
           value={formData.targetDeadline} 
@@ -321,6 +361,36 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
         onTogglePerson={handlePersonToggle}
         onAddNewPerson={handleAddNewPerson}
       />
+
+      {/* Task Dependencies Section */}
+      <div>
+        <label className="block text-xs font-medium mb-1">Dependencies</label>
+        <div className="border border-input rounded p-2 max-h-[120px] overflow-y-auto">
+          {availableTasks.length === 0 ? (
+            <p className="text-xs text-muted-foreground p-1">No tasks available</p>
+          ) : (
+            <div className="space-y-1">
+              {availableTasks.map(availableTask => (
+                <div key={availableTask.id} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={`dependency-${availableTask.id}`}
+                    checked={formData.dependencies.includes(availableTask.id)}
+                    onChange={() => handleDependencyToggle(availableTask.id)}
+                    className="mr-2"
+                  />
+                  <label 
+                    htmlFor={`dependency-${availableTask.id}`}
+                    className="text-xs cursor-pointer truncate"
+                  >
+                    {availableTask.title}
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       <TaskFormActions 
         isEditing={isEditing} 

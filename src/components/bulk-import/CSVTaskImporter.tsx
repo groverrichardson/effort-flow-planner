@@ -112,7 +112,7 @@ const CSVTaskImporter = () => {
         description: task.description || enhancedTaskData.description || '',
         priority: task.priority || enhancedTaskData.priority || 'normal',
         dueDate: enhancedTaskData.dueDate || (task.dueDate ? new Date(task.dueDate) : null),
-        dueDateType: 'by', // Default value for dueDateType
+        dueDateType: enhancedTaskData.dueDateType || 'by',
         targetDeadline: enhancedTaskData.targetDeadline || null,
         goLiveDate: enhancedTaskData.goLiveDate || null,
         effortLevel: enhancedTaskData.effortLevel || 4,
