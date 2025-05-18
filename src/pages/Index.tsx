@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
@@ -38,7 +37,7 @@ import {
   Edit,
   Trash
 } from 'lucide-react';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Index = () => {
   const { addTask, tags, people, addTag, addPerson } = useTaskContext();
@@ -46,7 +45,7 @@ const Index = () => {
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('tags');
   const [quickTaskInput, setQuickTaskInput] = useState('');
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   
   const handleQuickTaskSubmit = () => {
     if (!quickTaskInput.trim()) return;
