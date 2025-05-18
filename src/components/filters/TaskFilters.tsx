@@ -21,7 +21,7 @@ interface TaskFiltersProps {
   onResetFilters: () => void;
   showCompleted?: boolean;
   onToggleShowCompleted?: () => void;
-  tags: { id: string; name: string; color: string }[];
+  tags: { id: string; name: string; color?: string }[];
   people: { id: string; name: string }[];
   inMobileMenu?: boolean;
   

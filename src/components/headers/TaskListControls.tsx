@@ -37,7 +37,7 @@ interface TaskListControlsProps {
   onSetFilterByDueDate: (value: string) => void;
   onSetFilterByGoLive: (value: boolean) => void;
   onResetFilters: () => void;
-  tags: { id: string; name: string }[];
+  tags: { id: string; name: string; color?: string }[];
   people: { id: string; name: string }[];
   filterProps?: FilterProps;
 }

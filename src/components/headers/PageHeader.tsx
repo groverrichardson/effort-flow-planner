@@ -52,6 +52,12 @@ const PageHeader = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { tags, people } = useTaskContext();
   
+  // Update tags to include optional color property for compatibility
+  const tagsWithOptionalColor = tags.map(tag => ({
+    ...tag,
+    color: undefined // Adding undefined color property to match expected interface
+  }));
+  
   // Simple component to show only view options
   const ViewOptions = () => {
     if (!filterProps || !filterProps.onShowAllActive) return null;
@@ -111,46 +117,8 @@ const PageHeader = ({
       <SheetContent side="right" className="flex flex-col p-0">
         <ScrollArea className="h-full px-4">
           <div className="space-y-6 py-6">
-            <div className="flex flex-col gap-3">
-              <Button 
-                onClick={() => {
-                  onCreateTaskClick();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full justify-start gap-2"
-              >
-                <PlusCircle size={16} />
-                New Task
-              </Button>
-              
-              <Button 
-                onClick={() => {
-                  onManageTagsClick();
-                  setMobileMenuOpen(false);
-                }} 
-                variant="outline"
-                className="w-full justify-start gap-2"
-              >
-                <Tag size={16} />
-                Manage Tags
-              </Button>
-              
-              <Button 
-                onClick={() => {
-                  onManagePeopleClick();
-                  setMobileMenuOpen(false);
-                }} 
-                variant="outline"
-                className="w-full justify-start gap-2"
-              >
-                <User size={16} />
-                Manage People
-              </Button>
-            </div>
-            
             {isMobile && filterProps && (
               <>
-                <Separator />
                 <ViewOptions />
                 <Separator />
                 <div className="space-y-2">
@@ -182,7 +150,7 @@ const PageHeader = ({
                       onSetFilterByDueDate={filterProps.onSetFilterByDueDate}
                       onSetFilterByGoLive={filterProps.onSetFilterByGoLive}
                       onResetFilters={filterProps.onResetFilters}
-                      tags={tags}
+                      tags={tagsWithOptionalColor}
                       people={people}
                       inMobileMenu={true}
                     />
@@ -193,14 +161,51 @@ const PageHeader = ({
             
             <Separator />
             
-            <Button
-              onClick={() => signOut()}
-              variant="outline"
-              className="w-full justify-start gap-2"
-            >
-              <LogOut size={16} />
-              Sign Out
-            </Button>
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={() => {
+                  onManageTagsClick();
+                  setMobileMenuOpen(false);
+                }} 
+                variant="outline"
+                className="w-full justify-start gap-2"
+              >
+                <Tag size={16} />
+                Manage Tags
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  onManagePeopleClick();
+                  setMobileMenuOpen(false);
+                }} 
+                variant="outline"
+                className="w-full justify-start gap-2"
+              >
+                <User size={16} />
+                Manage People
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  onCreateTaskClick();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full justify-start gap-2"
+              >
+                <PlusCircle size={16} />
+                New Task
+              </Button>
+              
+              <Button
+                onClick={() => signOut()}
+                variant="outline"
+                className="w-full justify-start gap-2"
+              >
+                <LogOut size={16} />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </ScrollArea>
       </SheetContent>

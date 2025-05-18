@@ -16,21 +16,22 @@ import { PriorityFilterItems } from './PriorityFilterItems';
 import { DueDateFilterItems } from './DueDateFilterItems';
 import { GoLiveFilterItem } from './GoLiveFilterItem';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Priority } from '@/types';
 
 interface FilterDropdownMenuProps {
   selectedTags: string[];
   selectedPeople: string[];
-  selectedPriorities: string[];
+  selectedPriorities: Priority[];
   filterByDueDate: string;
   filterByGoLive: boolean;
   onToggleTag: (tagId: string) => void;
   onTogglePerson: (personId: string) => void;
-  onTogglePriority: (priority: string) => void;
+  onTogglePriority: (priority: Priority) => void;
   onSetFilterByDueDate: (value: string) => void;
   onSetFilterByGoLive: (value: boolean) => void;
   onResetFilters: () => void;
   hasActiveFilters: boolean;
-  tags: { id: string; name: string }[];
+  tags: { id: string; name: string; color?: string }[];
   people: { id: string; name: string }[];
   showCompleted?: boolean;
   onToggleShowCompleted?: () => void;
