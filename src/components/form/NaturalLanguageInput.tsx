@@ -87,60 +87,35 @@ const NaturalLanguageInput = ({
       }
 
       // Check for priority keywords
-      if (word.toLowerCase() === 'high' && i < words.length - 1 && words[i+1].toLowerCase() === 'priority') {
+      if (i < words.length - 1 && 
+          ((word.toLowerCase() === 'high' && words[i+1].toLowerCase() === 'priority') || 
+           (word.toLowerCase() === 'low' && words[i+1].toLowerCase() === 'priority'))) {
         if (currentText) {
           newTokens.push({ type: 'text', value: currentText, original: currentText });
           currentText = '';
         }
+        
+        const priority = word.toLowerCase();
         newTokens.push({ 
           type: 'priority', 
-          value: 'high priority', 
-          original: 'high priority',
-          color: '#ea384c'  // Red
+          value: `${priority} priority`, 
+          original: `${priority} priority`,
+          color: priority === 'high' ? '#ea384c' : '#7E69AB'  // Red for high, Purple for low
         });
         i++; // Skip the "priority" word
         continue;
       }
       
-      if (word.toLowerCase() === 'low' && i < words.length - 1 && words[i+1].toLowerCase() === 'priority') {
-        if (currentText) {
-          newTokens.push({ type: 'text', value: currentText, original: currentText });
-          currentText = '';
-        }
-        newTokens.push({ 
-          type: 'priority', 
-          value: 'low priority', 
-          original: 'low priority',
-          color: '#7E69AB'  // Secondary purple
-        });
-        i++; // Skip the "priority" word
-        continue;
-      }
-
       // Check for date keywords
-      if (word.toLowerCase() === 'tomorrow') {
+      if (['tomorrow', 'today'].includes(word.toLowerCase())) {
         if (currentText) {
           newTokens.push({ type: 'text', value: currentText, original: currentText });
           currentText = '';
         }
         newTokens.push({ 
           type: 'date', 
-          value: 'tomorrow', 
-          original: 'tomorrow',
-          color: '#F97316'  // Bright orange
-        });
-        continue;
-      }
-      
-      if (word.toLowerCase() === 'today') {
-        if (currentText) {
-          newTokens.push({ type: 'text', value: currentText, original: currentText });
-          currentText = '';
-        }
-        newTokens.push({ 
-          type: 'date', 
-          value: 'today', 
-          original: 'today',
+          value: word.toLowerCase(), 
+          original: word,
           color: '#F97316'  // Bright orange
         });
         continue;
@@ -298,21 +273,21 @@ const NaturalLanguageInput = ({
         
         {/* Visualization of parsed tokens */}
         {tokens.length > 0 && (
-          <div className="absolute top-0 left-0 w-full h-full pointer-events-none p-2.5">
-            <div className="space-x-1 flex flex-wrap items-center">
+          <div className="absolute top-0 left-0 w-full h-full pointer-events-none p-2.5 flex items-start overflow-hidden">
+            <div className="inline-flex flex-wrap gap-1 items-center">
               {tokens.map((token, index) => (
                 token.type === 'text' ? (
-                  <span key={index} className="text-transparent">
+                  <span key={index} className="text-transparent whitespace-pre-wrap">
                     {token.value}
                   </span>
                 ) : (
                   <span 
                     key={index} 
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white leading-none"
+                    className="inline-flex items-center rounded-full px-1 py-0 text-xs font-medium text-white leading-normal"
                     style={{ 
                       backgroundColor: token.color,
-                      height: '1.25rem',
-                      margin: '0.125rem 0'
+                      height: '1.15rem', // Make pills close to text height
+                      lineHeight: '1rem'
                     }}
                   >
                     {token.value}

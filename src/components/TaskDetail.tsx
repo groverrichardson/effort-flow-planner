@@ -66,7 +66,6 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
   const handleDelete = () => {
     deleteTask(task.id);
     toast({ title: "Success", description: "Task deleted successfully" });
-    setDeleteDialogOpen(false);
     if (onClose) onClose();
   };
 

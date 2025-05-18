@@ -116,7 +116,7 @@ export const naturalLanguageToTask = (input: string) => {
   title = title.replace(/\s+/g, ' ').trim();
   taskData.title = title;
   
-  // Add a description if the original text is significantly different from the title
+  // Add a description if the original input is significantly different from the title
   if (input.length > title.length + 10) {
     taskData.description = `Original input: ${input}`;
   }
