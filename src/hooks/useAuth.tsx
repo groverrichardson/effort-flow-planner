@@ -4,6 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 
+// Define more accurate types for auth options including redirectTo
+interface AuthOptions {
+  redirectTo?: string;
+  captchaToken?: string;
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -84,7 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password,
         options: {
           redirectTo: window.location.origin
-        }
+        } as AuthOptions
       });
       
       if (error) {
@@ -113,7 +119,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string): Promise<{ error: AuthError | null }> => {
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: window.location.origin
+        } as AuthOptions
+      });
+      
       if (error) {
         toast({
           title: 'Sign up error',
@@ -142,7 +155,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         provider: 'google',
         options: {
           redirectTo: window.location.origin,
-        },
+        } as AuthOptions
       });
     } catch (error) {
       console.error('Error signing in with Google:', error);
@@ -189,7 +202,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password: DUMMY_USER_PASSWORD,
         options: {
           redirectTo: window.location.origin
-        }
+        } as AuthOptions
       });
       
       if (signInError) {
@@ -202,7 +215,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           options: {
             // For development purposes, try to auto-confirm the account
             emailRedirectTo: window.location.origin
-          }
+          } as AuthOptions
         });
         
         if (signUpError) {
@@ -218,7 +231,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           password: DUMMY_USER_PASSWORD,
           options: {
             redirectTo: window.location.origin
-          }
+          } as AuthOptions
         });
         
         if (newSignInError) {
