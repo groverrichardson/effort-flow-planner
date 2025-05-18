@@ -14,14 +14,18 @@ interface PeopleFilterItemsProps {
 }
 
 export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
-  people,
-  selectedPeople,
+  people = [],
+  selectedPeople = [],
   onTogglePerson,
   size,
   className,
   fullWidth,
   compact = false
 }) => {
+  // Ensure people and selectedPeople are arrays even if undefined is passed
+  const safePeopleArray = Array.isArray(people) ? people : [];
+  const safeSelectedPeople = Array.isArray(selectedPeople) ? selectedPeople : [];
+  
   // Helper function to get initials from full name
   const getInitials = (name: string): string => {
     // Improved to handle multi-word names better
@@ -37,8 +41,8 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
   if (size) {
     return (
       <div className={`${className} flex flex-wrap gap-1`}>
-        {people.length > 0 ? (
-          people.map((person) => {
+        {safePeopleArray.length > 0 ? (
+          safePeopleArray.map((person) => {
             // For buttons, show initials for names longer than 10 characters or with multiple words
             const hasMultipleWords = person.name.trim().includes(' ');
             const displayName = (person.name.length > 10 || hasMultipleWords)
@@ -48,7 +52,7 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
             return (
               <Button
                 key={person.id}
-                variant={selectedPeople.includes(person.id) ? "default" : "outline"}
+                variant={safeSelectedPeople.includes(person.id) ? "default" : "outline"}
                 size={compact ? "xs" : size}
                 onClick={() => onTogglePerson(person.id)}
                 className={`${fullWidth ? "justify-between" : ""} ${compact ? "h-6 text-xs py-0" : ""}`}
@@ -68,11 +72,11 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
   // Default dropdown menu items
   return (
     <>
-      {people.length > 0 ? (
-        people.map((person) => (
+      {safePeopleArray.length > 0 ? (
+        safePeopleArray.map((person) => (
           <DropdownMenuCheckboxItem
             key={person.id}
-            checked={selectedPeople.includes(person.id)}
+            checked={safeSelectedPeople.includes(person.id)}
             onCheckedChange={() => onTogglePerson(person.id)}
           >
             {person.name}
