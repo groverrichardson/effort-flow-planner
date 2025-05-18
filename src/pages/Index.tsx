@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import TaskList from '@/components/TaskList';
 import QuickTaskInput from '@/components/quick-task/QuickTaskInput';
 import PageHeader from '@/components/headers/PageHeader';
@@ -11,7 +11,24 @@ const Index = () => {
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [manageActiveTab, setManageActiveTab] = useState<'tags' | 'people'>('tags');
+  const [showMobileInput, setShowMobileInput] = useState(true);
+  const prevScrollY = useRef(0);
   const isMobile = useIsMobile();
+  
+  useEffect(() => {
+    // Only add scroll listener on mobile
+    if (!isMobile) return;
+    
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      // Show input when scrolling up, hide when scrolling down
+      setShowMobileInput(prevScrollY.current > currentScrollY || currentScrollY < 10);
+      prevScrollY.current = currentScrollY;
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isMobile]);
   
   const handleManageTags = () => {
     setManageActiveTab('tags');
@@ -39,8 +56,16 @@ const Index = () => {
         <TaskList />
       </div>
 
-      {/* Quick task input shows at the bottom on mobile - sticky */}
-      {isMobile && <QuickTaskInput />}
+      {/* Quick task input shows at the bottom on mobile - sticky with transition */}
+      {isMobile && (
+        <div 
+          className={`fixed bottom-0 left-0 right-0 p-4 bg-background z-50 border-t
+                     transition-all duration-300 transform
+                     ${showMobileInput ? 'translate-y-0' : 'translate-y-full'}`}
+        >
+          <QuickTaskInput />
+        </div>
+      )}
 
       {/* Create Task Dialog */}
       <CreateTaskDialog 

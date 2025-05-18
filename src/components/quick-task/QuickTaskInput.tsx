@@ -33,8 +33,9 @@ const QuickTaskInput = () => {
       }
       
       // Process people from names - create new people if needed
+      let peopleToAdd = [];
       if (taskData.peopleNames && taskData.peopleNames.length > 0) {
-        taskData.people = await Promise.all(taskData.peopleNames.map(async personName => {
+        peopleToAdd = await Promise.all(taskData.peopleNames.map(async personName => {
           // Try to find an existing person
           const existingPerson = people.find(p => 
             p.name.toLowerCase() === personName.toLowerCase()
@@ -42,6 +43,17 @@ const QuickTaskInput = () => {
           // Create a new person if they don't exist
           return existingPerson || await addPerson(personName);
         }));
+        taskData.people = peopleToAdd;
+        
+        // Clean up the title by removing @people references
+        if (taskData.title) {
+          taskData.peopleNames.forEach(personName => {
+            const personRegex = new RegExp(`@${personName}\\s*`, 'gi');
+            taskData.title = taskData.title.replace(personRegex, '');
+          });
+          taskData.title = taskData.title.trim();
+        }
+        
         delete taskData.peopleNames;
       } else {
         taskData.people = [];
@@ -80,7 +92,7 @@ const QuickTaskInput = () => {
   
   if (isMobile) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background z-50 border-t">
+      <div>
         <NaturalLanguageInput
           value={quickTaskInput}
           onChange={setQuickTaskInput}
