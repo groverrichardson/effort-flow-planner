@@ -11,17 +11,19 @@ interface TaskFormActionsProps {
 const TaskFormActions = ({ isEditing, onCancel, onDelete }: TaskFormActionsProps) => {
   return isEditing ? (
     <div className="flex justify-between pt-2 border-t">
-      <Button 
-        variant="destructive" 
-        size="sm"
-        type="button"
-        onClick={onDelete}
-      >
-        <Trash size={16} className="mr-1" />
-        Delete
-      </Button>
+      {onDelete && (
+        <Button 
+          variant="destructive" 
+          size="sm"
+          type="button"
+          onClick={onDelete}
+        >
+          <Trash size={16} className="mr-1" />
+          Delete
+        </Button>
+      )}
       
-      <div className="flex gap-2">
+      <div className={`flex gap-2 ${!onDelete ? 'ml-auto' : ''}`}>
         {onCancel && (
           <Button 
             variant="outline" 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task, Priority, EffortLevel } from '@/types';
@@ -26,6 +25,7 @@ interface TaskFormProps {
   task?: Task;
   onSuccess?: () => void;
   onCancel?: () => void;
+  onDelete?: (taskId: string) => void; // Added this property
 }
 
 const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -42,7 +42,7 @@ const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
   people: []
 };
 
-const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
+const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
   const { addTask, updateTask, tags, people, addTag, addPerson } = useTaskContext();
   const [formData, setFormData] = useState(task || defaultTask);
   const isEditing = !!task;
@@ -322,7 +322,7 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
       <TaskFormActions 
         isEditing={isEditing} 
         onCancel={onCancel}
-        onDelete={onCancel} 
+        onDelete={task ? () => onDelete?.(task.id) : undefined} 
       />
     </form>
   );
