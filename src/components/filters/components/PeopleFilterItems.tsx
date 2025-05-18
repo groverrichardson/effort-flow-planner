@@ -2,9 +2,10 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenuCheckboxItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
+import { Person } from '@/types';
 
 interface PeopleFilterItemsProps {
-  people: { id: string; name: string }[];
+  people: Person[];
   selectedPeople: string[];
   onTogglePerson: (personId: string) => void;
   size?: "sm" | "default";

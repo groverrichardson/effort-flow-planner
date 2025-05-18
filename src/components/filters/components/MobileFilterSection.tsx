@@ -36,8 +36,8 @@ interface MobileFiltersProps {
   onToggleShowCompleted?: () => void;
   
   // Data
-  tags: Tag[];
-  people: Person[];
+  tags?: Tag[];
+  people?: Tag[];
   hasActiveFilters: boolean;
   
   // Create task button option
@@ -45,11 +45,11 @@ interface MobileFiltersProps {
 }
 
 export const MobileFilters: React.FC<MobileFiltersProps> = ({
-  selectedTags,
-  selectedPeople,
-  selectedPriorities,
-  filterByDueDate,
-  filterByGoLive,
+  selectedTags = [],
+  selectedPeople = [],
+  selectedPriorities = [],
+  filterByDueDate = 'all',
+  filterByGoLive = false,
   onToggleTag,
   onTogglePerson,
   onTogglePriority,
@@ -63,11 +63,15 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
   onShowAllActive,
   onShowToday,
   onShowCompleted,
-  tags,
-  people,
+  tags = [],
+  people = [],
   hasActiveFilters,
   onCreateTask
 }) => {
+  // Ensure tags and people are arrays with default empty arrays
+  const safeTags = Array.isArray(tags) ? tags : [];
+  const safePeople = Array.isArray(people) ? people : [];
+  
   return (
     <div className="space-y-3 pr-1 flex flex-col h-full">
       {/* Active filter reset */}
@@ -96,13 +100,13 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
       </div>
 
       {/* Tags filter section */}
-      {tags.length > 0 && (
+      {safeTags.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-medium">Tags</div>
           <ScrollArea className="h-28 rounded-md border">
             <div className="p-1">
               <TagFilterItems
-                tags={tags}
+                tags={safeTags}
                 selectedTags={selectedTags}
                 onToggleTag={onToggleTag}
                 size="sm"
@@ -116,13 +120,13 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
       )}
 
       {/* People filter section */}
-      {people.length > 0 && (
+      {safePeople.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-medium">People</div>
           <ScrollArea className="h-28 rounded-md border">
             <div className="p-1">
               <PeopleFilterItems
-                people={people}
+                people={safePeople}
                 selectedPeople={selectedPeople}
                 onTogglePerson={onTogglePerson}
                 size="sm"

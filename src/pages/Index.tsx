@@ -76,7 +76,9 @@ const Index = () => {
     onSetFilterByGoLive: setFilterByGoLive,
     onResetFilters: clearAllFilters,
     onCreateTask: () => setCreateTaskOpen(true),
-    onBulkImport: () => setBulkImportOpen(true)
+    onBulkImport: () => setBulkImportOpen(true),
+    tags: [],  // Providing empty arrays as defaults
+    people: [] // Providing empty arrays as defaults
   };
   
   return (
