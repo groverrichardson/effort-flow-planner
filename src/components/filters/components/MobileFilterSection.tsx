@@ -37,11 +37,12 @@ interface MobileFiltersProps {
   
   // Data
   tags?: Tag[];
-  people?: Tag[];
-  hasActiveFilters: boolean;
+  people?: Person[];
+  hasActiveFilters?: boolean;
   
   // Create task button option
   onCreateTask?: () => void;
+  onBulkImport?: () => void;
 }
 
 export const MobileFilters: React.FC<MobileFiltersProps> = ({
@@ -66,16 +67,57 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
   tags = [],
   people = [],
   hasActiveFilters,
-  onCreateTask
+  onCreateTask,
+  onBulkImport
 }) => {
   // Ensure tags and people are arrays with default empty arrays
   const safeTags = Array.isArray(tags) ? tags : [];
   const safePeople = Array.isArray(people) ? people : [];
   
+  // Calculate if there are active filters
+  const activeFilters = hasActiveFilters !== undefined ? hasActiveFilters : 
+    (selectedTags.length > 0 || selectedPeople.length > 0 || 
+     selectedPriorities.length > 0 || filterByDueDate !== 'all' || filterByGoLive);
+  
   return (
-    <div className="space-y-3 pr-1 flex flex-col h-full">
+    <div className="space-y-4 pr-1 h-full">
+      <h3 className="font-medium text-sm mb-2">Filters</h3>
+
+      {/* Task view toggles */}
+      {onShowAllActive && onShowToday && onShowCompleted && (
+        <div className="space-y-1 mb-4">
+          <div className="text-xs font-medium">View</div>
+          <div className="space-y-1">
+            <Button
+              variant={!showTodaysTasks && !viewingCompleted ? "default" : "outline"}
+              size="sm"
+              onClick={onShowAllActive}
+              className="w-full justify-start"
+            >
+              All Active Tasks
+            </Button>
+            <Button
+              variant={showTodaysTasks ? "default" : "outline"}
+              size="sm"
+              onClick={onShowToday}
+              className="w-full justify-start"
+            >
+              Due Today
+            </Button>
+            <Button
+              variant={viewingCompleted ? "default" : "outline"}
+              size="sm"
+              onClick={onShowCompleted}
+              className="w-full justify-start"
+            >
+              Completed Today
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Active filter reset */}
-      {hasActiveFilters && (
+      {activeFilters && (
         <Button 
           variant="outline" 
           size="sm"
@@ -167,20 +209,6 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
           className="w-full text-xs"
         >
           {viewingCompleted ? "Hide Completed" : "Show Completed"}
-        </Button>
-      )}
-      
-      {/* Push the button to the bottom with flex-grow */}
-      <div className="flex-grow"></div>
-      
-      {/* Footer section with New Task button */}
-      {onCreateTask && (
-        <Button 
-          onClick={onCreateTask}
-          className="w-full flex items-center justify-center"
-        >
-          <Plus size={18} className="mr-2" />
-          New Task
         </Button>
       )}
     </div>

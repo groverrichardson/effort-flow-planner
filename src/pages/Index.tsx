@@ -19,7 +19,7 @@ const Index = () => {
   const prevScrollY = useRef(0);
   const isMobile = useIsMobile();
   
-  const { tasks, getTodaysCompletedTasks } = useTaskContext();
+  const { tasks, tags, people, getTodaysCompletedTasks } = useTaskContext();
   
   // Get filter functions for mobile menu
   const {
@@ -34,6 +34,11 @@ const Index = () => {
     setFilterByDueDate,
     setFilterByGoLive,
     clearAllFilters,
+    viewingCompleted,
+    showTodaysTasks,
+    handleShowAllActive,
+    handleShowToday,
+    handleShowCompleted,
   } = useTaskFiltering({ tasks, getTodaysCompletedTasks });
   
   // Mobile quick task input scrolling behavior
@@ -77,8 +82,13 @@ const Index = () => {
     onResetFilters: clearAllFilters,
     onCreateTask: () => setCreateTaskOpen(true),
     onBulkImport: () => setBulkImportOpen(true),
-    tags: [],  // Providing empty arrays as defaults
-    people: [] // Providing empty arrays as defaults
+    viewingCompleted,
+    showTodaysTasks,
+    onShowAllActive: handleShowAllActive,
+    onShowToday: handleShowToday,
+    onShowCompleted: handleShowCompleted,
+    tags: tags || [],
+    people: people || []
   };
   
   return (

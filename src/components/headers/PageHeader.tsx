@@ -1,8 +1,9 @@
 
 import { Button } from "@/components/ui/button";
-import { Plus, Settings, Users, Tags, Upload } from "lucide-react";
+import { Menu, Plus, Settings, Users, Tags, Upload, LogOut } from "lucide-react";
 import MobileFilterSection from "../filters/components/MobileFilterSection";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface PageHeaderProps {
   onCreateTaskClick: () => void;
@@ -26,7 +27,7 @@ const PageHeader = ({
       {/* Main header */}
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
-          <img src="/lovable-uploads/68c43415-c7c9-4f4f-9397-bbb78d390034.png" alt="Logo" className="h-8" />
+          <img src="/lovable-uploads/f05941d8-1610-496d-8ed8-27adb9a6893a.png" alt="DoNext Logo" className={isMobile ? "h-6" : "h-8"} />
         </div>
         
         <div className="flex items-center gap-2">
@@ -61,34 +62,87 @@ const PageHeader = ({
                 <Upload className="h-4 w-4" />
                 Import CSV
               </Button>
+              
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-1"
+                onClick={onCreateTaskClick}
+              >
+                <Plus className="h-4 w-4" />
+                New Task
+              </Button>
             </>
           )}
           
-          <Button
-            variant="default"
-            size="sm"
-            className="gap-1"
-            onClick={onCreateTaskClick}
-          >
-            <Plus className="h-4 w-4" />
-            New Task
-          </Button>
-          
           {isMobile && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="ml-2"
-              onClick={onManageTagsClick}
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="flex flex-col p-0 w-[280px]">
+                <div className="flex-1 overflow-auto p-4">
+                  <MobileFilterSection {...filterProps} />
+                </div>
+                <div className="border-t p-4 space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-1 justify-start"
+                    onClick={onManageTagsClick}
+                  >
+                    <Tags className="h-4 w-4" />
+                    Manage Tags
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-1 justify-start"
+                    onClick={onManagePeopleClick}
+                  >
+                    <Users className="h-4 w-4" />
+                    Manage People
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-1 justify-start"
+                    onClick={onBulkImportClick}
+                  >
+                    <Upload className="h-4 w-4" />
+                    Import CSV
+                  </Button>
+                  
+                  <Button
+                    variant="default"
+                    className="w-full gap-1 justify-start"
+                    onClick={onCreateTaskClick}
+                  >
+                    <Plus className="h-4 w-4" />
+                    New Task
+                  </Button>
+                  
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full gap-1 justify-start mt-4"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
           )}
         </div>
       </div>
       
-      {/* Mobile filter section */}
-      {isMobile && <MobileFilterSection {...filterProps} />}
+      {/* Mobile filter section removed from here - now in the hamburger menu */}
     </div>
   );
 };
