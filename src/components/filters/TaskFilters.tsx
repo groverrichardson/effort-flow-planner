@@ -21,7 +21,7 @@ interface TaskFiltersProps {
   onResetFilters: () => void;
   showCompleted?: boolean;
   onToggleShowCompleted?: () => void;
-  tags: { id: string; name: string }[];
+  tags: { id: string; name: string; color: string }[];
   people: { id: string; name: string }[];
   inMobileMenu?: boolean;
   
@@ -80,7 +80,8 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
         selectedPriorities={selectedPriorities}
         filterByDueDate={filterByDueDate}
         filterByGoLive={filterByGoLive}
-        showCompleted={showCompleted}
+        viewingCompleted={viewingCompleted}
+        showTodaysTasks={showTodaysTasks}
         onToggleTag={onToggleTag}
         onTogglePerson={onTogglePerson}
         onTogglePriority={onTogglePriority}
@@ -88,14 +89,12 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
         onSetFilterByGoLive={onSetFilterByGoLive}
         onResetFilters={onResetFilters}
         onToggleShowCompleted={onToggleShowCompleted}
-        tags={tags}
-        people={people}
-        hasActiveFilters={hasActiveFilters}
-        viewingCompleted={viewingCompleted}
-        showTodaysTasks={showTodaysTasks}
         onShowAllActive={onShowAllActive}
         onShowToday={onShowToday}
         onShowCompleted={onShowCompleted}
+        tags={tags}
+        people={people}
+        hasActiveFilters={hasActiveFilters}
         onCreateTask={onCreateTask}
       />
     );

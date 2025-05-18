@@ -5,31 +5,31 @@ import { FilterX, Plus } from 'lucide-react';
 import { Priority } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-import PriorityFilterItems from './PriorityFilterItems';
-import TagFilterItems from './TagFilterItems';
-import PeopleFilterItems from './PeopleFilterItems';
-import DueDateFilterItems from './DueDateFilterItems';
-import GoLiveFilterItem from './GoLiveFilterItem';
+import { PriorityFilterItems } from './PriorityFilterItems';
+import { TagFilterItems } from './TagFilterItems';
+import { PeopleFilterItems } from './PeopleFilterItems';
+import { DueDateFilterItems } from './DueDateFilterItems';
+import { GoLiveFilterItem } from './GoLiveFilterItem';
 
 // Mobile filters component for sidebar/hamburger menu
 interface MobileFiltersProps {
   selectedTags: string[];
   selectedPeople: string[];
   selectedPriorities: Priority[];
-  filterByDueDate: boolean;
+  filterByDueDate: string;
   filterByGoLive: boolean;
   
   onToggleTag: (tagId: string) => void;
   onTogglePerson: (personId: string) => void;
   onTogglePriority: (priority: Priority) => void;
-  onSetFilterByDueDate: (value: boolean) => void;
+  onSetFilterByDueDate: (value: string) => void;
   onSetFilterByGoLive: (value: boolean) => void;
   onResetFilters: () => void;
   
   // Filter modes
-  showAllActive: boolean;
-  showTodaysTasks: boolean;
-  showCompleted: boolean;
+  viewingCompleted?: boolean;
+  showTodaysTasks?: boolean;
+  showAllActive?: boolean;
   onShowAllActive?: () => void;
   onShowToday?: () => void;
   onShowCompleted?: () => void;
@@ -58,15 +58,18 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
   onResetFilters,
   showAllActive,
   showTodaysTasks,
-  showCompleted,
+  viewingCompleted,
   onToggleShowCompleted,
+  onShowAllActive,
+  onShowToday,
+  onShowCompleted,
   tags,
   people,
   hasActiveFilters,
   onCreateTask
 }) => {
   return (
-    <div className="space-y-4 pr-1">
+    <div className="space-y-4 pr-1 flex flex-col h-full">
       {/* Active filter reset */}
       {hasActiveFilters && (
         <Button 
@@ -157,12 +160,15 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
           onClick={onToggleShowCompleted}
           className="w-full"
         >
-          {showCompleted ? "Hide Completed" : "Show Completed"}
+          {viewingCompleted ? "Hide Completed" : "Show Completed"}
         </Button>
       )}
       
-      {/* Footer section with New Task button - positioned with sign out */}
-      <div className="mt-auto pt-4 border-t">
+      {/* Push the button to the bottom with flex-grow */}
+      <div className="flex-grow"></div>
+      
+      {/* Footer section with New Task button */}
+      <div className="border-t pt-4">
         {onCreateTask && (
           <Button 
             onClick={onCreateTask}
