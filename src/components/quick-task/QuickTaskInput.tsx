@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
-import NaturalLanguageInput from '@/components/form/NaturalLanguageInput';
+import SlateNaturalLanguageInput from '@/components/form/SlateNaturalLanguageInput';
 import { toast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -72,7 +72,7 @@ const QuickTaskInput = () => {
   if (isMobile) {
     return (
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background z-50 border-t">
-        <NaturalLanguageInput
+        <SlateNaturalLanguageInput
           value={quickTaskInput}
           onChange={setQuickTaskInput}
           onSubmit={handleQuickTaskSubmit}
@@ -86,7 +86,7 @@ const QuickTaskInput = () => {
   
   return (
     <div className="mb-6">
-      <NaturalLanguageInput
+      <SlateNaturalLanguageInput
         value={quickTaskInput}
         onChange={setQuickTaskInput}
         onSubmit={handleQuickTaskSubmit}
