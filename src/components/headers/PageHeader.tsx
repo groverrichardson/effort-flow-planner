@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Plus, Settings, Users, Tags, Upload } from "lucide-react";
+import { Plus, Settings, Users, Tags, Upload, CheckSquare } from "lucide-react";
 import MobileFilterSection from "../filters/components/MobileFilterSection";
 import { FilterDropdownMenu } from "../filters/components/FilterDropdownMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -26,7 +26,8 @@ const PageHeader = ({
     <div className="flex flex-col gap-2 mb-6">
       {/* Main header */}
       <div className="flex justify-between items-center mb-2">
-        <div>
+        <div className="flex items-center gap-2">
+          <CheckSquare className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">Tasks</h1>
         </div>
         

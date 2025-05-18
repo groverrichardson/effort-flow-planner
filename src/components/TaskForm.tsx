@@ -21,6 +21,7 @@ import DatePickerField from './form/DatePickerField';
 import TagSelector from './form/TagSelector';
 import PeopleSelector from './form/PeopleSelector';
 import TaskFormActions from './form/TaskFormActions';
+import DependencySelector from './form/DependencySelector';
 
 interface TaskFormProps {
   task?: Task;
@@ -312,30 +313,33 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <div className="flex-1 min-w-[180px]">
-          <label className="block text-xs font-medium mb-1">Due Date</label>
-          <div className="flex gap-1">
-            <div className="flex-1">
-              <DatePickerField 
-                label="Date" 
-                value={formData.dueDate} 
-                onChange={(date) => handleDateChange(date, 'dueDate')} 
-              />
-            </div>
-            <div className="w-16">
-              <Select value={formData.dueDateType} onValueChange={handleDueDateTypeChange}>
-                <SelectTrigger className="h-10 text-xs w-16">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="by">By</SelectItem>
-                  <SelectItem value="on">On</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Due Date with By/On selector */}
+      <div>
+        <label className="block text-xs font-medium mb-1">Due Date</label>
+        <div className="flex gap-1">
+          <div className="flex-1">
+            <DatePickerField 
+              label="Date" 
+              value={formData.dueDate} 
+              onChange={(date) => handleDateChange(date, 'dueDate')} 
+            />
+          </div>
+          <div className="w-16">
+            <Select value={formData.dueDateType} onValueChange={handleDueDateTypeChange}>
+              <SelectTrigger className="h-10 text-xs w-16">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="by">By</SelectItem>
+                <SelectItem value="on">On</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
+      </div>
+      
+      {/* Target Deadline and Go-Live Date in a separate row */}
+      <div className="grid grid-cols-2 gap-2">
         <DatePickerField 
           label="Target Deadline" 
           value={formData.targetDeadline} 
@@ -362,35 +366,12 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
         onAddNewPerson={handleAddNewPerson}
       />
 
-      {/* Task Dependencies Section */}
-      <div>
-        <label className="block text-xs font-medium mb-1">Dependencies</label>
-        <div className="border border-input rounded p-2 max-h-[120px] overflow-y-auto">
-          {availableTasks.length === 0 ? (
-            <p className="text-xs text-muted-foreground p-1">No tasks available</p>
-          ) : (
-            <div className="space-y-1">
-              {availableTasks.map(availableTask => (
-                <div key={availableTask.id} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id={`dependency-${availableTask.id}`}
-                    checked={formData.dependencies.includes(availableTask.id)}
-                    onChange={() => handleDependencyToggle(availableTask.id)}
-                    className="mr-2"
-                  />
-                  <label 
-                    htmlFor={`dependency-${availableTask.id}`}
-                    className="text-xs cursor-pointer truncate"
-                  >
-                    {availableTask.title}
-                  </label>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Task Dependencies Section with the new component */}
+      <DependencySelector
+        selectedDependencies={formData.dependencies}
+        availableTasks={availableTasks}
+        onToggleDependency={handleDependencyToggle}
+      />
 
       <TaskFormActions 
         isEditing={isEditing} 
