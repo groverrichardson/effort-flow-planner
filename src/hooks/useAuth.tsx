@@ -12,6 +12,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  bypassLogin: () => Promise<void>; // New function for bypass login
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,7 +23,12 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => ({ error: null }),
   signInWithGoogle: async () => {},
   signOut: async () => {},
+  bypassLogin: async () => {}, // Add default implementation
 });
+
+// Dummy account credentials
+const DUMMY_USER_EMAIL = 'demo@example.com';
+const DUMMY_USER_PASSWORD = 'demopassword123';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -137,8 +143,60 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // New function for bypass login
+  const bypassLogin = async () => {
+    try {
+      // First check if the dummy account exists
+      const { data: users, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', DUMMY_USER_EMAIL)
+        .limit(1);
+
+      // If dummy account doesn't exist yet, create it first
+      if (checkError || (users && users.length === 0)) {
+        console.log('Creating dummy account...');
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: DUMMY_USER_EMAIL,
+          password: DUMMY_USER_PASSWORD,
+          options: {
+            data: {
+              username: 'Demo User'
+            }
+          }
+        });
+
+        if (signUpError) {
+          throw signUpError;
+        }
+      }
+
+      // Now sign in with the dummy account
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: DUMMY_USER_EMAIL,
+        password: DUMMY_USER_PASSWORD
+      });
+
+      if (signInError) {
+        throw signInError;
+      }
+
+      toast({
+        title: 'Demo Access Granted',
+        description: 'You are now signed in as a demo user.',
+      });
+    } catch (error) {
+      console.error('Error during bypass login:', error);
+      toast({
+        title: 'Bypass Login Failed',
+        description: 'There was an error accessing the demo account. Please try again or use a regular login.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signInWithGoogle, signOut, bypassLogin }}>
       {children}
     </AuthContext.Provider>
   );

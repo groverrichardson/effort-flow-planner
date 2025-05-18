@@ -7,14 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Check, Mail, Lock, Loader2 } from 'lucide-react';
+import { Check, Mail, Lock, Loader2, ZapIcon } from 'lucide-react';
 
 const Login = () => {
   const [tab, setTab] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, bypassLogin } = useAuth();
   const navigate = useNavigate();
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -46,6 +46,16 @@ const Login = () => {
     setLoading(true);
     try {
       await signInWithGoogle();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBypassLogin = async () => {
+    setLoading(true);
+    try {
+      await bypassLogin();
+      navigate('/');
     } finally {
       setLoading(false);
     }
@@ -159,21 +169,34 @@ const Login = () => {
             </div>
           </div>
 
-          <Button
-            variant="outline"
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-            className="w-full"
-          >
-            <svg viewBox="0 0 488 512" className="h-4 w-4 mr-2">
-              <path
-                fill="currentColor"
-                d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
-              ></path>
-            </svg>
-            Google
-          </Button>
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full"
+            >
+              <svg viewBox="0 0 488 512" className="h-4 w-4 mr-2">
+                <path
+                  fill="currentColor"
+                  d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
+                ></path>
+              </svg>
+              Google
+            </Button>
+
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={handleBypassLogin}
+              disabled={loading}
+              className="w-full"
+            >
+              <ZapIcon className="h-4 w-4 mr-2" />
+              Quick Access (Bypass Login)
+            </Button>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center text-sm text-muted-foreground">
           {tab === 'signin' ? (
