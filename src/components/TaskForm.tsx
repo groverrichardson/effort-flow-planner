@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task, Priority, EffortLevel, DueDateType } from '@/types';
@@ -339,7 +338,7 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
       </div>
       
       {/* Target Deadline and Go-Live Date in a separate row */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-4">
         <DatePickerField 
           label="Target Deadline" 
           value={formData.targetDeadline} 
@@ -366,7 +365,7 @@ const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {
         onAddNewPerson={handleAddNewPerson}
       />
 
-      {/* Task Dependencies Section with the new component */}
+      {/* Task Dependencies Section with the updated component */}
       <DependencySelector
         selectedDependencies={formData.dependencies}
         availableTasks={availableTasks}

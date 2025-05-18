@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Plus, Settings, Users, Tags, Upload, CheckSquare } from "lucide-react";
+import { Plus, Settings, Users, Tags, Upload } from "lucide-react";
 import MobileFilterSection from "../filters/components/MobileFilterSection";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -26,8 +26,7 @@ const PageHeader = ({
       {/* Main header */}
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
-          <CheckSquare className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Tasks</h1>
+          <img src="/lovable-uploads/68c43415-c7c9-4f4f-9397-bbb78d390034.png" alt="Logo" className="h-8" />
         </div>
         
         <div className="flex items-center gap-2">
@@ -90,8 +89,6 @@ const PageHeader = ({
       
       {/* Mobile filter section */}
       {isMobile && <MobileFilterSection {...filterProps} />}
-      
-      {/* Removed the FilterDropdownMenu here */}
     </div>
   );
 };

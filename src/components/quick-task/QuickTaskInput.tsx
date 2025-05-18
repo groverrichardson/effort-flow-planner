@@ -76,14 +76,16 @@ const QuickTaskInput = () => {
         effortLevel: taskData.effortLevel || 4,
         completed: false,
         completedDate: null,
-        tags: taskData.tags,
-        people: taskData.people,
-        dependencies: []
+        tags: taskData.tags || [],
+        people: taskData.people || [],
+        dependencies: taskData.dependencies || []
       };
       
       console.log("Creating task:", newTask);
       
-      addTask(newTask);
+      // Add the task and ensure we wait for it to complete
+      await addTask(newTask);
+      
       toast({ 
         title: "Task created", 
         description: `"${newTask.title}" has been created` 
@@ -93,10 +95,11 @@ const QuickTaskInput = () => {
       console.error("Error creating task:", error);
       toast({
         title: "Error",
-        description: "Failed to create task",
+        description: "Failed to create task. Please try again.",
         variant: "destructive"
       });
     } finally {
+      // Always ensure we exit the processing state, even if there was an error
       setIsProcessing(false);
     }
   };
