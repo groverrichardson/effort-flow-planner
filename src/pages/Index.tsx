@@ -25,14 +25,6 @@ const Index = () => {
   
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8 pb-20 md:pb-8 relative">
-      <div className="flex justify-center mb-8">
-        <img 
-          src="/lovable-uploads/df8e6029-f2da-4281-bd02-198de6b96226.png" 
-          alt="Do Next Logo" 
-          className="h-12"
-        />
-      </div>
-      
       <PageHeader 
         onCreateTaskClick={() => setCreateTaskOpen(true)}
         onManageTagsClick={handleManageTags}

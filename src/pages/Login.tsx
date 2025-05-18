@@ -85,7 +85,7 @@ const Login = () => {
             <img 
               src="/lovable-uploads/df8e6029-f2da-4281-bd02-198de6b96226.png" 
               alt="Do Next Logo" 
-              className="h-12"
+              className="h-8"
             />
           </div>
           <CardDescription>Sign in or create an account to manage your tasks</CardDescription>

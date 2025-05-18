@@ -1,8 +1,16 @@
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Tag, User, LogOut } from 'lucide-react';
+import { PlusCircle, Tag, User, LogOut, Menu } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
+import { 
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from "@/components/ui/sheet";
 
 interface PageHeaderProps {
   onCreateTaskClick: () => void;
@@ -17,58 +25,128 @@ const PageHeader = ({
 }: PageHeaderProps) => {
   const isMobile = useIsMobile();
   const { signOut, user } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  const MobileMenu = () => (
+    <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden">
+          <Menu />
+          <span className="sr-only">Toggle menu</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right">
+        <SheetHeader>
+          <SheetTitle>Menu</SheetTitle>
+        </SheetHeader>
+        <div className="flex flex-col gap-3 mt-6">
+          <Button 
+            onClick={() => {
+              onManageTagsClick();
+              setMobileMenuOpen(false);
+            }} 
+            variant="outline"
+            className="w-full justify-start gap-2"
+          >
+            <Tag size={16} />
+            Manage Tags
+          </Button>
+          
+          <Button 
+            onClick={() => {
+              onManagePeopleClick();
+              setMobileMenuOpen(false);
+            }} 
+            variant="outline"
+            className="w-full justify-start gap-2"
+          >
+            <User size={16} />
+            Manage People
+          </Button>
+
+          <Button 
+            onClick={() => {
+              onCreateTaskClick();
+              setMobileMenuOpen(false);
+            }}
+            className="w-full justify-start gap-2"
+          >
+            <PlusCircle size={16} />
+            New Task
+          </Button>
+          
+          <Button
+            onClick={() => signOut()}
+            variant="outline"
+            className="w-full justify-start gap-2"
+          >
+            <LogOut size={16} />
+            Sign Out
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
   
   return (
     <header className="mb-6 flex flex-wrap justify-between items-center gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Tasks</h1>
+      <div className="flex items-center">
+        <img 
+          src="/lovable-uploads/df8e6029-f2da-4281-bd02-198de6b96226.png" 
+          alt="Do Next Logo" 
+          className="h-8"
+        />
         {user && (
-          <p className="text-muted-foreground text-sm">
-            Signed in as {user.email}
+          <p className="text-muted-foreground text-sm ml-4">
+            Hi, {user.email?.split('@')[0]}
           </p>
         )}
       </div>
       
-      <div className="flex flex-wrap items-center gap-2">
-        <Button 
-          onClick={onManageTagsClick} 
-          variant="outline" 
-          size="sm"
-          className="gap-1"
-        >
-          <Tag size={16} />
-          {!isMobile && "Manage Tags"}
-        </Button>
-        
-        <Button 
-          onClick={onManagePeopleClick} 
-          variant="outline" 
-          size="sm"
-          className="gap-1"
-        >
-          <User size={16} />
-          {!isMobile && "Manage People"}
-        </Button>
-        
-        <Button 
-          onClick={onCreateTaskClick} 
-          size="sm"
-          className="gap-1"
-        >
-          <PlusCircle size={16} />
-          {!isMobile && "New Task"}
-        </Button>
-        
-        <Button
-          onClick={() => signOut()}
-          variant="outline"
-          size="sm"
-          className="gap-1"
-        >
-          <LogOut size={16} />
-          {!isMobile && "Sign Out"}
-        </Button>
-      </div>
+      {!isMobile ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button 
+            onClick={onManageTagsClick} 
+            variant="outline" 
+            size="sm"
+            className="gap-1"
+          >
+            <Tag size={16} />
+            Manage Tags
+          </Button>
+          
+          <Button 
+            onClick={onManagePeopleClick} 
+            variant="outline" 
+            size="sm"
+            className="gap-1"
+          >
+            <User size={16} />
+            Manage People
+          </Button>
+          
+          <Button 
+            onClick={onCreateTaskClick} 
+            size="sm"
+            className="gap-1"
+          >
+            <PlusCircle size={16} />
+            New Task
+          </Button>
+          
+          <Button
+            onClick={() => signOut()}
+            variant="outline"
+            size="sm"
+            className="gap-1"
+          >
+            <LogOut size={16} />
+            Sign Out
+          </Button>
+        </div>
+      ) : (
+        <MobileMenu />
+      )}
     </header>
   );
 };
