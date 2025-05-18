@@ -1,5 +1,6 @@
+
 import React, { useState, useCallback, useMemo, KeyboardEvent, useEffect, useRef } from 'react';
-import { createEditor, Descendant, Editor, Element as SlateElement, Node as SlateNode, Range, Text } from 'slate';
+import { createEditor, Descendant, Editor, Element as SlateElement, Node as SlateNode, Range, Text, Transforms } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
@@ -224,8 +225,8 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     // Determine the prefix
     const prefix = word.startsWith('#') ? '#' : '@';
     
-    // Fix #2: Change the way we delete text and insert the suggestion
-    Editor.select(editor, wordRange);
+    // Fix #3: Use Transforms.select instead of Editor.select
+    Transforms.select(editor, wordRange);
     Editor.deleteFragment(editor);
     Editor.insertText(editor, `${prefix}${suggestion.name} `);
     
