@@ -38,8 +38,8 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
     }
     
     if (person) {
-      // Update existing person
-      updatePerson(person.id, personName.trim());
+      // Update existing person - passing full person object
+      updatePerson({ id: person.id, name: personName.trim() });
       toast({ title: "Person updated", description: `"${personName.trim()}" has been updated` });
     } else {
       // Add new person

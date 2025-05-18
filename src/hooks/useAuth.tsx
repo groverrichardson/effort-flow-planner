@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<{ error: AuthError | null }> => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
@@ -88,11 +88,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('Unexpected error during sign in:', error);
       // Cast the error to AuthError to match the function signature
-      return { error: error as AuthError };
+      const authError = error as AuthError;
+      return { error: authError };
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string): Promise<{ error: AuthError | null }> => {
     try {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
@@ -112,7 +113,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('Unexpected error during sign up:', error);
       // Cast the error to AuthError to match the function signature
-      return { error: error as AuthError };
+      const authError = error as AuthError;
+      return { error: authError };
     }
   };
 

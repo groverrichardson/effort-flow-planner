@@ -38,6 +38,7 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
   };
 
   const handleCloseTagModal = () => {
+    setEditingTag(null);
     setTagModalOpen(false);
   };
 
@@ -47,6 +48,7 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
   };
 
   const handleClosePersonModal = () => {
+    setEditingPerson(null);
     setPersonModalOpen(false);
   };
 
@@ -167,11 +169,13 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
           <DialogHeader>
             <DialogTitle>Edit Tag</DialogTitle>
           </DialogHeader>
-          <GroupForm 
-            group={editingTag} 
-            onSave={handleCloseTagModal}
-            onCancel={handleCloseTagModal} 
-          />
+          {editingTag && (
+            <GroupForm 
+              group={editingTag} 
+              onSave={handleCloseTagModal}
+              onCancel={handleCloseTagModal} 
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -180,11 +184,13 @@ const TaskDetail = ({ task, onClose, onEdit }: TaskDetailProps) => {
           <DialogHeader>
             <DialogTitle>Edit Person</DialogTitle>
           </DialogHeader>
-          <PersonForm 
-            person={editingPerson} 
-            onSave={handleClosePersonModal}
-            onCancel={handleClosePersonModal} 
-          />
+          {editingPerson && (
+            <PersonForm 
+              person={editingPerson} 
+              onSave={handleClosePersonModal}
+              onCancel={handleClosePersonModal} 
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -38,8 +38,8 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
     }
     
     if (group) {
-      // Update existing group
-      updateTag(group.id, groupName.trim());
+      // Update existing group - passing full tag object
+      updateTag({ id: group.id, name: groupName.trim() });
       toast({ title: "Tag updated", description: `"${groupName.trim()}" has been updated` });
     } else {
       // Add new group
