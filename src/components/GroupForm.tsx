@@ -13,7 +13,7 @@ interface GroupFormProps {
 }
 
 const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
-  const { addTag, updateTag } = useTaskContext();
+  const { addTag, updateTag, loading } = useTaskContext();
   const [groupName, setGroupName] = useState(group?.name || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -25,7 +25,7 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!groupName.trim()) {
@@ -37,19 +37,28 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
       return;
     }
     
-    if (group) {
-      // Update existing group - passing full tag object
-      updateTag({ id: group.id, name: groupName.trim() });
-      toast({ title: "Tag updated", description: `"${groupName.trim()}" has been updated` });
-    } else {
-      // Add new group
-      addTag(groupName.trim());
-      setGroupName('');
-      toast({ title: "Tag created", description: `"${groupName.trim()}" has been created` });
-    }
-    
-    if (onSave) {
-      onSave();
+    try {
+      if (group) {
+        // Update existing group - passing full tag object
+        await updateTag({ id: group.id, name: groupName.trim() });
+        toast({ title: "Tag updated", description: `"${groupName.trim()}" has been updated` });
+      } else {
+        // Add new group
+        await addTag(groupName.trim());
+        setGroupName('');
+        toast({ title: "Tag created", description: `"${groupName.trim()}" has been created` });
+      }
+      
+      if (onSave) {
+        onSave();
+      }
+    } catch (error) {
+      console.error('Error saving tag:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to save tag", 
+        variant: "destructive" 
+      });
     }
   };
   
@@ -61,9 +70,10 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
         onChange={(e) => setGroupName(e.target.value)}
         placeholder="Add or edit tag/area..." 
         className="flex-1"
+        disabled={loading}
       />
       
-      <Button type="submit" variant="default" size="icon" className="h-10 w-10">
+      <Button type="submit" variant="default" size="icon" className="h-10 w-10" disabled={loading}>
         <Save className="h-4 w-4" />
       </Button>
       
@@ -74,6 +84,7 @@ const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
           onClick={onCancel} 
           size="icon" 
           className="h-10 w-10"
+          disabled={loading}
         >
           <X className="h-4 w-4" />
         </Button>

@@ -29,7 +29,13 @@ const createSupabaseClient = () => {
   }
 
   // Create and return the actual Supabase client
-  return createClient(supabaseUrl, supabaseAnonKey);
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true
+    }
+  });
 };
 
 export const supabase = createSupabaseClient();

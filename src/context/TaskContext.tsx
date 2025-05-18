@@ -1,6 +1,9 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Task, Tag, Person, Priority, EffortLevel } from '@/types';
+import { TaskService } from '@/services/TaskService';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/components/ui/use-toast';
 
 interface TaskContextType {
   tasks: Task[];
@@ -17,184 +20,311 @@ interface TaskContextType {
   updatePerson: (person: Person) => void;
   deletePerson: (personId: string) => void;
   getTodaysCompletedTasks: () => Task[];
+  loading: boolean;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export function TaskProvider({ children }: { children: ReactNode }) {
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    const savedTasks = localStorage.getItem('tasks');
-    if (savedTasks) {
-      const parsedTasks = JSON.parse(savedTasks);
-      return parsedTasks.map((task: any) => ({
-        ...task,
-        dueDate: task.dueDate ? new Date(task.dueDate) : null,
-        targetDeadline: task.targetDeadline ? new Date(task.targetDeadline) : null,
-        goLiveDate: task.goLiveDate ? new Date(task.goLiveDate) : null,
-        completedDate: task.completedDate ? new Date(task.completedDate) : null,
-        createdAt: new Date(task.createdAt),
-        updatedAt: new Date(task.updatedAt),
-        // Handle migration from groups to tags
-        tags: task.tags || task.groups || []
-      }));
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  // Load data from Supabase when user is authenticated
+  useEffect(() => {
+    const loadData = async () => {
+      if (user) {
+        setLoading(true);
+        try {
+          const [tasksData, tagsData, peopleData] = await Promise.all([
+            TaskService.getTasks(),
+            TaskService.getTags(),
+            TaskService.getPeople()
+          ]);
+          
+          setTasks(tasksData);
+          setTags(tagsData);
+          setPeople(peopleData);
+        } catch (error) {
+          console.error('Error loading data:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load your tasks. Please try refreshing the page.',
+            variant: 'destructive'
+          });
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // Clear data when user is not authenticated
+        setTasks([]);
+        setTags([]);
+        setPeople([]);
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
+
+  const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to create tasks',
+        variant: 'destructive'
+      });
+      return;
     }
-    return [];
-  });
-  
-  const [tags, setTags] = useState<Tag[]>(() => {
-    const savedTags = localStorage.getItem('tags');
-    const savedGroups = localStorage.getItem('groups');
     
-    // Migration from groups to tags
-    if (savedTags) {
-      return JSON.parse(savedTags);
-    } else if (savedGroups) {
-      const groups = JSON.parse(savedGroups);
-      localStorage.setItem('tags', JSON.stringify(groups));
-      return groups;
+    try {
+      const newTask = await TaskService.createTask(taskData);
+      
+      if (newTask) {
+        setTasks(prev => [newTask, ...prev]);
+      }
+    } catch (error) {
+      console.error('Error adding task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const updateTask = async (updatedTask: Task) => {
+    if (!user) return;
+    
+    try {
+      await TaskService.updateTask(updatedTask);
+      
+      setTasks(prev => 
+        prev.map(task => 
+          task.id === updatedTask.id 
+            ? { ...updatedTask, updatedAt: new Date() } 
+            : task
+        )
+      );
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    if (!user) return;
+    
+    try {
+      await TaskService.deleteTask(taskId);
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const completeTask = async (taskId: string) => {
+    if (!user) return;
+    
+    try {
+      await TaskService.completeTask(taskId);
+      
+      setTasks(prev => 
+        prev.map(task => 
+          task.id === taskId 
+            ? { ...task, completed: true, completedDate: new Date(), updatedAt: new Date() } 
+            : task
+        )
+      );
+    } catch (error) {
+      console.error('Error completing task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete task',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const addTag = async (name: string) => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to create tags',
+        variant: 'destructive'
+      });
+      return { id: '', name: '' };
     }
     
-    return [
-      { id: '1', name: 'Work' },
-      { id: '2', name: 'Personal' },
-      { id: '3', name: 'Health' },
-      { id: '4', name: 'Learning' },
-      { id: '5', name: 'Family' },
-      { id: '6', name: 'Home' },
-      { id: '7', name: 'Office' }
-    ];
-  });
-  
-  const [people, setPeople] = useState<Person[]>(() => {
-    const savedPeople = localStorage.getItem('people');
-    return savedPeople ? JSON.parse(savedPeople) : [];
-  });
-
-  // Save data to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  useEffect(() => {
-    localStorage.setItem('tags', JSON.stringify(tags));
-  }, [tags]);
-
-  useEffect(() => {
-    localStorage.setItem('people', JSON.stringify(people));
-  }, [people]);
-
-  const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const now = new Date();
-    const newTask: Task = {
-      ...taskData,
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now
-    };
+    try {
+      const newTag = await TaskService.createTag(name);
+      
+      if (newTag) {
+        setTags(prev => [...prev, newTag]);
+        return newTag;
+      }
+    } catch (error) {
+      console.error('Error adding tag:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create tag',
+        variant: 'destructive'
+      });
+    }
     
-    setTasks(prev => [...prev, newTask]);
+    return { id: '', name: '' };
   };
 
-  const updateTask = (updatedTask: Task) => {
-    setTasks(prev => 
-      prev.map(task => 
-        task.id === updatedTask.id 
-          ? { ...updatedTask, updatedAt: new Date() } 
-          : task
-      )
-    );
-  };
-
-  const deleteTask = (taskId: string) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
-  };
-
-  const completeTask = (taskId: string) => {
-    setTasks(prev => 
-      prev.map(task => 
-        task.id === taskId 
-          ? { ...task, completed: true, completedDate: new Date(), updatedAt: new Date() } 
-          : task
-      )
-    );
-  };
-
-  const addTag = (name: string) => {
-    const newTag: Tag = {
-      id: crypto.randomUUID(),
-      name
-    };
-    setTags(prev => [...prev, newTag]);
-    return newTag;
-  };
-
-  const updateTag = (updatedTag: Tag) => {
-    setTags(prev => 
-      prev.map(tag => 
-        tag.id === updatedTag.id ? updatedTag : tag
-      )
-    );
+  const updateTag = async (updatedTag: Tag) => {
+    if (!user) return;
     
-    // Update tasks with this tag
-    setTasks(prev => 
-      prev.map(task => ({
-        ...task,
-        tags: task.tags.map(g => 
-          g.id === updatedTag.id ? updatedTag : g
+    try {
+      await TaskService.updateTag(updatedTag);
+      
+      setTags(prev => 
+        prev.map(tag => 
+          tag.id === updatedTag.id ? updatedTag : tag
         )
-      }))
-    );
+      );
+      
+      // Update tags in tasks
+      setTasks(prev => 
+        prev.map(task => ({
+          ...task,
+          tags: task.tags.map(tag => 
+            tag.id === updatedTag.id ? updatedTag : tag
+          )
+        }))
+      );
+    } catch (error) {
+      console.error('Error updating tag:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update tag',
+        variant: 'destructive'
+      });
+    }
   };
 
-  const deleteTag = (tagId: string) => {
-    setTags(prev => prev.filter(tag => tag.id !== tagId));
+  const deleteTag = async (tagId: string) => {
+    if (!user) return;
     
-    // Remove the tag from all tasks
-    setTasks(prev => 
-      prev.map(task => ({
-        ...task,
-        tags: task.tags.filter(g => g.id !== tagId)
-      }))
-    );
+    try {
+      await TaskService.deleteTag(tagId);
+      
+      setTags(prev => prev.filter(tag => tag.id !== tagId));
+      
+      // Remove the tag from all tasks
+      setTasks(prev => 
+        prev.map(task => ({
+          ...task,
+          tags: task.tags.filter(tag => tag.id !== tagId)
+        }))
+      );
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete tag',
+        variant: 'destructive'
+      });
+    }
   };
 
-  const addPerson = (name: string) => {
-    const newPerson: Person = {
-      id: crypto.randomUUID(),
-      name
-    };
-    setPeople(prev => [...prev, newPerson]);
-    return newPerson;
-  };
-
-  const updatePerson = (updatedPerson: Person) => {
-    setPeople(prev => 
-      prev.map(person => 
-        person.id === updatedPerson.id ? updatedPerson : person
-      )
-    );
+  const addPerson = async (name: string) => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to create people',
+        variant: 'destructive'
+      });
+      return { id: '', name: '' };
+    }
     
-    // Update tasks with this person
-    setTasks(prev => 
-      prev.map(task => ({
-        ...task,
-        people: task.people.map(p => 
-          p.id === updatedPerson.id ? updatedPerson : p
+    try {
+      const newPerson = await TaskService.createPerson(name);
+      
+      if (newPerson) {
+        setPeople(prev => [...prev, newPerson]);
+        return newPerson;
+      }
+    } catch (error) {
+      console.error('Error adding person:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create person',
+        variant: 'destructive'
+      });
+    }
+    
+    return { id: '', name: '' };
+  };
+
+  const updatePerson = async (updatedPerson: Person) => {
+    if (!user) return;
+    
+    try {
+      await TaskService.updatePerson(updatedPerson);
+      
+      setPeople(prev => 
+        prev.map(person => 
+          person.id === updatedPerson.id ? updatedPerson : person
         )
-      }))
-    );
+      );
+      
+      // Update people in tasks
+      setTasks(prev => 
+        prev.map(task => ({
+          ...task,
+          people: task.people.map(person => 
+            person.id === updatedPerson.id ? updatedPerson : person
+          )
+        }))
+      );
+    } catch (error) {
+      console.error('Error updating person:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update person',
+        variant: 'destructive'
+      });
+    }
   };
 
-  const deletePerson = (personId: string) => {
-    setPeople(prev => prev.filter(person => person.id !== personId));
+  const deletePerson = async (personId: string) => {
+    if (!user) return;
     
-    // Remove the person from all tasks
-    setTasks(prev => 
-      prev.map(task => ({
-        ...task,
-        people: task.people.filter(p => p.id !== personId)
-      }))
-    );
+    try {
+      await TaskService.deletePerson(personId);
+      
+      setPeople(prev => prev.filter(person => person.id !== personId));
+      
+      // Remove the person from all tasks
+      setTasks(prev => 
+        prev.map(task => ({
+          ...task,
+          people: task.people.filter(person => person.id !== personId)
+        }))
+      );
+    } catch (error) {
+      console.error('Error deleting person:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete person',
+        variant: 'destructive'
+      });
+    }
   };
 
   const getTodaysCompletedTasks = () => {
@@ -225,7 +355,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     addPerson,
     updatePerson,
     deletePerson,
-    getTodaysCompletedTasks
+    getTodaysCompletedTasks,
+    loading
   };
 
   return (

@@ -1,6 +1,6 @@
 
 import { useState, useEffect, createContext, useContext } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 
@@ -30,41 +30,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting session:', error);
-        }
-        
-        if (data && data.session) {
-          setSession(data.session);
-          setUser(data.session.user);
-        }
-      } catch (error) {
-        console.error('Unexpected error getting session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getSession();
-
-    // Set up auth change listener
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user || null);
       setLoading(false);
     });
 
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user || null);
+      setLoading(false);
+    }).catch(error => {
+      console.error('Error getting session:', error);
+      setLoading(false);
+    });
+
     return () => {
-      // Clean up subscription when unmounting
-      if (authListener && typeof authListener.subscription.unsubscribe === 'function') {
-        authListener.subscription.unsubscribe();
-      }
+      subscription.unsubscribe();
     };
   }, []);
 

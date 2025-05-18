@@ -13,7 +13,7 @@ interface PersonFormProps {
 }
 
 const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
-  const { addPerson, updatePerson } = useTaskContext();
+  const { addPerson, updatePerson, loading } = useTaskContext();
   const [personName, setPersonName] = useState(person?.name || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -25,7 +25,7 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!personName.trim()) {
@@ -37,19 +37,28 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
       return;
     }
     
-    if (person) {
-      // Update existing person - passing full person object
-      updatePerson({ id: person.id, name: personName.trim() });
-      toast({ title: "Person updated", description: `"${personName.trim()}" has been updated` });
-    } else {
-      // Add new person
-      addPerson(personName.trim());
-      setPersonName('');
-      toast({ title: "Person added", description: `"${personName.trim()}" has been added` });
-    }
-    
-    if (onSave) {
-      onSave();
+    try {
+      if (person) {
+        // Update existing person - passing full person object
+        await updatePerson({ id: person.id, name: personName.trim() });
+        toast({ title: "Person updated", description: `"${personName.trim()}" has been updated` });
+      } else {
+        // Add new person
+        await addPerson(personName.trim());
+        setPersonName('');
+        toast({ title: "Person added", description: `"${personName.trim()}" has been added` });
+      }
+      
+      if (onSave) {
+        onSave();
+      }
+    } catch (error) {
+      console.error('Error saving person:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to save person", 
+        variant: "destructive" 
+      });
     }
   };
   
@@ -61,9 +70,10 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
         onChange={(e) => setPersonName(e.target.value)}
         placeholder="Add or edit person..." 
         className="flex-1"
+        disabled={loading}
       />
       
-      <Button type="submit" variant="default" size="icon" className="h-10 w-10">
+      <Button type="submit" variant="default" size="icon" className="h-10 w-10" disabled={loading}>
         <Save className="h-4 w-4" />
       </Button>
       
@@ -74,6 +84,7 @@ const PersonForm = ({ person, onSave, onCancel }: PersonFormProps) => {
           onClick={onCancel} 
           size="icon" 
           className="h-10 w-10"
+          disabled={loading}
         >
           <X className="h-4 w-4" />
         </Button>
