@@ -12,6 +12,7 @@ interface TagFilterItemsProps {
   size?: "sm" | "default";
   className?: string;
   fullWidth?: boolean;
+  compact?: boolean;
 }
 
 export const TagFilterItems: React.FC<TagFilterItemsProps> = ({
@@ -20,7 +21,8 @@ export const TagFilterItems: React.FC<TagFilterItemsProps> = ({
   onToggleTag,
   size,
   className,
-  fullWidth
+  fullWidth,
+  compact = false
 }) => {
   // If we're rendering as buttons/badges (for mobile)
   if (size) {
@@ -31,12 +33,12 @@ export const TagFilterItems: React.FC<TagFilterItemsProps> = ({
             <Button
               key={tag.id}
               variant={selectedTags.includes(tag.id) ? "default" : "outline"}
-              size={size}
+              size={compact ? "xs" : size}
               onClick={() => onToggleTag(tag.id)}
-              className={fullWidth ? "w-full justify-between" : ""}
+              className={`${fullWidth ? "w-full justify-between" : ""} ${compact ? "h-6 text-xs py-0" : ""}`}
             >
               {tag.name}
-              {tag.color && <span className="ml-2 h-3 w-3 rounded-full" style={{ backgroundColor: tag.color }} />}
+              {tag.color && <span className="ml-2 h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />}
             </Button>
           ))
         ) : (

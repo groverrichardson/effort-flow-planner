@@ -69,7 +69,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
   onCreateTask
 }) => {
   return (
-    <div className="space-y-4 pr-1 flex flex-col h-full">
+    <div className="space-y-3 pr-1 flex flex-col h-full">
       {/* Active filter reset */}
       {hasActiveFilters && (
         <Button 
@@ -85,7 +85,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
 
       {/* Priority filter section */}
       <div className="space-y-1">
-        <div className="text-sm font-medium">Filter by Priority</div>
+        <div className="text-xs font-medium">Priority</div>
         <PriorityFilterItems
           selectedPriorities={selectedPriorities}
           onTogglePriority={onTogglePriority}
@@ -98,9 +98,9 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
       {/* Tags filter section */}
       {tags.length > 0 && (
         <div className="space-y-1">
-          <div className="text-sm font-medium">Filter by Tags</div>
-          <ScrollArea className="h-40 rounded-md border">
-            <div className="p-2">
+          <div className="text-xs font-medium">Tags</div>
+          <ScrollArea className="h-28 rounded-md border">
+            <div className="p-1">
               <TagFilterItems
                 tags={tags}
                 selectedTags={selectedTags}
@@ -108,6 +108,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
                 size="sm"
                 className="flex-col space-y-1 items-start"
                 fullWidth
+                compact={true}
               />
             </div>
           </ScrollArea>
@@ -117,9 +118,9 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
       {/* People filter section */}
       {people.length > 0 && (
         <div className="space-y-1">
-          <div className="text-sm font-medium">Filter by People</div>
-          <ScrollArea className="h-40 rounded-md border">
-            <div className="p-2">
+          <div className="text-xs font-medium">People</div>
+          <ScrollArea className="h-28 rounded-md border">
+            <div className="p-1">
               <PeopleFilterItems
                 people={people}
                 selectedPeople={selectedPeople}
@@ -127,6 +128,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
                 size="sm"
                 className="flex-col space-y-1 items-start"
                 fullWidth
+                compact={true}
               />
             </div>
           </ScrollArea>
@@ -135,8 +137,8 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
 
       {/* Date filters */}
       <div className="space-y-1">
-        <div className="text-sm font-medium">Filter by Dates</div>
-        <div className="space-y-2">
+        <div className="text-xs font-medium">Dates</div>
+        <div className="space-y-1">
           <DueDateFilterItems
             filterByDueDate={filterByDueDate}
             onSetFilterByDueDate={onSetFilterByDueDate}
@@ -158,7 +160,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
           variant="outline" 
           size="sm"
           onClick={onToggleShowCompleted}
-          className="w-full"
+          className="w-full text-xs"
         >
           {viewingCompleted ? "Hide Completed" : "Show Completed"}
         </Button>
@@ -168,31 +170,17 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
       <div className="flex-grow"></div>
       
       {/* Footer section with New Task button */}
-      <div className="border-t pt-4">
-        {onCreateTask && (
-          <Button 
-            onClick={onCreateTask}
-            className="w-full flex items-center justify-center"
-          >
-            <Plus size={18} className="mr-2" />
-            New Task
-          </Button>
-        )}
-      </div>
+      {onCreateTask && (
+        <Button 
+          onClick={onCreateTask}
+          className="w-full flex items-center justify-center"
+        >
+          <Plus size={18} className="mr-2" />
+          New Task
+        </Button>
+      )}
     </div>
   );
 };
 
-// Mobile header title
-export const MobileFilterHeader = () => {
-  return (
-    <div className="px-4 py-2 border-b">
-      <h2 className="text-lg font-semibold">Filters</h2>
-    </div>
-  );
-};
-
-export default {
-  MobileFilters,
-  MobileFilterHeader
-};
+export default MobileFilters;

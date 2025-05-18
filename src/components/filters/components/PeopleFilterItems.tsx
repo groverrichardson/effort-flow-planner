@@ -10,6 +10,7 @@ interface PeopleFilterItemsProps {
   size?: "sm" | "default";
   className?: string;
   fullWidth?: boolean;
+  compact?: boolean;
 }
 
 export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
@@ -18,7 +19,8 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
   onTogglePerson,
   size,
   className,
-  fullWidth
+  fullWidth,
+  compact = false
 }) => {
   // If we're rendering as buttons (for mobile)
   if (size) {
@@ -29,9 +31,9 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
             <Button
               key={person.id}
               variant={selectedPeople.includes(person.id) ? "default" : "outline"}
-              size={size}
+              size={compact ? "xs" : size}
               onClick={() => onTogglePerson(person.id)}
-              className={fullWidth ? "w-full justify-between" : ""}
+              className={`${fullWidth ? "w-full justify-between" : ""} ${compact ? "h-6 text-xs py-0" : ""}`}
             >
               {person.name}
             </Button>

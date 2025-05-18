@@ -59,17 +59,18 @@ const NaturalLanguageInput = ({
         regex: /#([^\s#@]+)/g, 
         type: 'tag' 
       },
-      // People (@person - can include spaces for multi-word names)
+      // People (@person - limit to 2 names max with better boundary detection)
+      // This regex will match up to 2 @ mentions, each followed by words until space, @, or # is encountered
       { 
-        regex: /@([^\s#@]+(?:\s+[^\s#@]+)*)/g,
+        regex: /@([^\s#@]+)/g,
         type: 'person' 
       },
-      // Priority keywords - Enhanced to match all priority levels
+      // Priority keywords
       { 
         regex: /\b(high priority|normal priority|medium priority|low priority|lowest priority|urgent|important|not urgent|when you have time|whenever)\b/gi, 
         type: 'priority' 
       },
-      // Date keywords - Enhanced to catch more date formats
+      // Date keywords
       { 
         regex: /\b(tomorrow|today|next week|next month|next (monday|tuesday|wednesday|thursday|friday|saturday|sunday)|on (monday|tuesday|wednesday|thursday|friday|saturday|sunday)|this (monday|tuesday|wednesday|thursday|friday|saturday|sunday)|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* \d{1,2}(st|nd|rd|th)?|\d{1,2}[\/\-]\d{1,2}([\/\-]\d{2,4})?|due (tomorrow|today|next week|on|by|this) ?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)?|(monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/gi, 
         type: 'date' 
@@ -88,17 +89,27 @@ const NaturalLanguageInput = ({
       const regex = new RegExp(pattern.regex);
       let match;
       
-      while ((match = regex.exec(value)) !== null) {
-        matches.push({
-          start: match.index,
-          end: match.index + match[0].length,
-          text: match[0],
-          type: pattern.type
-        });
-        
-        // Reset regex to prevent infinite loop with global flag
-        if (pattern.type === 'person') {
-          regex.lastIndex = match.index + match[0].length;
+      // For person type, only capture first two matches
+      if (pattern.type === 'person') {
+        let personCount = 0;
+        while ((match = regex.exec(value)) !== null && personCount < 2) {
+          matches.push({
+            start: match.index,
+            end: match.index + match[0].length,
+            text: match[0],
+            type: pattern.type
+          });
+          personCount++;
+        }
+      } else {
+        // Normal processing for other token types
+        while ((match = regex.exec(value)) !== null) {
+          matches.push({
+            start: match.index,
+            end: match.index + match[0].length,
+            text: match[0],
+            type: pattern.type
+          });
         }
       }
     });
@@ -191,19 +202,24 @@ const NaturalLanguageInput = ({
       return;
     }
 
-    // Check for people suggestions
+    // Check for people suggestions, but only if we haven't already matched 2 people
     if (currentWord.startsWith('@')) {
-      const personQuery = currentWord.substring(1).toLowerCase();
-      if (personQuery.length > 0) {
-        const matchingPeople = people.filter(
-          person => person.name.toLowerCase().includes(personQuery)
-        );
-        setSuggestions({ type: 'person', items: matchingPeople });
-        setPopoverOpen(true);
-      } else if (currentWord === '@') {
-        // Show all people when just the @ is typed
-        setSuggestions({ type: 'person', items: people });
-        setPopoverOpen(true);
+      // Count existing person tokens to make sure we don't suggest more than 2
+      const existingPersonTokens = tokens.filter(t => t.type === 'person').length;
+      
+      if (existingPersonTokens < 2) {
+        const personQuery = currentWord.substring(1).toLowerCase();
+        if (personQuery.length > 0) {
+          const matchingPeople = people.filter(
+            person => person.name.toLowerCase().includes(personQuery)
+          );
+          setSuggestions({ type: 'person', items: matchingPeople });
+          setPopoverOpen(true);
+        } else if (currentWord === '@') {
+          // Show all people when just the @ is typed
+          setSuggestions({ type: 'person', items: people });
+          setPopoverOpen(true);
+        }
       }
       return;
     }
@@ -259,16 +275,20 @@ const NaturalLanguageInput = ({
     const lastHashIndex = beforeCursor.lastIndexOf('#');
     
     if (lastAtIndex >= 0 && (lastHashIndex < 0 || lastAtIndex > lastHashIndex)) {
-      // Replace from @ to cursor position with suggestion and add a space to prevent the next word from attaching
-      const newText = beforeCursor.substring(0, lastAtIndex) + 
-                       '@' + suggestion.name + ' ' + 
-                       afterCursor;
-      onChange(newText);
+      // Count existing person mentions to enforce limit of 2
+      const existingPersons = (value.match(/@[^\s#@]+/g) || []).length;
+      if (existingPersons < 2 || beforeCursor.substring(lastAtIndex).includes('@')) {
+        // Replace from @ to cursor position with suggestion and add a space
+        const newText = beforeCursor.substring(0, lastAtIndex) + 
+                        '@' + suggestion.name + ' ' + 
+                        afterCursor;
+        onChange(newText);
+      }
     } else if (lastHashIndex >= 0) {
-      // Replace from # to cursor position with suggestion and add a space to prevent the next word from attaching
+      // Replace from # to cursor position with suggestion and add a space
       const newText = beforeCursor.substring(0, lastHashIndex) + 
-                       '#' + suggestion.name + ' ' + 
-                       afterCursor;
+                      '#' + suggestion.name + ' ' + 
+                      afterCursor;
       onChange(newText);
     }
     
@@ -365,7 +385,7 @@ const NaturalLanguageInput = ({
                 suggestions.items.map((item) => (
                   <div
                     key={item.id}
-                    className="px-3 py-2.5 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
+                    className="px-3 py-2 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
                     onClick={() => applySuggestion(item)}
                   >
                     <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>

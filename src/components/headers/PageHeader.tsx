@@ -52,12 +52,6 @@ const PageHeader = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { tags, people } = useTaskContext();
   
-  // Update tags to include optional color property for compatibility
-  const tagsWithOptionalColor = tags.map(tag => ({
-    ...tag,
-    color: undefined // Adding undefined color property to match expected interface
-  }));
-  
   // Simple component to show only view options
   const ViewOptions = () => {
     if (!filterProps || !filterProps.onShowAllActive) return null;
@@ -116,11 +110,10 @@ const PageHeader = ({
       </SheetTrigger>
       <SheetContent side="right" className="flex flex-col p-0">
         <ScrollArea className="h-full px-4">
-          <div className="space-y-6 py-6">
+          <div className="space-y-4 py-6">
             {isMobile && filterProps && (
               <>
                 <ViewOptions />
-                <Separator />
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <h3 className="text-xs font-medium text-muted-foreground">Filters</h3>
@@ -150,16 +143,15 @@ const PageHeader = ({
                       onSetFilterByDueDate={filterProps.onSetFilterByDueDate}
                       onSetFilterByGoLive={filterProps.onSetFilterByGoLive}
                       onResetFilters={filterProps.onResetFilters}
-                      tags={tagsWithOptionalColor}
+                      tags={tags}
                       people={people}
                       inMobileMenu={true}
+                      onCreateTask={onCreateTaskClick}
                     />
                   )}
                 </div>
               </>
             )}
-            
-            <Separator />
             
             <div className="flex flex-col gap-3">
               <Button 
