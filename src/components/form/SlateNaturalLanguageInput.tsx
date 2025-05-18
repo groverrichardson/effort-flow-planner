@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, KeyboardEvent, useEffect, useRef } from 'react';
-import { createEditor, Descendant, Editor, Element as SlateElement, Node as SlateNode, Range, Text, BaseEditor, BaseRange } from 'slate';
+import { createEditor, Descendant, Editor, Element as SlateElement, Node as SlateNode, Range, Text } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
@@ -28,7 +28,9 @@ const TOKEN_COLORS = {
 };
 
 // Define interfaces for our custom types
-interface CustomText extends Text {
+// Fix #1: CustomText should not extend itself (Text)
+interface CustomText {
+  text: string;
   tag?: boolean;
   person?: boolean;
   priority?: boolean;
@@ -42,9 +44,11 @@ interface CustomElement {
   children: CustomText[];
 }
 
-interface CustomEditor extends BaseEditor, ReactEditor {}
+// Define types for custom editor
+type CustomEditor = ReactEditor;
 
-interface CustomRange extends BaseRange {
+// Custom Range type for our decorations
+interface CustomRange extends Range {
   tag?: boolean;
   person?: boolean;
   priority?: boolean;
@@ -59,7 +63,6 @@ declare module 'slate' {
     Editor: CustomEditor;
     Element: CustomElement;
     Text: CustomText;
-    Range: CustomRange;
   }
 }
 
@@ -221,8 +224,9 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     // Determine the prefix
     const prefix = word.startsWith('#') ? '#' : '@';
     
-    // Replace the current word with the suggestion
-    Editor.deleteFragment(editor, wordRange);
+    // Fix #2: Change the way we delete text and insert the suggestion
+    Editor.select(editor, wordRange);
+    Editor.deleteFragment(editor);
     Editor.insertText(editor, `${prefix}${suggestion.name} `);
     
     setSuggestions({ type: '', items: [] });
