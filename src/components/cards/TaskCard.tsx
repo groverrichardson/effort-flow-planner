@@ -1,11 +1,9 @@
-
 import { format, isToday, isPast } from 'date-fns';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Task, Priority, EffortLevel } from '@/types';
-import { Check, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Check } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 interface TaskCardProps {
@@ -111,17 +109,6 @@ const TaskCard = ({ task, viewingCompleted, onClick, onComplete, onDelete }: Tas
               </div>
             )}
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-gray-500 hover:text-red-500" 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete();
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
         </div>
       </CardContent>
     </Card>
