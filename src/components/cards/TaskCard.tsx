@@ -11,9 +11,10 @@ interface TaskCardProps {
   viewingCompleted: boolean;
   onClick: (task: Task) => void;
   onComplete: (task: Task) => void;
+  onDelete: (taskId: string) => void;  // Added the missing prop
 }
 
-const TaskCard = ({ task, viewingCompleted, onClick, onComplete }: TaskCardProps) => {
+const TaskCard = ({ task, viewingCompleted, onClick, onComplete, onDelete }: TaskCardProps) => {
   const renderPriorityBadge = (priority: Priority) => {
     let className = '';
     switch (priority) {

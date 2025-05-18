@@ -8,11 +8,13 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface TaskDialogsProps {
   editTask: Task | null;
   onCloseEdit: () => void;
+  onDeleteTask: (taskId: string) => void;  // Added the missing prop
 }
 
 const TaskDialogs = ({
   editTask,
-  onCloseEdit
+  onCloseEdit,
+  onDeleteTask  // Added the missing prop
 }: TaskDialogsProps) => {
   // Keep a local reference to the task being edited to prevent stale data
   const [currentEditTask, setCurrentEditTask] = useState<Task | null>(null);
