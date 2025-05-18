@@ -95,6 +95,7 @@ const CSVTaskImporter = () => {
             else if (lowerHeader === 'duedate' || lowerHeader === 'due date') initialMap[header] = 'dueDate';
             else if (lowerHeader === 'people' || lowerHeader === 'person') initialMap[header] = 'people';
             else if (lowerHeader === 'tags' || lowerHeader === 'tag') initialMap[header] = 'tags';
+            else initialMap[header] = 'ignore'; // Set default to 'ignore' instead of empty string
           });
         }
         setColumnMap(initialMap);
@@ -121,15 +122,20 @@ const CSVTaskImporter = () => {
     setHasHeaders(checked);
     
     if (parsedData) {
-      // If we toggle headers off, we need to treat first row as data
-      // If we toggle headers on, we need to treat first row as headers
+      // If we're toggling headers off, we need to treat first row as data
+      // If we're toggling headers on, we need to treat first row as headers
       setParsedData({
         headers: checked ? parsedData.rows[0] : Array.from({ length: parsedData.rows[0].length }, (_, i) => `Column ${i + 1}`),
         rows: checked ? parsedData.rows.slice(1) : parsedData.rows
       });
       
       // Reset column mapping when header toggle changes
-      setColumnMap({});
+      const initialMap: Record<string, string> = {};
+      const headers = checked ? parsedData.rows[0] : Array.from({ length: parsedData.rows[0].length }, (_, i) => `Column ${i + 1}`);
+      headers.forEach(header => {
+        initialMap[header] = 'ignore'; // Set default to 'ignore'
+      });
+      setColumnMap(initialMap);
     }
   };
 
@@ -146,7 +152,7 @@ const CSVTaskImporter = () => {
       // Apply mapping to extract fields
       headers.forEach((header, index) => {
         const field = columnMap[header];
-        if (!field || index >= row.length) return;
+        if (!field || field === 'ignore' || index >= row.length) return; // Skip ignored fields
         
         const value = row[index];
         if (!value) return;

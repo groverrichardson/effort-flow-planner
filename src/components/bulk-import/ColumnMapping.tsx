@@ -25,7 +25,7 @@ interface ColumnMappingProps {
 }
 
 const FIELD_OPTIONS = [
-  { value: '', label: 'Ignore' },
+  { value: 'ignore', label: 'Ignore' }, // Changed empty string to 'ignore'
   { value: 'title', label: 'Title (required)' },
   { value: 'description', label: 'Description' },
   { value: 'priority', label: 'Priority' },
@@ -45,10 +45,10 @@ const ColumnMapping = ({
     const newMap = { ...columnMap };
     
     // Clear any existing mappings for this field value to avoid duplicates
-    if (value) {
+    if (value && value !== 'ignore') { // Updated condition to check for 'ignore' instead of empty string
       Object.keys(newMap).forEach(key => {
         if (newMap[key] === value && key !== header) {
-          newMap[key] = '';
+          newMap[key] = 'ignore'; // Changed empty string to 'ignore'
         }
       });
     }
@@ -79,7 +79,7 @@ const ColumnMapping = ({
                 <TableCell className="font-medium">{header}</TableCell>
                 <TableCell>
                   <Select 
-                    value={columnMap[header] || ''} 
+                    value={columnMap[header] || 'ignore'} // Use 'ignore' instead of empty string
                     onValueChange={(value) => handleFieldChange(header, value)}
                   >
                     <SelectTrigger className="w-[180px]">
