@@ -5,46 +5,40 @@ import { FilterX, Plus } from 'lucide-react';
 import { Priority } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface MobileFilterSectionProps {
-  title: string;
-  children: React.ReactNode;
-}
+import PriorityFilterItems from './PriorityFilterItems';
+import TagFilterItems from './TagFilterItems';
+import PeopleFilterItems from './PeopleFilterItems';
+import DueDateFilterItems from './DueDateFilterItems';
+import GoLiveFilterItem from './GoLiveFilterItem';
 
-const MobileFilterSection: React.FC<MobileFilterSectionProps> = ({ title, children }) => {
-  return (
-    <div className="space-y-3">
-      <h4 className="text-xs font-medium text-muted-foreground">{title}</h4>
-      <div className="flex flex-wrap gap-2">
-        {children}
-      </div>
-    </div>
-  );
-};
-
+// Mobile filters component for sidebar/hamburger menu
 interface MobileFiltersProps {
   selectedTags: string[];
   selectedPeople: string[];
   selectedPriorities: Priority[];
-  filterByDueDate: string;
+  filterByDueDate: boolean;
   filterByGoLive: boolean;
-  showCompleted: boolean;
+  
   onToggleTag: (tagId: string) => void;
   onTogglePerson: (personId: string) => void;
   onTogglePriority: (priority: Priority) => void;
-  onSetFilterByDueDate: (value: string) => void;
+  onSetFilterByDueDate: (value: boolean) => void;
   onSetFilterByGoLive: (value: boolean) => void;
   onResetFilters: () => void;
-  onToggleShowCompleted?: () => void;
-  tags: { id: string; name: string }[];
-  people: { id: string; name: string }[];
-  hasActiveFilters: boolean;
   
-  // View options
-  viewingCompleted?: boolean;
-  showTodaysTasks?: boolean;
+  // Filter modes
+  showAllActive: boolean;
+  showTodaysTasks: boolean;
+  showCompleted: boolean;
   onShowAllActive?: () => void;
   onShowToday?: () => void;
   onShowCompleted?: () => void;
+  onToggleShowCompleted?: () => void;
+  
+  // Data
+  tags: { id: string; name: string; color: string }[];
+  people: { id: string; name: string }[];
+  hasActiveFilters: boolean;
   
   // Create task button option
   onCreateTask?: () => void;
@@ -56,13 +50,15 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
   selectedPriorities,
   filterByDueDate,
   filterByGoLive,
-  showCompleted,
   onToggleTag,
   onTogglePerson,
   onTogglePriority,
   onSetFilterByDueDate,
   onSetFilterByGoLive,
   onResetFilters,
+  showAllActive,
+  showTodaysTasks,
+  showCompleted,
   onToggleShowCompleted,
   tags,
   people,
@@ -71,108 +67,103 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
 }) => {
   return (
     <div className="space-y-4 pr-1">
+      {/* Active filter reset */}
       {hasActiveFilters && (
-        <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onResetFilters}
-            className="h-8 px-2 text-xs"
-          >
-            <FilterX size={14} className="mr-1" />
-            Reset
-          </Button>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={onResetFilters}
+          className="w-full justify-between"
+        >
+          Clear all filters
+          <FilterX size={14} />
+        </Button>
+      )}
+
+      {/* Priority filter section */}
+      <div className="space-y-1">
+        <div className="text-sm font-medium">Filter by Priority</div>
+        <PriorityFilterItems
+          selectedPriorities={selectedPriorities}
+          onTogglePriority={onTogglePriority}
+          size="sm"
+          className="flex-wrap gap-1"
+          fullWidth
+        />
+      </div>
+
+      {/* Tags filter section */}
+      {tags.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-sm font-medium">Filter by Tags</div>
+          <ScrollArea className="h-40 rounded-md border">
+            <div className="p-2">
+              <TagFilterItems
+                tags={tags}
+                selectedTags={selectedTags}
+                onToggleTag={onToggleTag}
+                size="sm"
+                className="flex-col space-y-1 items-start"
+                fullWidth
+              />
+            </div>
+          </ScrollArea>
         </div>
       )}
 
-      <MobileFilterSection title="Filter by Priority">
-        {['high', 'normal', 'low', 'lowest'].map((priority) => (
-          <Button
-            key={priority}
-            size="sm"
-            variant={selectedPriorities.includes(priority as Priority) ? "secondary" : "outline"}
-            onClick={() => onTogglePriority(priority as Priority)}
-            className="text-xs px-2 py-0 h-7"
-          >
-            {priority.charAt(0).toUpperCase() + priority.slice(1)}
-          </Button>
-        ))}
-      </MobileFilterSection>
-
-      <MobileFilterSection title="Filter by Due Date">
-        {[
-          { id: 'all', label: 'All Dates' },
-          { id: 'today', label: 'Due Today' },
-          { id: 'week', label: 'This Week' },
-          { id: 'overdue', label: 'Overdue' }
-        ].map((option) => (
-          <Button
-            key={option.id}
-            size="sm"
-            variant={filterByDueDate === option.id ? "secondary" : "outline"}
-            onClick={() => onSetFilterByDueDate(option.id)}
-            className="text-xs px-2 py-0 h-7"
-          >
-            {option.label}
-          </Button>
-        ))}
-      </MobileFilterSection>
-
-      <Button
-        size="sm"
-        variant={filterByGoLive ? "secondary" : "outline"}
-        onClick={() => onSetFilterByGoLive(!filterByGoLive)}
-        className="text-xs"
-      >
-        Has Go-Live Date
-      </Button>
-
-      {tags.length > 0 && (
-        <MobileFilterSection title="Filter by Tag">
-          {tags.map((tag) => (
-            <Button
-              key={tag.id}
-              size="sm"
-              variant={selectedTags.includes(tag.id) ? "secondary" : "outline"}
-              onClick={() => onToggleTag(tag.id)}
-              className="text-xs px-2 py-0 h-7"
-            >
-              {tag.name}
-            </Button>
-          ))}
-        </MobileFilterSection>
-      )}
-
+      {/* People filter section */}
       {people.length > 0 && (
-        <MobileFilterSection title="Filter by Person">
-          {people.map((person) => (
-            <Button
-              key={person.id}
-              size="sm"
-              variant={selectedPeople.includes(person.id) ? "secondary" : "outline"}
-              onClick={() => onTogglePerson(person.id)}
-              className="text-xs px-2 py-0 h-7"
-            >
-              {person.name}
-            </Button>
-          ))}
-        </MobileFilterSection>
+        <div className="space-y-1">
+          <div className="text-sm font-medium">Filter by People</div>
+          <ScrollArea className="h-40 rounded-md border">
+            <div className="p-2">
+              <PeopleFilterItems
+                people={people}
+                selectedPeople={selectedPeople}
+                onTogglePerson={onTogglePerson}
+                size="sm"
+                className="flex-col space-y-1 items-start"
+                fullWidth
+              />
+            </div>
+          </ScrollArea>
+        </div>
       )}
-      
+
+      {/* Date filters */}
+      <div className="space-y-1">
+        <div className="text-sm font-medium">Filter by Dates</div>
+        <div className="space-y-2">
+          <DueDateFilterItems
+            filterByDueDate={filterByDueDate}
+            onSetFilterByDueDate={onSetFilterByDueDate}
+            size="sm"
+            className="w-full"
+          />
+          <GoLiveFilterItem
+            filterByGoLive={filterByGoLive}
+            onSetFilterByGoLive={onSetFilterByGoLive}
+            size="sm"
+            className="w-full"
+          />
+        </div>
+      </div>
+
+      {/* Show completed toggle */}
       {onToggleShowCompleted && (
-        <Button
-          onClick={onToggleShowCompleted}
-          variant={showCompleted ? "default" : "outline"}
+        <Button 
+          variant="outline" 
           size="sm"
-          className="text-xs w-full"
+          onClick={onToggleShowCompleted}
+          className="w-full"
         >
           {showCompleted ? "Hide Completed" : "Show Completed"}
         </Button>
       )}
       
-      {/* New Task button - positioned above logout button in mobile menu */}
-      {onCreateTask && (
-        <div className="pt-4 border-t mt-4">
+      {/* Footer section with New Task button - positioned with sign out */}
+      <div className="mt-auto pt-4 border-t">
+        {onCreateTask && (
           <Button 
             onClick={onCreateTask}
             className="w-full flex items-center justify-center"
@@ -180,8 +171,22 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
             <Plus size={18} className="mr-2" />
             New Task
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
+};
+
+// Mobile header title
+export const MobileFilterHeader = () => {
+  return (
+    <div className="px-4 py-2 border-b">
+      <h2 className="text-lg font-semibold">Filters</h2>
+    </div>
+  );
+};
+
+export default {
+  MobileFilters,
+  MobileFilterHeader
 };

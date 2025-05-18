@@ -1,11 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Task } from '@/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import TaskForm from '../TaskForm';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Button } from '../ui/button';
-import { Trash2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 interface TaskDialogsProps {
@@ -34,12 +31,16 @@ const TaskDialogs = ({
 
   const handleDelete = () => {
     if (currentEditTask) {
+      // Delete the task first
       onDeleteTask(currentEditTask.id);
-      // Single toast with auto-dismissal
+      
+      // Show a single toast message
       toast({ 
         title: "Task deleted", 
         description: `"${currentEditTask.title}" has been removed` 
       });
+      
+      // Close the dialog
       onCloseEdit();
     }
   };
@@ -55,14 +56,12 @@ const TaskDialogs = ({
             </DialogDescription>
           </DialogHeader>
           {currentEditTask && (
-            <>
-              <TaskForm 
-                task={currentEditTask} 
-                onSuccess={onCloseEdit} 
-                onCancel={onCloseEdit} 
-                onDelete={handleDelete}
-              />
-            </>
+            <TaskForm 
+              task={currentEditTask} 
+              onSuccess={onCloseEdit} 
+              onCancel={onCloseEdit} 
+              onDelete={handleDelete}
+            />
           )}
         </DialogContent>
       </Dialog>

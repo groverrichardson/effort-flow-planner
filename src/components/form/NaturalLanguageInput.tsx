@@ -259,13 +259,13 @@ const NaturalLanguageInput = ({
     const lastHashIndex = beforeCursor.lastIndexOf('#');
     
     if (lastAtIndex >= 0 && (lastHashIndex < 0 || lastAtIndex > lastHashIndex)) {
-      // Replace from @ to cursor position with suggestion
+      // Replace from @ to cursor position with suggestion and add a space to prevent the next word from attaching
       const newText = beforeCursor.substring(0, lastAtIndex) + 
                        '@' + suggestion.name + ' ' + 
                        afterCursor;
       onChange(newText);
     } else if (lastHashIndex >= 0) {
-      // Replace from # to cursor position with suggestion
+      // Replace from # to cursor position with suggestion and add a space to prevent the next word from attaching
       const newText = beforeCursor.substring(0, lastHashIndex) + 
                        '#' + suggestion.name + ' ' + 
                        afterCursor;
