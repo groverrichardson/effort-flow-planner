@@ -15,6 +15,7 @@ import { PeopleFilterItems } from './PeopleFilterItems';
 import { PriorityFilterItems } from './PriorityFilterItems';
 import { DueDateFilterItems } from './DueDateFilterItems';
 import { GoLiveFilterItem } from './GoLiveFilterItem';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface FilterDropdownMenuProps {
   selectedTags: string[];
@@ -31,6 +32,8 @@ interface FilterDropdownMenuProps {
   hasActiveFilters: boolean;
   tags: { id: string; name: string }[];
   people: { id: string; name: string }[];
+  showCompleted?: boolean;
+  onToggleShowCompleted?: () => void;
 }
 
 export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
@@ -47,7 +50,9 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
   onResetFilters,
   hasActiveFilters,
   tags,
-  people
+  people,
+  showCompleted,
+  onToggleShowCompleted
 }) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   
@@ -63,55 +68,75 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
           Filter Tasks
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="bg-background">
-        <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent align="start" className="bg-background max-h-[70vh]">
+        <ScrollArea className="max-h-[60vh]">
+          {onToggleShowCompleted && (
+            <>
+              <DropdownMenuLabel>View Options</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="px-2 pb-2">
+                <Button
+                  onClick={onToggleShowCompleted}
+                  variant={showCompleted ? "default" : "outline"}
+                  size="sm"
+                  className="w-full justify-start"
+                >
+                  {showCompleted ? "Hide Completed" : "Show Completed"}
+                </Button>
+              </div>
+              <DropdownMenuSeparator />
+            </>
+          )}
         
-        <TagFilterItems
-          tags={tags}
-          selectedTags={selectedTags}
-          onToggleTag={(tagId) => {
-            onToggleTag(tagId);
-            setFiltersOpen(true);
-          }}
-        />
+          <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          
+          <TagFilterItems
+            tags={tags}
+            selectedTags={selectedTags}
+            onToggleTag={(tagId) => {
+              onToggleTag(tagId);
+              setFiltersOpen(true);
+            }}
+          />
 
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Filter by People</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        
-        <PeopleFilterItems
-          people={people}
-          selectedPeople={selectedPeople}
-          onTogglePerson={(personId) => {
-            onTogglePerson(personId);
-            setFiltersOpen(true);
-          }}
-        />
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Filter by People</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          
+          <PeopleFilterItems
+            people={people}
+            selectedPeople={selectedPeople}
+            onTogglePerson={(personId) => {
+              onTogglePerson(personId);
+              setFiltersOpen(true);
+            }}
+          />
 
-        <PriorityFilterItems 
-          selectedPriorities={selectedPriorities}
-          onTogglePriority={(priority) => {
-            onTogglePriority(priority);
-            setFiltersOpen(true);
-          }}
-        />
+          <PriorityFilterItems 
+            selectedPriorities={selectedPriorities}
+            onTogglePriority={(priority) => {
+              onTogglePriority(priority);
+              setFiltersOpen(true);
+            }}
+          />
 
-        <DueDateFilterItems
-          filterByDueDate={filterByDueDate}
-          onSetFilterByDueDate={(value) => {
-            onSetFilterByDueDate(value);
-            setFiltersOpen(true);
-          }}
-        />
+          <DueDateFilterItems
+            filterByDueDate={filterByDueDate}
+            onSetFilterByDueDate={(value) => {
+              onSetFilterByDueDate(value);
+              setFiltersOpen(true);
+            }}
+          />
 
-        <GoLiveFilterItem
-          filterByGoLive={filterByGoLive}
-          onSetFilterByGoLive={(value) => {
-            onSetFilterByGoLive(value);
-            setFiltersOpen(true);
-          }}
-        />
+          <GoLiveFilterItem
+            filterByGoLive={filterByGoLive}
+            onSetFilterByGoLive={(value) => {
+              onSetFilterByGoLive(value);
+              setFiltersOpen(true);
+            }}
+          />
+        </ScrollArea>
 
         {hasActiveFilters && (
           <>

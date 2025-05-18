@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Priority } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -79,28 +79,20 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
   return (
     <div className="mb-4">
       <div className="flex flex-wrap gap-2">
-        {onToggleShowCompleted && (
-          <Button
-            onClick={onToggleShowCompleted}
-            variant={showCompleted ? "default" : "outline"}
-            size="sm"
-          >
-            {showCompleted ? "Hide Completed" : "Show Completed"}
-          </Button>
-        )}
-
         <FilterDropdownMenu
           selectedTags={selectedTags}
           selectedPeople={selectedPeople}
           selectedPriorities={selectedPriorities}
           filterByDueDate={filterByDueDate}
           filterByGoLive={filterByGoLive}
+          showCompleted={showCompleted}
           onToggleTag={onToggleTag}
           onTogglePerson={onTogglePerson}
           onTogglePriority={onTogglePriority}
           onSetFilterByDueDate={onSetFilterByDueDate}
           onSetFilterByGoLive={onSetFilterByGoLive}
           onResetFilters={onResetFilters}
+          onToggleShowCompleted={onToggleShowCompleted}
           hasActiveFilters={hasActiveFilters}
           tags={tags}
           people={people}

@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FilterX } from 'lucide-react';
 import { Priority } from '@/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface MobileFilterSectionProps {
   title: string;
@@ -58,106 +59,110 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
   hasActiveFilters
 }) => {
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-sm font-medium">Filters</h3>
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onResetFilters}
-            className="h-8 px-2 text-xs"
-          >
-            <FilterX size={14} className="mr-1" />
-            Reset
-          </Button>
+    <ScrollArea className="max-h-[70vh] pr-4">
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-sm font-medium">Filters</h3>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onResetFilters}
+              className="h-8 px-2 text-xs"
+            >
+              <FilterX size={14} className="mr-1" />
+              Reset
+            </Button>
+          )}
+        </div>
+
+        {onToggleShowCompleted && (
+          <MobileFilterSection title="View Options">
+            <Button
+              onClick={onToggleShowCompleted}
+              variant={showCompleted ? "default" : "outline"}
+              size="sm"
+              className="w-full justify-start"
+            >
+              {showCompleted ? "Hide Completed" : "Show Completed"}
+            </Button>
+          </MobileFilterSection>
+        )}
+
+        <MobileFilterSection title="Filter by Priority">
+          {['high', 'normal', 'low', 'lowest'].map((priority) => (
+            <Button
+              key={priority}
+              size="sm"
+              variant={selectedPriorities.includes(priority as Priority) ? "secondary" : "outline"}
+              onClick={() => onTogglePriority(priority as Priority)}
+              className="text-xs px-2 py-0 h-7"
+            >
+              {priority.charAt(0).toUpperCase() + priority.slice(1)}
+            </Button>
+          ))}
+        </MobileFilterSection>
+
+        <MobileFilterSection title="Filter by Due Date">
+          {[
+            { id: 'all', label: 'All Dates' },
+            { id: 'today', label: 'Due Today' },
+            { id: 'week', label: 'This Week' },
+            { id: 'overdue', label: 'Overdue' }
+          ].map((option) => (
+            <Button
+              key={option.id}
+              size="sm"
+              variant={filterByDueDate === option.id ? "secondary" : "outline"}
+              onClick={() => onSetFilterByDueDate(option.id)}
+              className="text-xs px-2 py-0 h-7"
+            >
+              {option.label}
+            </Button>
+          ))}
+        </MobileFilterSection>
+
+        <Button
+          size="sm"
+          variant={filterByGoLive ? "secondary" : "outline"}
+          onClick={() => onSetFilterByGoLive(!filterByGoLive)}
+          className="text-xs"
+        >
+          Has Go-Live Date
+        </Button>
+
+        {tags.length > 0 && (
+          <MobileFilterSection title="Filter by Tag">
+            {tags.map((tag) => (
+              <Button
+                key={tag.id}
+                size="sm"
+                variant={selectedTags.includes(tag.id) ? "secondary" : "outline"}
+                onClick={() => onToggleTag(tag.id)}
+                className="text-xs px-2 py-0 h-7"
+              >
+                {tag.name}
+              </Button>
+            ))}
+          </MobileFilterSection>
+        )}
+
+        {people.length > 0 && (
+          <MobileFilterSection title="Filter by Person">
+            {people.map((person) => (
+              <Button
+                key={person.id}
+                size="sm"
+                variant={selectedPeople.includes(person.id) ? "secondary" : "outline"}
+                onClick={() => onTogglePerson(person.id)}
+                className="text-xs px-2 py-0 h-7"
+              >
+                {person.name}
+              </Button>
+            ))}
+          </MobileFilterSection>
         )}
       </div>
-
-      {onToggleShowCompleted && (
-        <Button
-          onClick={onToggleShowCompleted}
-          variant={showCompleted ? "default" : "outline"}
-          size="sm"
-          className="w-full justify-start"
-        >
-          {showCompleted ? "Hide Completed" : "Show Completed"}
-        </Button>
-      )}
-
-      <MobileFilterSection title="Filter by Priority">
-        {['high', 'normal', 'low', 'lowest'].map((priority) => (
-          <Button
-            key={priority}
-            size="sm"
-            variant={selectedPriorities.includes(priority as Priority) ? "secondary" : "outline"}
-            onClick={() => onTogglePriority(priority as Priority)}
-            className="text-xs px-2 py-0 h-7"
-          >
-            {priority.charAt(0).toUpperCase() + priority.slice(1)}
-          </Button>
-        ))}
-      </MobileFilterSection>
-
-      <MobileFilterSection title="Filter by Due Date">
-        {[
-          { id: 'all', label: 'All Dates' },
-          { id: 'today', label: 'Due Today' },
-          { id: 'week', label: 'This Week' },
-          { id: 'overdue', label: 'Overdue' }
-        ].map((option) => (
-          <Button
-            key={option.id}
-            size="sm"
-            variant={filterByDueDate === option.id ? "secondary" : "outline"}
-            onClick={() => onSetFilterByDueDate(option.id)}
-            className="text-xs px-2 py-0 h-7"
-          >
-            {option.label}
-          </Button>
-        ))}
-      </MobileFilterSection>
-
-      <Button
-        size="sm"
-        variant={filterByGoLive ? "secondary" : "outline"}
-        onClick={() => onSetFilterByGoLive(!filterByGoLive)}
-        className="text-xs"
-      >
-        Has Go-Live Date
-      </Button>
-
-      {tags.length > 0 && (
-        <MobileFilterSection title="Filter by Tag">
-          {tags.map((tag) => (
-            <Button
-              key={tag.id}
-              size="sm"
-              variant={selectedTags.includes(tag.id) ? "secondary" : "outline"}
-              onClick={() => onToggleTag(tag.id)}
-              className="text-xs px-2 py-0 h-7"
-            >
-              {tag.name}
-            </Button>
-          ))}
-        </MobileFilterSection>
-      )}
-
-      {people.length > 0 && (
-        <MobileFilterSection title="Filter by Person">
-          {people.map((person) => (
-            <Button
-              key={person.id}
-              size="sm"
-              variant={selectedPeople.includes(person.id) ? "secondary" : "outline"}
-              onClick={() => onTogglePerson(person.id)}
-              className="text-xs px-2 py-0 h-7"
-            >
-              {person.name}
-            </Button>
-          ))}
-        </MobileFilterSection>
-      )}
-    </div>
+    </ScrollArea>
   );
 };

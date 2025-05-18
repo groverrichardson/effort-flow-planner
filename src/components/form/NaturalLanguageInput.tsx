@@ -69,9 +69,9 @@ const NaturalLanguageInput = ({
         regex: /\b(high priority|low priority|urgent|important)\b/gi, 
         type: 'priority' 
       },
-      // Date keywords
+      // Date keywords - Improved to catch more date formats
       { 
-        regex: /\b(tomorrow|today|due tomorrow|due today|due (on )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/gi, 
+        regex: /\b(tomorrow|today|next week|next month|on (monday|tuesday|wednesday|thursday|friday|saturday|sunday)|this (monday|tuesday|wednesday|thursday|friday|saturday|sunday)|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* \d{1,2}(st|nd|rd|th)?|\d{1,2}[\/\-]\d{1,2}([\/\-]\d{2,4})?|due (tomorrow|today|next week|on|by|this) ?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)?)\b/gi, 
         type: 'date' 
       },
       // Effort keywords
@@ -86,7 +86,8 @@ const NaturalLanguageInput = ({
     
     tokenPatterns.forEach(pattern => {
       let match;
-      while ((match = pattern.regex.exec(value)) !== null) {
+      const regex = new RegExp(pattern.regex);
+      while ((match = regex.exec(value)) !== null) {
         matches.push({
           start: match.index,
           end: match.index + match[0].length,
