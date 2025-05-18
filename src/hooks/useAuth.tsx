@@ -11,7 +11,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  bypassLogin: () => Promise<void>; // New function for bypass login
+  bypassLogin: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,11 +22,11 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => ({ error: null }),
   signInWithGoogle: async () => {},
   signOut: async () => {},
-  bypassLogin: async () => {}, // Add default implementation
+  bypassLogin: async () => {},
 });
 
-// Dummy account credentials - using a valid email format
-const DUMMY_USER_EMAIL = 'demo-user@example.com';
+// Using a proper email format for the dummy account
+const DUMMY_USER_EMAIL = 'demouser@example.com';
 const DUMMY_USER_PASSWORD = 'demopassword123';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -142,66 +142,56 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Improved bypass login function that ensures a working demo account
+  // Completely revamped bypass login function for reliable demo access
   const bypassLogin = async () => {
     try {
-      console.log('Attempting bypass login...');
+      console.log('Attempting bypass login with valid email...');
       
-      let demoUser;
-      
-      // Try to sign in with the dummy account first
+      // First try to sign in with the dummy account
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: DUMMY_USER_EMAIL,
         password: DUMMY_USER_PASSWORD
       });
       
       if (signInError) {
-        console.log('Login failed, creating dummy account:', signInError.message);
+        console.log('Login failed, creating new demo account:', signInError.message);
         
-        // Create the dummy account with auto-confirmation enabled
+        // Create the demo account
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: DUMMY_USER_EMAIL,
-          password: DUMMY_USER_PASSWORD,
-          options: {
-            data: {
-              username: 'Demo User'
-            },
-            // Attempt auto-confirmation for development 
-            emailRedirectTo: window.location.origin
-          }
+          password: DUMMY_USER_PASSWORD
         });
         
         if (signUpError) {
           throw signUpError;
         }
         
-        demoUser = signUpData;
-        console.log('Dummy account created:', demoUser);
+        console.log('Demo account created, attempting to sign in directly');
         
-        // After creating the account, try signing in again
+        // After creating the account, attempt to sign in
         const { data: newSignInData, error: newSignInError } = await supabase.auth.signInWithPassword({
           email: DUMMY_USER_EMAIL,
           password: DUMMY_USER_PASSWORD
         });
         
         if (newSignInError) {
-          throw newSignInError;
+          throw new Error(`Demo account created but couldn't sign in: ${newSignInError.message}`);
         }
         
-        demoUser = newSignInData;
-      } else {
-        demoUser = signInData;
-        console.log('Signed in with existing dummy account');
-      }
-      
-      if (demoUser?.user) {
         toast({
           title: 'Demo Access Granted',
-          description: 'You are now signed in as a demo user.',
+          description: 'You are now signed in as a demo user. Note: You may need to verify the email if required by your Supabase settings.',
         });
-      } else {
-        throw new Error('Failed to authenticate demo user');
+        
+        return;
       }
+      
+      // If we got here, the sign-in was successful
+      console.log('Successfully signed in with existing demo account');
+      toast({
+        title: 'Demo Access Granted',
+        description: 'You are now signed in as a demo user.',
+      });
     } catch (error) {
       console.error('Error during bypass login:', error);
       toast({
