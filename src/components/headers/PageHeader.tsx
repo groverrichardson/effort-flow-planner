@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Plus, Settings, Users, Tags, Upload } from "lucide-react";
 import MobileFilterSection from "../filters/components/MobileFilterSection";
+import { FilterDropdownMenu } from "../filters/components/FilterDropdownMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PageHeaderProps {
@@ -89,6 +90,9 @@ const PageHeader = ({
       
       {/* Mobile filter section */}
       {isMobile && <MobileFilterSection {...filterProps} />}
+      
+      {/* Desktop filter menu */}
+      {!isMobile && <FilterDropdownMenu {...filterProps} />}
     </div>
   );
 };
