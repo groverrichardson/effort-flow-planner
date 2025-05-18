@@ -7,17 +7,25 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { FilterX, Filter } from 'lucide-react';
+import { Priority } from '@/types';
 
 interface TaskFiltersProps {
   selectedTags: string[];
   selectedPeople: string[];
+  selectedPriorities?: Priority[];
+  filterByDueDate?: string;
+  filterByGoLive?: boolean;
   onToggleTag: (tagId: string) => void;
   onTogglePerson: (personId: string) => void;
+  onTogglePriority?: (priority: Priority) => void;
+  onSetFilterByDueDate?: (value: string) => void;
+  onSetFilterByGoLive?: (value: boolean) => void;
   onResetFilters: () => void;
-  showCompleted: boolean;
-  onToggleShowCompleted: () => void;
+  showCompleted?: boolean;
+  onToggleShowCompleted?: () => void;
   tags: { id: string; name: string }[];
   people: { id: string; name: string }[];
 }
@@ -25,37 +33,51 @@ interface TaskFiltersProps {
 const TaskFilters: React.FC<TaskFiltersProps> = ({
   selectedTags,
   selectedPeople,
+  selectedPriorities = [],
+  filterByDueDate = 'all',
+  filterByGoLive = false,
   onToggleTag,
   onTogglePerson,
+  onTogglePriority = () => {},
+  onSetFilterByDueDate = () => {},
+  onSetFilterByGoLive = () => {},
   onResetFilters,
-  showCompleted,
-  onToggleShowCompleted,
+  showCompleted = false,
+  onToggleShowCompleted = () => {},
   tags,
   people,
 }) => {
+  const hasActiveFilters = selectedTags.length > 0 || 
+                         selectedPeople.length > 0 || 
+                         selectedPriorities.length > 0 || 
+                         filterByDueDate !== 'all' || 
+                         filterByGoLive;
+
   return (
     <div className="mb-4">
       <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={onToggleShowCompleted}
-          variant={showCompleted ? "default" : "outline"}
-          size="sm"
-        >
-          {showCompleted ? "Hide Completed" : "Show Completed"}
-        </Button>
+        {onToggleShowCompleted && (
+          <Button
+            onClick={onToggleShowCompleted}
+            variant={showCompleted ? "default" : "outline"}
+            size="sm"
+          >
+            {showCompleted ? "Hide Completed" : "Show Completed"}
+          </Button>
+        )}
 
         <DropdownMenu>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            asChild
-          >
-            <DropdownMenuCheckboxItem checked={false} />
-            <Filter size={14} />
-            Filter Tasks
-          </Button>
-          <DropdownMenuContent align="center">
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1"
+            >
+              <Filter size={14} />
+              Filter Tasks
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="bg-background">
             <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {tags.length > 0 ? (
@@ -93,7 +115,83 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
               </DropdownMenuLabel>
             )}
 
-            {(selectedTags.length > 0 || selectedPeople.length > 0) && (
+            {onTogglePriority && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Filter by Priority</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={selectedPriorities.includes('high')}
+                  onCheckedChange={() => onTogglePriority('high')}
+                >
+                  High
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={selectedPriorities.includes('normal')}
+                  onCheckedChange={() => onTogglePriority('normal')}
+                >
+                  Normal
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={selectedPriorities.includes('low')}
+                  onCheckedChange={() => onTogglePriority('low')}
+                >
+                  Low
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={selectedPriorities.includes('lowest')}
+                  onCheckedChange={() => onTogglePriority('lowest')}
+                >
+                  Lowest
+                </DropdownMenuCheckboxItem>
+              </>
+            )}
+
+            {onSetFilterByDueDate && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Due Date</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={filterByDueDate === 'all'}
+                  onCheckedChange={() => onSetFilterByDueDate('all')}
+                >
+                  All Dates
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={filterByDueDate === 'today'}
+                  onCheckedChange={() => onSetFilterByDueDate('today')}
+                >
+                  Due Today
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={filterByDueDate === 'week'}
+                  onCheckedChange={() => onSetFilterByDueDate('week')}
+                >
+                  Due This Week
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={filterByDueDate === 'overdue'}
+                  onCheckedChange={() => onSetFilterByDueDate('overdue')}
+                >
+                  Overdue
+                </DropdownMenuCheckboxItem>
+              </>
+            )}
+
+            {onSetFilterByGoLive && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={filterByGoLive}
+                  onCheckedChange={() => onSetFilterByGoLive(!filterByGoLive)}
+                >
+                  Has Go-Live Date
+                </DropdownMenuCheckboxItem>
+              </>
+            )}
+
+            {hasActiveFilters && (
               <>
                 <DropdownMenuSeparator />
                 <Button
@@ -141,6 +239,47 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
                 <span className="text-xs">×</span>
               </Button>
             ))}
+
+        {selectedPriorities && selectedPriorities.length > 0 && (
+          selectedPriorities.map((priority) => (
+            <Button
+              key={priority}
+              variant="secondary"
+              size="sm"
+              onClick={() => onTogglePriority && onTogglePriority(priority)}
+              className="gap-1"
+            >
+              {priority.charAt(0).toUpperCase() + priority.slice(1)}
+              <span className="text-xs">×</span>
+            </Button>
+          ))
+        )}
+
+        {filterByDueDate && filterByDueDate !== 'all' && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onSetFilterByDueDate && onSetFilterByDueDate('all')}
+            className="gap-1"
+          >
+            {filterByDueDate === 'today' ? 'Due Today' : 
+             filterByDueDate === 'week' ? 'Due This Week' : 
+             filterByDueDate === 'overdue' ? 'Overdue' : filterByDueDate}
+            <span className="text-xs">×</span>
+          </Button>
+        )}
+
+        {filterByGoLive && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onSetFilterByGoLive && onSetFilterByGoLive(false)}
+            className="gap-1"
+          >
+            Has Go-Live Date
+            <span className="text-xs">×</span>
+          </Button>
+        )}
       </div>
     </div>
   );

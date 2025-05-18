@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task, Priority } from '@/types';
@@ -180,18 +181,33 @@ const TaskList = () => {
           
           {!viewingCompleted && (
             <TaskFilters 
-              activeTasks={activeTasks}
-              selectedPriorities={selectedPriorities}
               selectedTags={selectedTags}
-              selectedPeople={selectedPeople}
+              selectedPeople={selectedPeople} 
+              selectedPriorities={selectedPriorities}
               filterByDueDate={filterByDueDate}
               filterByGoLive={filterByGoLive}
-              onTogglePriority={handleTogglePriority}
               onToggleTag={handleToggleTag}
               onTogglePerson={handleTogglePerson}
+              onTogglePriority={handleTogglePriority}
               onSetFilterByDueDate={setFilterByDueDate}
               onSetFilterByGoLive={setFilterByGoLive}
-              onClearAllFilters={clearAllFilters}
+              onResetFilters={clearAllFilters}
+              tags={tasks.reduce((allTags, task) => {
+                task.tags.forEach(tag => {
+                  if (!allTags.some(t => t.id === tag.id)) {
+                    allTags.push(tag);
+                  }
+                });
+                return allTags;
+              }, [] as { id: string; name: string }[])}
+              people={tasks.reduce((allPeople, task) => {
+                task.people.forEach(person => {
+                  if (!allPeople.some(p => p.id === person.id)) {
+                    allPeople.push(person);
+                  }
+                });
+                return allPeople;
+              }, [] as { id: string; name: string }[])}
             />
           )}
         </div>

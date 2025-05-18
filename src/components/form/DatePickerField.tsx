@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -42,7 +42,7 @@ const DatePickerField = ({ label, value, onChange }: DatePickerFieldProps) => {
             {value ? format(value, "PP") : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 bg-background" align="start">
           <Calendar
             mode="single"
             selected={value || undefined}
