@@ -27,7 +27,7 @@ const PageHeader = ({
       {/* Main header */}
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
-          <img src="/lovable-uploads/f05941d8-1610-496d-8ed8-27adb9a6893a.png" alt="DoNext Logo" className={isMobile ? "h-6" : "h-8"} />
+          <img src="/lovable-uploads/61973109-0cfe-43a9-9f3e-e52a3d6f09a1.png" alt="DoNext Logo" className={isMobile ? "h-6" : "h-8"} />
         </div>
         
         <div className="flex items-center gap-2">
@@ -141,8 +141,6 @@ const PageHeader = ({
           )}
         </div>
       </div>
-      
-      {/* Mobile filter section removed from here - now in the hamburger menu */}
     </div>
   );
 };
