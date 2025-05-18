@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, KeyboardEvent, useEffect, useRef } from 'react';
 import { createEditor, Descendant, Editor, Element as SlateElement, Node as SlateNode, Range, Text } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
@@ -43,9 +44,10 @@ type CustomElement = {
   children: CustomText[];
 };
 
+// Add custom types to Slate's type system
 declare module 'slate' {
   interface CustomTypes {
-    Editor: BaseEditor & ReactEditor;
+    Editor: Editor & ReactEditor;
     Element: CustomElement;
     Text: CustomText;
   }
@@ -336,7 +338,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
       <div className="relative">
         <Slate
           editor={editor}
-          value={editorValue}
+          initialValue={editorValue}
           onChange={handleEditorChange}
         >
           <Editable
