@@ -1,19 +1,15 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { AuthError } from '@supabase/supabase-js';
+import { AuthError, AuthApiError } from '@supabase/supabase-js';
 
 // Get Supabase URL and anon key from environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Create a mock AuthError that matches the required type
-const createMockAuthError = (message: string): AuthError => ({
-  name: 'AuthApiError',
-  message,
-  status: 0,
-  __isAuthError: true,
-  code: 'not_initialized',
-});
+// Create a mock AuthError using AuthApiError class which extends AuthError
+const createMockAuthError = (message: string): AuthError => {
+  return new AuthApiError(message, 0);
+};
 
 // Create a Supabase client only if the required environment variables are available
 const createSupabaseClient = () => {
