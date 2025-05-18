@@ -62,7 +62,7 @@ const Index = () => {
     setManageDialogOpen(true);
   };
   
-  // Filter props for mobile menu
+  // Filter props for mobile menu only
   const filterProps = {
     selectedTags,
     selectedPeople,

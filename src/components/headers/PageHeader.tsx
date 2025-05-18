@@ -92,8 +92,7 @@ const PageHeader = ({
       {/* Mobile filter section */}
       {isMobile && <MobileFilterSection {...filterProps} />}
       
-      {/* Desktop filter menu */}
-      {!isMobile && <FilterDropdownMenu {...filterProps} />}
+      {/* Removed the FilterDropdownMenu here */}
     </div>
   );
 };
