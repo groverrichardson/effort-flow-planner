@@ -191,6 +191,24 @@ const NaturalLanguageInput = ({
       setSuggestions({ type: '', items: [] });
       return;
     }
+
+    // Handle tab key to accept suggestion
+    if (e.key === 'Tab' && suggestions.items.length > 0) {
+      e.preventDefault();
+      if (suggestions.items.length > 0) {
+        applySuggestion(suggestions.items[0]);
+      }
+      return;
+    }
+
+    // Handle arrow keys for suggestion navigation
+    if (suggestions.items.length > 0) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        // Navigation logic would go here if we implement selection within suggestions
+        return;
+      }
+    }
   };
 
   // Check for potential auto-completion suggestions
@@ -213,8 +231,11 @@ const NaturalLanguageInput = ({
           tag => tag.name.toLowerCase().includes(tagQuery)
         );
         setSuggestions({ type: 'tag', items: matchingTags });
-        return;
+      } else if (currentWord === '#') {
+        // Show all tags when just the # is typed
+        setSuggestions({ type: 'tag', items: tags });
       }
+      return;
     }
 
     // Check for people suggestions
@@ -225,8 +246,11 @@ const NaturalLanguageInput = ({
           person => person.name.toLowerCase().includes(personQuery)
         );
         setSuggestions({ type: 'person', items: matchingPeople });
-        return;
+      } else if (currentWord === '@') {
+        // Show all people when just the @ is typed
+        setSuggestions({ type: 'person', items: people });
       }
+      return;
     }
 
     // No suggestions
@@ -253,7 +277,8 @@ const NaturalLanguageInput = ({
 
   // Track cursor position for suggestions
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
+    const newValue = e.target.value;
+    onChange(newValue);
     setCursorPosition(e.target.selectionStart || 0);
     checkForSuggestions();
   };
@@ -361,16 +386,22 @@ const NaturalLanguageInput = ({
             <div className="px-3 py-2 border-b text-sm font-medium">
               {suggestions.type === 'tag' ? 'Tag Suggestions' : 'People Suggestions'}
             </div>
-            {suggestions.items.map((item) => (
-              <div
-                key={item.id}
-                className="px-3 py-2.5 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
-                onClick={() => applySuggestion(item)}
-              >
-                <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>
-                {item.name}
+            {suggestions.items.length === 0 ? (
+              <div className="px-3 py-2.5 text-sm text-muted-foreground">
+                No {suggestions.type === 'tag' ? 'tags' : 'people'} found
               </div>
-            ))}
+            ) : (
+              suggestions.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="px-3 py-2.5 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
+                  onClick={() => applySuggestion(item)}
+                >
+                  <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>
+                  {item.name}
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

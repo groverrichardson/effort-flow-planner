@@ -43,7 +43,9 @@ const PeopleSelector = ({
   // Handle input changes and filtering
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPersonSearch(e.target.value);
-    setIsPopoverOpen(true);
+    if (!isPopoverOpen) {
+      setIsPopoverOpen(true);
+    }
   };
 
   // Handle key press events for better UX
@@ -53,6 +55,10 @@ const PeopleSelector = ({
       handleAddNewPerson();
     } else if (e.key === 'Escape') {
       setIsPopoverOpen(false);
+    } else if (e.key === 'Tab' && filteredPeople.length > 0) {
+      e.preventDefault();
+      onTogglePerson(filteredPeople[0].id);
+      setPersonSearch('');
     }
   };
   
@@ -97,38 +103,36 @@ const PeopleSelector = ({
             />
           </div>
         </PopoverTrigger>
-        {isPopoverOpen && (
-          <PopoverContent className="w-full p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-            <div className="p-2 max-h-[150px] overflow-y-auto">
-              {filteredPeople.length > 0 ? (
-                <div className="space-y-1">
-                  {filteredPeople.map(person => (
-                    <div
-                      key={person.id}
-                      className="flex items-center px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
-                      onClick={() => {
-                        onTogglePerson(person.id);
-                        setPersonSearch('');
-                      }}
-                    >
-                      {person.name}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                personSearch.trim() !== '' && (
-                  <div 
-                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
-                    onClick={handleAddNewPerson}
+        <PopoverContent className="w-full p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <div className="p-2 max-h-[150px] overflow-y-auto">
+            {filteredPeople.length > 0 ? (
+              <div className="space-y-1">
+                {filteredPeople.map(person => (
+                  <div
+                    key={person.id}
+                    className="flex items-center px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
+                    onClick={() => {
+                      onTogglePerson(person.id);
+                      setPersonSearch('');
+                    }}
                   >
-                    <Plus size={14} />
-                    Add "{personSearch.trim()}"
+                    {person.name}
                   </div>
-                )
-              )}
-            </div>
-          </PopoverContent>
-        )}
+                ))}
+              </div>
+            ) : (
+              personSearch.trim() !== '' && (
+                <div 
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
+                  onClick={handleAddNewPerson}
+                >
+                  <Plus size={14} />
+                  Add "{personSearch.trim()}"
+                </div>
+              )
+            )}
+          </div>
+        </PopoverContent>
       </Popover>
     </div>
   );

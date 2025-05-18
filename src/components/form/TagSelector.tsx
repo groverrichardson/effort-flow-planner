@@ -43,6 +43,9 @@ const TagSelector = ({
   // Handle input changes and filtering
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTagSearch(e.target.value);
+    if (!isPopoverOpen) {
+      setIsPopoverOpen(true);
+    }
   };
 
   // Handle key press events for better UX
@@ -52,6 +55,10 @@ const TagSelector = ({
       handleAddNewTag();
     } else if (e.key === 'Escape') {
       setIsPopoverOpen(false);
+    } else if (e.key === 'Tab' && filteredTags.length > 0) {
+      e.preventDefault();
+      onToggleTag(filteredTags[0].id);
+      setTagSearch('');
     }
   };
   
@@ -60,7 +67,7 @@ const TagSelector = ({
     if (isPopoverOpen && inputRef.current) {
       setTimeout(() => {
         inputRef.current?.focus();
-      }, 10);
+      }, 100);
     }
   }, [isPopoverOpen]);
 
@@ -96,7 +103,7 @@ const TagSelector = ({
             />
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
+        <PopoverContent className="w-full p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
           <div className="p-2 max-h-[150px] overflow-y-auto">
             {filteredTags.length > 0 ? (
               <div className="space-y-1">
