@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Plus, Settings, Users, Tags, Upload } from "lucide-react";
 import MobileFilterSection from "../filters/components/MobileFilterSection";
-import FilterDropdownMenu from "../filters/components/FilterDropdownMenu";
+import { FilterDropdownMenu } from "../filters/components/FilterDropdownMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PageHeaderProps {

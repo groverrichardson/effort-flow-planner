@@ -4,7 +4,7 @@ import { useTaskContext } from '@/context/TaskContext';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload, FileText, X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, X, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
 import {
   Table,
