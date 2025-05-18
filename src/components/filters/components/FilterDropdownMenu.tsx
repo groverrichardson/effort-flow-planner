@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Filter } from 'lucide-react';
 import { FilterResetButton } from './FilterResetButton';
-import { TagFilterItems } from './TagFilterItems';
+import TagFilterItems from './TagFilterItems';
 import { PeopleFilterItems } from './PeopleFilterItems';
 import { PriorityFilterItems } from './PriorityFilterItems';
 import { DueDateFilterItems } from './DueDateFilterItems';

@@ -6,6 +6,7 @@ export type EffortLevel = 1 | 2 | 4 | 8 | 16 | 32 | 64;
 export interface Tag {
   id: string;
   name: string;
+  color?: string;
 }
 
 export interface Person {
