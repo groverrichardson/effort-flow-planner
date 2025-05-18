@@ -11,7 +11,6 @@ import {
   SheetTitle,
   SheetTrigger
 } from "@/components/ui/sheet";
-import TaskFilters from '@/components/filters/TaskFilters';
 import { useTaskContext } from '@/context/TaskContext';
 import { Priority } from '@/types';
 import { Separator } from '@/components/ui/separator';
@@ -52,6 +51,54 @@ const PageHeader = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { tags, people } = useTaskContext();
   
+  // Simple component to show only view options
+  const ViewOptions = () => {
+    if (!filterProps || !filterProps.onShowAllActive) return null;
+
+    return (
+      <>
+        <h3 className="text-xs font-medium text-muted-foreground">View Options</h3>
+        <div className="flex flex-col gap-2 mt-2">
+          <Button
+            onClick={() => {
+              filterProps.onShowAllActive?.();
+              setMobileMenuOpen(false);
+            }}
+            variant={!filterProps.showTodaysTasks && !filterProps.viewingCompleted ? "default" : "outline"}
+            size="sm"
+            className="w-full justify-start"
+          >
+            All Active Tasks
+          </Button>
+          
+          <Button
+            onClick={() => {
+              filterProps.onShowToday?.();
+              setMobileMenuOpen(false);
+            }}
+            variant={filterProps.showTodaysTasks ? "default" : "outline"}
+            size="sm"
+            className="w-full justify-start"
+          >
+            Due Today
+          </Button>
+          
+          <Button
+            onClick={() => {
+              filterProps.onShowCompleted?.();
+              setMobileMenuOpen(false);
+            }}
+            variant={filterProps.viewingCompleted ? "default" : "outline"}
+            size="sm"
+            className="w-full justify-start"
+          >
+            Completed Today
+          </Button>
+        </div>
+      </>
+    );
+  };
+  
   const MobileMenu = () => (
     <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
       <SheetTrigger asChild>
@@ -61,80 +108,56 @@ const PageHeader = ({
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="flex flex-col p-0">
-        <ScrollArea className="h-full">
-          <div className="p-6 flex flex-col gap-3 h-full">
-            <SheetHeader className="text-left">
-              <SheetTitle>Menu</SheetTitle>
-            </SheetHeader>
-            
-            <div className="flex flex-col gap-3 mt-4">
-              <Button 
-                onClick={() => {
-                  onManageTagsClick();
-                  setMobileMenuOpen(false);
-                }} 
-                variant="outline"
-                className="w-full justify-start gap-2"
-              >
-                <Tag size={16} />
-                Manage Tags
-              </Button>
-              
-              <Button 
-                onClick={() => {
-                  onManagePeopleClick();
-                  setMobileMenuOpen(false);
-                }} 
-                variant="outline"
-                className="w-full justify-start gap-2"
-              >
-                <User size={16} />
-                Manage People
-              </Button>
-
-              <Button 
-                onClick={() => {
-                  onCreateTaskClick();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full justify-start gap-2"
-              >
-                <PlusCircle size={16} />
-                New Task
-              </Button>
-            </div>
-            
-            {isMobile && filterProps && (
-              <>
-                <Separator className="my-4" />
+        <div className="p-6 flex flex-col gap-3 h-full overflow-hidden">
+          {/* Use ScrollArea for scrollability */}
+          <ScrollArea className="h-full -mr-4 pr-4">
+            <div className="space-y-6">
+              <div className="flex flex-col gap-3">
+                <Button 
+                  onClick={() => {
+                    onCreateTaskClick();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full justify-start gap-2"
+                >
+                  <PlusCircle size={16} />
+                  New Task
+                </Button>
                 
-                <div className="flex-1 overflow-y-auto">
-                  <TaskFilters
-                    selectedTags={filterProps.selectedTags}
-                    selectedPeople={filterProps.selectedPeople}
-                    selectedPriorities={filterProps.selectedPriorities}
-                    filterByDueDate={filterProps.filterByDueDate}
-                    filterByGoLive={filterProps.filterByGoLive}
-                    onToggleTag={filterProps.onToggleTag}
-                    onTogglePerson={filterProps.onTogglePerson}
-                    onTogglePriority={filterProps.onTogglePriority}
-                    onSetFilterByDueDate={filterProps.onSetFilterByDueDate}
-                    onSetFilterByGoLive={filterProps.onSetFilterByGoLive}
-                    onResetFilters={filterProps.onResetFilters}
-                    tags={tags}
-                    people={people}
-                    inMobileMenu={true}
-                    viewingCompleted={filterProps.viewingCompleted}
-                    showTodaysTasks={filterProps.showTodaysTasks}
-                    onShowAllActive={filterProps.onShowAllActive}
-                    onShowToday={filterProps.onShowToday}
-                    onShowCompleted={filterProps.onShowCompleted}
-                  />
-                </div>
-              </>
-            )}
-            
-            <div className="mt-auto">
+                <Button 
+                  onClick={() => {
+                    onManageTagsClick();
+                    setMobileMenuOpen(false);
+                  }} 
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                >
+                  <Tag size={16} />
+                  Manage Tags
+                </Button>
+                
+                <Button 
+                  onClick={() => {
+                    onManagePeopleClick();
+                    setMobileMenuOpen(false);
+                  }} 
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                >
+                  <User size={16} />
+                  Manage People
+                </Button>
+              </div>
+              
+              {isMobile && filterProps && (
+                <>
+                  <Separator />
+                  <ViewOptions />
+                </>
+              )}
+              
+              <Separator />
+              
               <Button
                 onClick={() => signOut()}
                 variant="outline"
@@ -144,8 +167,8 @@ const PageHeader = ({
                 Sign Out
               </Button>
             </div>
-          </div>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
       </SheetContent>
     </Sheet>
   );

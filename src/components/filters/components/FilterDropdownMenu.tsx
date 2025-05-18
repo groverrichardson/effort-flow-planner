@@ -81,72 +81,6 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
       <DropdownMenuContent align="start" className="w-64 bg-background">
         <ScrollArea className="max-h-[70vh]">
           <div className="p-1">
-            {/* View options */}
-            {(onShowAllActive || onShowToday || onShowCompleted) && (
-              <>
-                <DropdownMenuLabel>View Options</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <div className="px-2 pb-2 space-y-2">
-                  {onShowAllActive && (
-                    <Button
-                      onClick={() => {
-                        onShowAllActive();
-                        setFiltersOpen(false);
-                      }}
-                      variant={!showTodaysTasks && !viewingCompleted ? "default" : "outline"}
-                      size="sm"
-                      className="w-full justify-start"
-                    >
-                      All Active Tasks
-                    </Button>
-                  )}
-                  
-                  {onShowToday && (
-                    <Button
-                      onClick={() => {
-                        onShowToday();
-                        setFiltersOpen(false);
-                      }}
-                      variant={showTodaysTasks ? "default" : "outline"}
-                      size="sm"
-                      className="w-full justify-start"
-                    >
-                      Due Today
-                    </Button>
-                  )}
-                  
-                  {onShowCompleted && (
-                    <Button
-                      onClick={() => {
-                        onShowCompleted();
-                        setFiltersOpen(false);
-                      }}
-                      variant={viewingCompleted ? "default" : "outline"}
-                      size="sm"
-                      className="w-full justify-start"
-                    >
-                      Completed Today
-                    </Button>
-                  )}
-
-                  {onToggleShowCompleted && (
-                    <Button
-                      onClick={() => {
-                        onToggleShowCompleted();
-                        setFiltersOpen(false);
-                      }}
-                      variant={showCompleted ? "default" : "outline"}
-                      size="sm"
-                      className="w-full justify-start"
-                    >
-                      {showCompleted ? "Hide Completed" : "Show Completed"}
-                    </Button>
-                  )}
-                </div>
-                <DropdownMenuSeparator />
-              </>
-            )}
-
             <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
             <DropdownMenuSeparator />
             
@@ -195,6 +129,22 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
                 setFiltersOpen(true);
               }}
             />
+            
+            {onToggleShowCompleted && (
+              <div className="px-2 py-1.5">
+                <Button
+                  onClick={() => {
+                    onToggleShowCompleted();
+                    setFiltersOpen(false);
+                  }}
+                  variant={showCompleted ? "default" : "outline"}
+                  size="sm"
+                  className="w-full justify-start"
+                >
+                  {showCompleted ? "Hide Completed" : "Show Completed"}
+                </Button>
+              </div>
+            )}
           </div>
         </ScrollArea>
 

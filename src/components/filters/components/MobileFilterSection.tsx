@@ -65,7 +65,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
   people,
   hasActiveFilters,
   
-  // View options
+  // View options are not used here as they've been moved to the hamburger menu
   viewingCompleted = false,
   showTodaysTasks = false,
   onShowAllActive,
@@ -89,55 +89,6 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
             </Button>
           )}
         </div>
-
-        {/* View Options Section */}
-        {(onShowAllActive || onShowToday || onShowCompleted) && (
-          <MobileFilterSection title="View Options">
-            {onShowAllActive && (
-              <Button
-                onClick={onShowAllActive}
-                variant={!showTodaysTasks && !viewingCompleted ? "default" : "outline"}
-                size="sm"
-                className="text-xs px-2 py-0 h-7"
-              >
-                All Active Tasks
-              </Button>
-            )}
-            
-            {onShowToday && (
-              <Button
-                onClick={onShowToday}
-                variant={showTodaysTasks ? "default" : "outline"}
-                size="sm"
-                className="text-xs px-2 py-0 h-7"
-              >
-                Due Today
-              </Button>
-            )}
-            
-            {onShowCompleted && (
-              <Button
-                onClick={onShowCompleted}
-                variant={viewingCompleted ? "default" : "outline"}
-                size="sm"
-                className="text-xs px-2 py-0 h-7"
-              >
-                Completed Today
-              </Button>
-            )}
-            
-            {onToggleShowCompleted && (
-              <Button
-                onClick={onToggleShowCompleted}
-                variant={showCompleted ? "default" : "outline"}
-                size="sm"
-                className="text-xs px-2 py-0 h-7"
-              >
-                {showCompleted ? "Hide Completed" : "Show Completed"}
-              </Button>
-            )}
-          </MobileFilterSection>
-        )}
 
         <MobileFilterSection title="Filter by Priority">
           {['high', 'normal', 'low', 'lowest'].map((priority) => (
@@ -211,6 +162,17 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
               </Button>
             ))}
           </MobileFilterSection>
+        )}
+        
+        {onToggleShowCompleted && (
+          <Button
+            onClick={onToggleShowCompleted}
+            variant={showCompleted ? "default" : "outline"}
+            size="sm"
+            className="text-xs w-full"
+          >
+            {showCompleted ? "Hide Completed" : "Show Completed"}
+          </Button>
         )}
       </div>
     </ScrollArea>

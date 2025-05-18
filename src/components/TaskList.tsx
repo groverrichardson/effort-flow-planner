@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task } from '@/types';
 import { useTaskFiltering } from '@/hooks/useTaskFiltering';
@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const TaskList = () => {
   const { tasks, completeTask, getTodaysCompletedTasks } = useTaskContext();
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [visibleTasks, setVisibleTasks] = useState<Task[]>([]);
   const isMobile = useIsMobile();
   
   const {
@@ -35,11 +36,10 @@ const TaskList = () => {
     handleShowCompleted
   } = useTaskFiltering({ tasks, getTodaysCompletedTasks });
 
-  // Use effect to update the task list when tasks change
+  // Memoize the filtered tasks to prevent unnecessary re-renders
   useEffect(() => {
-    // This helps ensure the UI updates immediately when tasks change
-    // (especially after deletion)
-  }, [tasks]);
+    setVisibleTasks(filteredTasks);
+  }, [filteredTasks]);
 
   // Get all unique tags from tasks
   const allTags = tasks.reduce((allTags, task) => {
@@ -69,6 +69,14 @@ const TaskList = () => {
   const handleCloseEdit = () => {
     setEditTask(null);
   };
+
+  // Optimistic task removal for better UX
+  const handleCompleteTask = useCallback((taskId: string) => {
+    // Immediately remove the task from the visible list
+    setVisibleTasks(currentTasks => currentTasks.filter(t => t.id !== taskId));
+    // Then call the actual completion function
+    completeTask(taskId);
+  }, [completeTask]);
 
   // Make filter props available for both mobile menu and desktop view
   const filterProps = {
@@ -119,11 +127,11 @@ const TaskList = () => {
       )}
 
       <TaskListContent 
-        tasks={filteredTasks}
+        tasks={visibleTasks}
         viewingCompleted={viewingCompleted}
         showTodaysTasks={showTodaysTasks}
         onTaskClick={handleTaskClick}
-        onCompleteTask={completeTask}
+        onCompleteTask={handleCompleteTask}
       />
 
       <TaskDialogs 

@@ -70,7 +70,7 @@ export const naturalLanguageToTask = (input: string) => {
     }
   }
   
-  // Extract date related information
+  // Extract date related information - Enhanced with more variations
   const today = new Date();
   
   // Due date patterns - Enhanced with more variations
