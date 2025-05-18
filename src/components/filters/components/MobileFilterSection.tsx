@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FilterX, Plus } from 'lucide-react';
-import { Priority } from '@/types';
+import { Priority, Tag, Person } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { PriorityFilterItems } from './PriorityFilterItems';
@@ -36,8 +36,8 @@ interface MobileFiltersProps {
   onToggleShowCompleted?: () => void;
   
   // Data
-  tags: { id: string; name: string; color: string }[];
-  people: { id: string; name: string }[];
+  tags: Tag[];
+  people: Person[];
   hasActiveFilters: boolean;
   
   // Create task button option
