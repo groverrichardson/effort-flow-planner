@@ -43,7 +43,6 @@ const TagSelector = ({
   // Handle input changes and filtering
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTagSearch(e.target.value);
-    setIsPopoverOpen(true);
   };
 
   // Handle key press events for better UX
@@ -61,7 +60,7 @@ const TagSelector = ({
     if (isPopoverOpen && inputRef.current) {
       setTimeout(() => {
         inputRef.current?.focus();
-      }, 100);
+      }, 10);
     }
   }, [isPopoverOpen]);
 
@@ -97,38 +96,36 @@ const TagSelector = ({
             />
           </div>
         </PopoverTrigger>
-        {isPopoverOpen && (
-          <PopoverContent className="w-full p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-            <div className="p-2 max-h-[150px] overflow-y-auto">
-              {filteredTags.length > 0 ? (
-                <div className="space-y-1">
-                  {filteredTags.map(tag => (
-                    <div
-                      key={tag.id}
-                      className="flex items-center px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
-                      onClick={() => {
-                        onToggleTag(tag.id);
-                        setTagSearch('');
-                      }}
-                    >
-                      {tag.name}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                tagSearch.trim() !== '' && (
-                  <div 
-                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
-                    onClick={handleAddNewTag}
+        <PopoverContent className="w-full p-0" align="start">
+          <div className="p-2 max-h-[150px] overflow-y-auto">
+            {filteredTags.length > 0 ? (
+              <div className="space-y-1">
+                {filteredTags.map(tag => (
+                  <div
+                    key={tag.id}
+                    className="flex items-center px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
+                    onClick={() => {
+                      onToggleTag(tag.id);
+                      setTagSearch('');
+                    }}
                   >
-                    <Plus size={14} />
-                    Add "{tagSearch.trim()}"
+                    {tag.name}
                   </div>
-                )
-              )}
-            </div>
-          </PopoverContent>
-        )}
+                ))}
+              </div>
+            ) : (
+              tagSearch.trim() !== '' && (
+                <div 
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md cursor-pointer hover:bg-accent"
+                  onClick={handleAddNewTag}
+                >
+                  <Plus size={14} />
+                  Add "{tagSearch.trim()}"
+                </div>
+              )
+            )}
+          </div>
+        </PopoverContent>
       </Popover>
     </div>
   );

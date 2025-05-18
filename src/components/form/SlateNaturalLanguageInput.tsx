@@ -79,6 +79,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
   
   const { tags, people } = useTaskContext();
   const [suggestions, setSuggestions] = useState<{ type: string, items: { id: string, name: string }[] }>({ type: '', items: [] });
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const suggestionRef = useRef<HTMLDivElement>(null);
 
   // Define our initial value based on props
@@ -132,6 +133,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (suggestionRef.current && !suggestionRef.current.contains(e.target as Node)) {
         setSuggestions({ type: '', items: [] });
+        setSearchQuery('');
       }
     };
 
@@ -160,6 +162,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     if (e.key === 'Escape' && suggestions.items.length > 0) {
       e.preventDefault();
       setSuggestions({ type: '', items: [] });
+      setSearchQuery('');
       return;
     }
   }, [onSubmit, suggestions.items.length]);
@@ -170,6 +173,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     
     if (!selection || !Range.isCollapsed(selection)) {
       setSuggestions({ type: '', items: [] });
+      setSearchQuery('');
       return;
     }
 
@@ -188,9 +192,16 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     // Check for tag suggestions
     if (word.startsWith('#')) {
       const tagQuery = word.substring(1).toLowerCase();
+      setSearchQuery(tagQuery);
+      
+      // Filter tags based on search query
+      const filteredTags = tags.filter(tag => 
+        tag.name.toLowerCase().includes(tagQuery.toLowerCase())
+      );
+      
       setSuggestions({ 
         type: 'tag', 
-        items: tags.filter(tag => tag.name.toLowerCase().includes(tagQuery)) 
+        items: filteredTags
       });
       return;
     }
@@ -198,15 +209,23 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     // Check for people suggestions
     if (word.startsWith('@')) {
       const personQuery = word.substring(1).toLowerCase();
+      setSearchQuery(personQuery);
+      
+      // Filter people based on search query
+      const filteredPeople = people.filter(person => 
+        person.name.toLowerCase().includes(personQuery.toLowerCase())
+      );
+      
       setSuggestions({ 
         type: 'person', 
-        items: people.filter(person => person.name.toLowerCase().includes(personQuery)) 
+        items: filteredPeople
       });
       return;
     }
 
     // No suggestions
     setSuggestions({ type: '', items: [] });
+    setSearchQuery('');
   }, [editor, people, tags]);
 
   // Apply a suggestion when clicked
@@ -232,6 +251,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     Transforms.insertText(editor, `${prefix}${suggestion.name} `);
     
     setSuggestions({ type: '', items: [] });
+    setSearchQuery('');
   }, [editor]);
   
   // Decorate the editor content to highlight tokens
@@ -378,19 +398,25 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
             }}
           >
             <div className="px-3 py-2 border-b text-sm font-medium">
-              {suggestions.type === 'tag' ? 'Tag Suggestions' : 'People Suggestions'}
+              {suggestions.type === 'tag' ? `Tag Suggestions${searchQuery ? `: "${searchQuery}"` : ''}` : `People Suggestions${searchQuery ? `: "${searchQuery}"` : ''}`}
             </div>
             <div className="p-2 max-h-[150px] overflow-y-auto">
-              {suggestions.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="px-3 py-2.5 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
-                  onClick={() => applySuggestion(item)}
-                >
-                  <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>
-                  {item.name}
+              {suggestions.items.length > 0 ? (
+                suggestions.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="px-3 py-2.5 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
+                    onClick={() => applySuggestion(item)}
+                  >
+                    <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>
+                    {item.name}
+                  </div>
+                ))
+              ) : (
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  No {suggestions.type === 'tag' ? 'tags' : 'people'} found matching "{searchQuery}"
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}

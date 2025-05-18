@@ -1,73 +1,85 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
-import { Tag } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Save, X } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
-interface TagFormProps {
-  group?: Tag | null;
-  onSave?: (name: string) => void;
+interface GroupFormProps {
+  group?: { id: string; name: string };
+  onSave?: () => void;
   onCancel?: () => void;
 }
 
-const TagForm = ({ group, onSave, onCancel }: TagFormProps) => {
+const GroupForm = ({ group, onSave, onCancel }: GroupFormProps) => {
   const { addTag, updateTag } = useTaskContext();
-  const [name, setName] = useState('');
-  const isEditing = !!group;
+  const [groupName, setGroupName] = useState(group?.name || '');
+  const inputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-focus and select all text when the form opens
   useEffect(() => {
-    if (group) {
-      setName(group.name);
-    } else {
-      setName('');
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
     }
-  }, [group]);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim()) {
+    if (!groupName.trim()) {
       toast({
         title: "Error",
-        description: "Tag name is required",
+        description: "Tag name cannot be empty",
         variant: "destructive"
       });
       return;
     }
     
-    if (isEditing && group) {
-      updateTag({ ...group, name });
-      toast({ title: "Success", description: "Tag updated successfully" });
-    } else if (onSave) {
-      onSave(name);
+    if (group) {
+      // Update existing group
+      updateTag(group.id, groupName.trim());
+      toast({ title: "Tag updated", description: `"${groupName.trim()}" has been updated` });
     } else {
-      addTag(name);
-      toast({ title: "Success", description: "Tag created successfully" });
-      setName('');
+      // Add new group
+      addTag(groupName.trim());
+      setGroupName('');
+      toast({ title: "Tag created", description: `"${groupName.trim()}" has been created` });
+    }
+    
+    if (onSave) {
+      onSave();
     }
   };
-
+  
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="flex items-center gap-2">
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Tag name"
-          className="flex-grow"
-          autoFocus={isEditing}
-        />
-        <Button type="submit" size="sm">{isEditing ? 'Update' : 'Add'}</Button>
-        {onCancel && (
-          <Button type="button" variant="outline" size="sm" onClick={onCancel}>
-            Cancel
-          </Button>
-        )}
-      </div>
+    <form onSubmit={handleSubmit} className="flex gap-2">
+      <Input 
+        ref={inputRef}
+        value={groupName} 
+        onChange={(e) => setGroupName(e.target.value)}
+        placeholder="Add or edit tag/area..." 
+        className="flex-1"
+      />
+      
+      <Button type="submit" variant="default" size="icon" className="h-10 w-10">
+        <Save className="h-4 w-4" />
+      </Button>
+      
+      {onCancel && (
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onCancel} 
+          size="icon" 
+          className="h-10 w-10"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
     </form>
   );
 };
 
-export default TagForm;
+export default GroupForm;

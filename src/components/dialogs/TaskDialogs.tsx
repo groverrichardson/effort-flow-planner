@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Task } from '@/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -31,9 +30,9 @@ const TaskDialogs = ({
     <>
       <Dialog open={!!editTask} onOpenChange={(open) => !open && onCloseEdit()}>
         <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader className={isMobile ? "text-left" : ""}>
-            <DialogTitle className={isMobile ? "text-left" : ""}>Edit Task</DialogTitle>
-            <DialogDescription className={isMobile ? "text-left" : ""}>
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-left">Edit Task</DialogTitle>
+            <DialogDescription className="text-left">
               Make changes to your task
             </DialogDescription>
           </DialogHeader>

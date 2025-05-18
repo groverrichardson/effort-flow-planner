@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -53,6 +52,9 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
                          filterByDueDate !== 'all' || 
                          filterByGoLive;
 
+  // Keep the dropdown open while selecting multiple items
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   return (
     <div className="mb-4">
       <div className="flex flex-wrap gap-2">
@@ -66,7 +68,7 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
           </Button>
         )}
 
-        <DropdownMenu>
+        <DropdownMenu open={filtersOpen} onOpenChange={setFiltersOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
@@ -85,7 +87,11 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
                 <DropdownMenuCheckboxItem
                   key={tag.id}
                   checked={selectedTags.includes(tag.id)}
-                  onCheckedChange={() => onToggleTag(tag.id)}
+                  onCheckedChange={() => {
+                    onToggleTag(tag.id);
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   {tag.name}
                 </DropdownMenuCheckboxItem>
@@ -104,7 +110,11 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
                 <DropdownMenuCheckboxItem
                   key={person.id}
                   checked={selectedPeople.includes(person.id)}
-                  onCheckedChange={() => onTogglePerson(person.id)}
+                  onCheckedChange={() => {
+                    onTogglePerson(person.id);
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   {person.name}
                 </DropdownMenuCheckboxItem>
@@ -122,25 +132,41 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
                   checked={selectedPriorities.includes('high')}
-                  onCheckedChange={() => onTogglePriority('high')}
+                  onCheckedChange={() => {
+                    onTogglePriority('high');
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   High
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   checked={selectedPriorities.includes('normal')}
-                  onCheckedChange={() => onTogglePriority('normal')}
+                  onCheckedChange={() => {
+                    onTogglePriority('normal');
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   Normal
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   checked={selectedPriorities.includes('low')}
-                  onCheckedChange={() => onTogglePriority('low')}
+                  onCheckedChange={() => {
+                    onTogglePriority('low');
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   Low
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   checked={selectedPriorities.includes('lowest')}
-                  onCheckedChange={() => onTogglePriority('lowest')}
+                  onCheckedChange={() => {
+                    onTogglePriority('lowest');
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   Lowest
                 </DropdownMenuCheckboxItem>
@@ -154,25 +180,41 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
                   checked={filterByDueDate === 'all'}
-                  onCheckedChange={() => onSetFilterByDueDate('all')}
+                  onCheckedChange={() => {
+                    onSetFilterByDueDate('all');
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   All Dates
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   checked={filterByDueDate === 'today'}
-                  onCheckedChange={() => onSetFilterByDueDate('today')}
+                  onCheckedChange={() => {
+                    onSetFilterByDueDate('today');
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   Due Today
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   checked={filterByDueDate === 'week'}
-                  onCheckedChange={() => onSetFilterByDueDate('week')}
+                  onCheckedChange={() => {
+                    onSetFilterByDueDate('week');
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   Due This Week
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   checked={filterByDueDate === 'overdue'}
-                  onCheckedChange={() => onSetFilterByDueDate('overdue')}
+                  onCheckedChange={() => {
+                    onSetFilterByDueDate('overdue');
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   Overdue
                 </DropdownMenuCheckboxItem>
@@ -184,7 +226,11 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
                   checked={filterByGoLive}
-                  onCheckedChange={() => onSetFilterByGoLive(!filterByGoLive)}
+                  onCheckedChange={() => {
+                    onSetFilterByGoLive(!filterByGoLive);
+                    // Keep the dropdown open
+                    setFiltersOpen(true);
+                  }}
                 >
                   Has Go-Live Date
                 </DropdownMenuCheckboxItem>
@@ -197,7 +243,11 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onResetFilters}
+                  onClick={() => {
+                    onResetFilters();
+                    // Close the dropdown after resetting filters
+                    setFiltersOpen(false);
+                  }}
                   className="w-full flex gap-1 items-center justify-center"
                 >
                   <FilterX size={14} />
