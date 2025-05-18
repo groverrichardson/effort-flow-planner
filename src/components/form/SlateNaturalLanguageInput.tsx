@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, KeyboardEvent, useEffect, useRef } from 'react';
 import { createEditor, Descendant, Editor, Element as SlateElement, Node as SlateNode, Range, Text, Transforms } from 'slate';
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
@@ -29,7 +28,6 @@ const TOKEN_COLORS = {
 };
 
 // Define interfaces for our custom types
-// Fix #1: CustomText should not extend itself (Text)
 interface CustomText {
   text: string;
   tag?: boolean;
@@ -49,7 +47,7 @@ interface CustomElement {
 type CustomEditor = ReactEditor;
 
 // Custom Range type for our decorations
-interface CustomRange extends Range {
+type CustomRange = Range & {
   tag?: boolean;
   person?: boolean;
   priority?: boolean;
@@ -225,10 +223,10 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
     // Determine the prefix
     const prefix = word.startsWith('#') ? '#' : '@';
     
-    // Fix #3: Use Transforms.select instead of Editor.select
+    // Select the range, delete it, then insert the new text
     Transforms.select(editor, wordRange);
-    Editor.deleteFragment(editor);
-    Editor.insertText(editor, `${prefix}${suggestion.name} `);
+    Transforms.delete(editor);
+    Transforms.insertText(editor, `${prefix}${suggestion.name} `);
     
     setSuggestions({ type: '', items: [] });
   }, [editor]);
@@ -251,7 +249,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
         anchor: { path, offset: tagMatch.index },
         focus: { path, offset: tagMatch.index + tagMatch[0].length },
         tag: true,
-      });
+      } as CustomRange);
     }
     
     // Match people (@person)
@@ -262,7 +260,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
         anchor: { path, offset: personMatch.index },
         focus: { path, offset: personMatch.index + personMatch[0].length },
         person: true,
-      });
+      } as CustomRange);
     }
     
     // Match priority keywords
@@ -276,7 +274,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
         focus: { path, offset: priorityMatch.index + priorityMatch[0].length },
         priority: true,
         priorityType: 'high',
-      });
+      } as CustomRange);
     }
     
     while ((priorityMatch = lowPriorityRegex.exec(text)) !== null) {
@@ -285,7 +283,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
         focus: { path, offset: priorityMatch.index + priorityMatch[0].length },
         priority: true,
         priorityType: 'low',
-      });
+      } as CustomRange);
     }
     
     // Match date keywords
@@ -296,7 +294,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
         anchor: { path, offset: dateMatch.index },
         focus: { path, offset: dateMatch.index + dateMatch[0].length },
         date: true,
-      });
+      } as CustomRange);
     }
     
     // Match effort keywords
@@ -307,7 +305,7 @@ const SlateNaturalLanguageInput: React.FC<SlateNaturalLanguageInputProps> = ({
         anchor: { path, offset: effortMatch.index },
         focus: { path, offset: effortMatch.index + effortMatch[0].length },
         effort: true,
-      });
+      } as CustomRange);
     }
     
     return ranges;

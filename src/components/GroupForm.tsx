@@ -57,6 +57,7 @@ const TagForm = ({ group, onSave, onCancel }: TagFormProps) => {
           onChange={(e) => setName(e.target.value)}
           placeholder="Tag name"
           className="flex-grow"
+          autoFocus={isEditing}
         />
         <Button type="submit" size="sm">{isEditing ? 'Update' : 'Add'}</Button>
         {onCancel && (
