@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { naturalLanguageToTask } from '@/utils/naturalLanguageParser';
 import TaskList from '@/components/TaskList';
@@ -151,23 +152,39 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Task list appears first on mobile */}
+      {/* Quick task input shows at the top on desktop */}
+      {!isMobile && (
+        <div className="mb-6">
+          <NaturalLanguageInput
+            value={quickTaskInput}
+            onChange={setQuickTaskInput}
+            onSubmit={handleQuickTaskSubmit}
+            autoFocus={!isMobile}
+          />
+          <div className="mt-1 text-xs text-muted-foreground">
+            Pro tip: Use #tag for tags, @person for people, "high priority" or dates like "due tomorrow"
+          </div>
+        </div>
+      )}
+
+      {/* Task list */}
       <div className="mb-6 md:mb-0">
         <TaskList />
       </div>
 
-      {/* Natural language quick task input - sticky on mobile */}
-      <div className={`${isMobile ? 'fixed bottom-0 left-0 right-0 p-4 bg-background z-50 border-t' : 'mt-8 mb-6'}`}>
-        <NaturalLanguageInput
-          value={quickTaskInput}
-          onChange={setQuickTaskInput}
-          onSubmit={handleQuickTaskSubmit}
-          autoFocus={!isMobile}
-        />
-        <div className="mt-1 text-xs text-muted-foreground">
-          Pro tip: Use #tag for tags, @person for people, "high priority" or dates like "due tomorrow"
+      {/* Quick task input shows at the bottom on mobile - sticky */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background z-50 border-t">
+          <NaturalLanguageInput
+            value={quickTaskInput}
+            onChange={setQuickTaskInput}
+            onSubmit={handleQuickTaskSubmit}
+          />
+          <div className="mt-1 text-xs text-muted-foreground">
+            Use #tag for tags, @person for people, "high priority" or dates like "due tomorrow"
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Create Task Dialog - NO natural language input here */}
       <Dialog open={createTaskOpen} onOpenChange={setCreateTaskOpen}>

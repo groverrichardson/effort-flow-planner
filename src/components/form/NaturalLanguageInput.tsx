@@ -19,6 +19,8 @@ interface Token {
   type: 'text' | 'tag' | 'person' | 'priority' | 'date' | 'effort';
   value: string;
   original: string;
+  start: number;
+  end: number;
   color?: string;
 }
 
@@ -35,11 +37,26 @@ const NaturalLanguageInput = ({
   const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [tokens, setTokens] = useState<Token[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const suggestionRef = useRef<HTMLDivElement>(null);
   
   // Process tokens when value changes
   useEffect(() => {
     processTokens();
   }, [value]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(e.target as Node)) {
+        setSuggestions({ type: '', items: [] });
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Process the input text into tokens
   const processTokens = () => {
@@ -48,121 +65,78 @@ const NaturalLanguageInput = ({
       return;
     }
 
-    // Start with a simple word-by-word analysis
-    const words = value.split(/\s+/);
     const newTokens: Token[] = [];
-    let currentText = '';
     
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      
-      // Check for tags
-      if (word.startsWith('#')) {
-        if (currentText) {
-          newTokens.push({ type: 'text', value: currentText, original: currentText });
-          currentText = '';
-        }
-        newTokens.push({ 
-          type: 'tag', 
-          value: word.substring(1), 
-          original: word,
-          color: '#9b87f5'  // Purple
-        });
-        continue;
-      }
-      
-      // Check for people
-      if (word.startsWith('@')) {
-        if (currentText) {
-          newTokens.push({ type: 'text', value: currentText, original: currentText });
-          currentText = '';
-        }
-        newTokens.push({ 
-          type: 'person', 
-          value: word.substring(1), 
-          original: word,
-          color: '#0EA5E9'  // Ocean blue
-        });
-        continue;
-      }
-
-      // Check for priority keywords
-      if (i < words.length - 1 && 
-          ((word.toLowerCase() === 'high' && words[i+1].toLowerCase() === 'priority') || 
-           (word.toLowerCase() === 'low' && words[i+1].toLowerCase() === 'priority'))) {
-        if (currentText) {
-          newTokens.push({ type: 'text', value: currentText, original: currentText });
-          currentText = '';
-        }
-        
-        const priority = word.toLowerCase();
-        newTokens.push({ 
-          type: 'priority', 
-          value: `${priority} priority`, 
-          original: `${priority} priority`,
-          color: priority === 'high' ? '#ea384c' : '#7E69AB'  // Red for high, Purple for low
-        });
-        i++; // Skip the "priority" word
-        continue;
-      }
-      
-      // Check for date keywords
-      if (['tomorrow', 'today'].includes(word.toLowerCase())) {
-        if (currentText) {
-          newTokens.push({ type: 'text', value: currentText, original: currentText });
-          currentText = '';
-        }
-        newTokens.push({ 
-          type: 'date', 
-          value: word.toLowerCase(), 
-          original: word,
-          color: '#F97316'  // Bright orange
-        });
-        continue;
-      }
-      
-      if (word.toLowerCase() === 'due' && i < words.length - 1) {
-        const nextWord = words[i+1].toLowerCase();
-        if (['today', 'tomorrow', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].includes(nextWord)) {
-          if (currentText) {
-            newTokens.push({ type: 'text', value: currentText, original: currentText });
-            currentText = '';
-          }
-          newTokens.push({ 
-            type: 'date', 
-            value: `due ${nextWord}`, 
-            original: `due ${words[i]} ${words[i+1]}`,
-            color: '#F97316'  // Bright orange
-          });
-          i++; // Skip the day word
-          continue;
-        }
-      }
-
-      // Time effort indicators
-      if (['quick', 'few minutes', '5 minutes', '30 minutes', 'half hour', 'short', 'couple hours', 'few hours',
-           'all day', 'one day', 'full day', 'this week', 'several days', 'couple weeks', 'few weeks',
-           'month', 'long term', 'big project'].some(phrase => word.toLowerCase().includes(phrase))) {
-        if (currentText) {
-          newTokens.push({ type: 'text', value: currentText, original: currentText });
-          currentText = '';
-        }
-        newTokens.push({ 
-          type: 'effort', 
-          value: word, 
-          original: word,
-          color: '#1EAEDB'  // Bright blue
-        });
-        continue;
-      }
-
-      // If nothing special, add to current text buffer
-      currentText += (currentText ? ' ' : '') + word;
+    // Match tags (#tag)
+    const tagRegex = /#(\w+)/g;
+    let tagMatch;
+    while ((tagMatch = tagRegex.exec(value)) !== null) {
+      newTokens.push({
+        type: 'tag',
+        value: tagMatch[1],
+        original: tagMatch[0],
+        start: tagMatch.index,
+        end: tagMatch.index + tagMatch[0].length,
+        color: 'rgba(155, 135, 245, 0.3)' // Light purple background
+      });
     }
     
-    // Add any remaining text
-    if (currentText) {
-      newTokens.push({ type: 'text', value: currentText, original: currentText });
+    // Match people (@person)
+    const personRegex = /@(\w+)/g;
+    let personMatch;
+    while ((personMatch = personRegex.exec(value)) !== null) {
+      newTokens.push({
+        type: 'person',
+        value: personMatch[1],
+        original: personMatch[0],
+        start: personMatch.index,
+        end: personMatch.index + personMatch[0].length,
+        color: 'rgba(14, 165, 233, 0.3)' // Light blue background
+      });
+    }
+    
+    // Match priority keywords
+    const priorityRegex = /(high priority|low priority|urgent|important)/gi;
+    let priorityMatch;
+    while ((priorityMatch = priorityRegex.exec(value)) !== null) {
+      newTokens.push({
+        type: 'priority',
+        value: priorityMatch[1].toLowerCase(),
+        original: priorityMatch[0],
+        start: priorityMatch.index,
+        end: priorityMatch.index + priorityMatch[0].length,
+        color: priorityMatch[0].toLowerCase().includes('high') || priorityMatch[0].toLowerCase().includes('urgent') 
+          ? 'rgba(234, 56, 76, 0.3)' // Light red background
+          : 'rgba(126, 105, 171, 0.3)' // Light purple background
+      });
+    }
+    
+    // Match date keywords
+    const dateRegex = /(tomorrow|today|due tomorrow|due today|due (on )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday))/gi;
+    let dateMatch;
+    while ((dateMatch = dateRegex.exec(value)) !== null) {
+      newTokens.push({
+        type: 'date',
+        value: dateMatch[0].toLowerCase(),
+        original: dateMatch[0],
+        start: dateMatch.index,
+        end: dateMatch.index + dateMatch[0].length,
+        color: 'rgba(249, 115, 22, 0.3)' // Light orange background
+      });
+    }
+    
+    // Match effort keywords
+    const effortRegex = /(quick|few minutes|5 minutes|30 minutes|half hour|short|couple hours|few hours|all day|one day|full day|this week|several days|couple weeks|few weeks|month|long term|big project)/gi;
+    let effortMatch;
+    while ((effortMatch = effortRegex.exec(value)) !== null) {
+      newTokens.push({
+        type: 'effort',
+        value: effortMatch[0].toLowerCase(),
+        original: effortMatch[0],
+        start: effortMatch.index,
+        end: effortMatch.index + effortMatch[0].length,
+        color: 'rgba(30, 174, 219, 0.3)' // Light blue background
+      });
     }
     
     setTokens(newTokens);
@@ -259,57 +233,59 @@ const NaturalLanguageInput = ({
   return (
     <div className="flex flex-col gap-2">
       <div className="relative">
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleInputChange}
-          placeholder={placeholder}
-          className="min-h-[60px] text-sm resize-none"
-          onKeyDown={handleKeyDown}
-          autoFocus={autoFocus}
-          onSelect={handleCursorPositionChange}
-          onClick={handleCursorPositionChange}
-        />
-        
-        {/* Visualization of parsed tokens with improved styling */}
-        {tokens.length > 0 && (
-          <div className="absolute top-0 left-0 w-full h-full pointer-events-none p-2.5 flex flex-wrap gap-0 items-start overflow-hidden">
-            <div className="inline whitespace-normal break-words">
-              {tokens.map((token, index) => (
-                token.type === 'text' ? (
-                  <span key={index} className="text-transparent inline">
-                    {token.value}
-                  </span>
-                ) : (
-                  <span 
-                    key={index} 
-                    className="inline-block rounded-md px-1.5 py-0 text-xs font-medium text-white leading-tight"
-                    style={{ 
-                      backgroundColor: token.color,
-                      height: '1rem', // Make pills same as text height
-                      lineHeight: '1rem',
-                      margin: '0 1px',
-                      transform: 'translateY(-1px)'
-                    }}
-                  >
-                    {token.value}
-                  </span>
-                )
-              ))}
-            </div>
+        <div className="relative">
+          {/* Background highlighting layer */}
+          <div className="absolute inset-0 p-2.5 text-transparent overflow-hidden whitespace-pre-wrap break-words pointer-events-none">
+            {value}
+            {tokens.map((token, index) => (
+              <span
+                key={index}
+                className="absolute"
+                style={{
+                  backgroundColor: token.color,
+                  left: 0,
+                  right: 0,
+                  height: '1.5rem', // Match the line height of text
+                  zIndex: -1
+                }}
+              />
+            ))}
           </div>
-        )}
+          
+          <Textarea
+            ref={textareaRef}
+            value={value}
+            onChange={handleInputChange}
+            placeholder={placeholder}
+            className="min-h-[60px] text-sm resize-none"
+            onKeyDown={handleKeyDown}
+            autoFocus={autoFocus}
+            onSelect={handleCursorPositionChange}
+            onClick={handleCursorPositionChange}
+          />
+        </div>
         
-        {/* Display suggestions if available */}
+        {/* Display suggestions as a popup modal if available */}
         {suggestions.items.length > 0 && (
-          <div className="absolute z-10 bg-background border rounded-md shadow-md mt-1 w-full max-h-[150px] overflow-y-auto">
+          <div 
+            ref={suggestionRef}
+            className="absolute z-50 bg-popover border rounded-md shadow-lg mt-1 w-60 max-h-[200px] overflow-y-auto"
+            style={{
+              top: 'calc(100% + 5px)',
+              left: '10px',
+            }}
+          >
+            <div className="px-3 py-2 border-b text-sm font-medium">
+              {suggestions.type === 'tag' ? 'Tag Suggestions' : 'People Suggestions'}
+            </div>
             {suggestions.items.map((item) => (
               <div
                 key={item.id}
-                className="px-3 py-2 hover:bg-accent cursor-pointer text-sm flex items-center"
+                className="px-3 py-2.5 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
                 onClick={() => applySuggestion(item)}
               >
-                {suggestions.type === 'tag' ? '#' : '@'}{item.name}
+                <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>
+                {item.name}
               </div>
             ))}
           </div>
