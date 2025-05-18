@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
-import { Task, Priority, EffortLevel } from '@/types';
+import { Task, Priority, EffortLevel, DueDateType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,13 +34,15 @@ const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
   description: '',
   priority: 'normal' as Priority,
   dueDate: null,
+  dueDateType: 'by' as DueDateType,
   targetDeadline: null,
   goLiveDate: null,
   effortLevel: 1 as EffortLevel,
   completed: false,
   completedDate: null,
   tags: [],
-  people: []
+  people: [],
+  dependencies: []
 };
 
 const TaskForm = ({ task, onSuccess, onCancel, onDelete }: TaskFormProps) => {

@@ -70,6 +70,7 @@ const QuickTaskInput = () => {
         description: taskData.description || '',
         priority: taskData.priority || 'normal',
         dueDate: taskData.dueDate || null,
+        dueDateType: taskData.dueDateType || 'by',
         targetDeadline: taskData.targetDeadline || null,
         goLiveDate: taskData.goLiveDate || null,
         effortLevel: taskData.effortLevel || 4,
@@ -77,6 +78,7 @@ const QuickTaskInput = () => {
         completedDate: null,
         tags: taskData.tags,
         people: taskData.people,
+        dependencies: []
       };
       
       console.log("Creating task:", newTask);

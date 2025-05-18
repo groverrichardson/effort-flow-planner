@@ -112,6 +112,7 @@ const CSVTaskImporter = () => {
         description: task.description || enhancedTaskData.description || '',
         priority: task.priority || enhancedTaskData.priority || 'normal',
         dueDate: enhancedTaskData.dueDate || (task.dueDate ? new Date(task.dueDate) : null),
+        dueDateType: 'by', // Default value for dueDateType
         targetDeadline: enhancedTaskData.targetDeadline || null,
         goLiveDate: enhancedTaskData.goLiveDate || null,
         effortLevel: enhancedTaskData.effortLevel || 4,
@@ -119,6 +120,7 @@ const CSVTaskImporter = () => {
         completedDate: null,
         tags: taskTags,
         people: taskPeople,
+        dependencies: []
       };
       
       // Add task to the database
