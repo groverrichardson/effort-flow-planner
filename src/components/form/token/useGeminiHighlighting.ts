@@ -1,7 +1,6 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { debounce } from '@/lib/utils';
+import { debounce } from '@/utils/natural-language/parserUtils';
 import { GeminiResponse } from './TokenTypes';
 
 export const useGeminiHighlighting = (value: string) => {
