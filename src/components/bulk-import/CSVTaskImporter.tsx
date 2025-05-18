@@ -15,6 +15,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import ColumnMapping from './ColumnMapping';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface CSVTask {
   title: string;
@@ -27,6 +30,11 @@ interface CSVTask {
   error?: string;
 }
 
+interface ParsedCSVData {
+  headers: string[];
+  rows: string[][];
+}
+
 const CSVTaskImporter = () => {
   const { addTask, tags, people, addTag, addPerson } = useTaskContext();
   const [file, setFile] = useState<File | null>(null);
@@ -34,69 +42,63 @@ const CSVTaskImporter = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
+  const [parsedData, setParsedData] = useState<ParsedCSVData | null>(null);
+  const [hasHeaders, setHasHeaders] = useState(true);
+  const [columnMap, setColumnMap] = useState<Record<string, string>>({});
+  const [mappingComplete, setMappingComplete] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      parseCSV(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      setMappingComplete(false);
+      setCsvTasks([]);
+      parseRawCSV(selectedFile);
     }
   };
 
-  const parseCSV = (file: File) => {
+  const parseRawCSV = (file: File) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
         const text = e.target?.result as string;
         const lines = text.split('\n').filter(line => line.trim().length > 0);
-        const headers = lines[0].split(',').map(header => header.trim().toLowerCase());
         
-        // Validate required headers
-        if (!headers.includes('title')) {
+        if (lines.length === 0) {
           toast({
-            title: "Invalid CSV format",
-            description: "CSV must contain a 'title' column",
+            title: "Empty CSV file",
+            description: "The CSV file doesn't contain any data",
             variant: "destructive",
           });
           return;
         }
 
-        const parsedTasks: CSVTask[] = [];
+        // Parse CSV into rows and columns
+        const rows = lines.map(line => 
+          line.split(',').map(value => value.trim().replace(/^["'](.*)["']$/, '$1'))
+        );
         
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(value => value.trim());
-          
-          if (values.length !== headers.length) {
-            continue; // Skip lines with incorrect number of values
-          }
-          
-          const task: CSVTask = {
-            title: '',
-            status: 'pending'
-          };
-          
-          headers.forEach((header, index) => {
-            if (header === 'title') {
-              task.title = values[index];
-            } else if (header === 'description') {
-              task.description = values[index];
-            } else if (header === 'priority') {
-              task.priority = values[index];
-            } else if (header === 'duedate') {
-              task.dueDate = values[index];
-            } else if (header === 'people' || header === 'person') {
-              task.personNames = values[index] ? values[index].split(';').map(p => p.trim()) : [];
-            } else if (header === 'tags') {
-              task.tagNames = values[index] ? values[index].split(';').map(t => t.trim()) : [];
-            }
+        // Set the parsed data
+        setParsedData({
+          headers: rows[0],
+          rows: rows.slice(1)
+        });
+        
+        // Initialize column mapping with default values if headers exist
+        const initialMap: Record<string, string> = {};
+        if (hasHeaders) {
+          rows[0].forEach(header => {
+            const lowerHeader = header.toLowerCase();
+            if (lowerHeader === 'title') initialMap[header] = 'title';
+            else if (lowerHeader === 'description') initialMap[header] = 'description';
+            else if (lowerHeader === 'priority') initialMap[header] = 'priority';
+            else if (lowerHeader === 'duedate' || lowerHeader === 'due date') initialMap[header] = 'dueDate';
+            else if (lowerHeader === 'people' || lowerHeader === 'person') initialMap[header] = 'people';
+            else if (lowerHeader === 'tags' || lowerHeader === 'tag') initialMap[header] = 'tags';
           });
-          
-          // Only add tasks with a title
-          if (task.title) {
-            parsedTasks.push(task);
-          }
         }
+        setColumnMap(initialMap);
         
-        setCsvTasks(parsedTasks);
       } catch (error) {
         toast({
           title: "Error parsing CSV",
@@ -110,7 +112,84 @@ const CSVTaskImporter = () => {
 
   const handleClearFile = () => {
     setFile(null);
+    setParsedData(null);
     setCsvTasks([]);
+    setMappingComplete(false);
+  };
+
+  const handleHeaderToggle = (checked: boolean) => {
+    setHasHeaders(checked);
+    
+    if (parsedData) {
+      // If we toggle headers off, we need to treat first row as data
+      // If we toggle headers on, we need to treat first row as headers
+      setParsedData({
+        headers: checked ? parsedData.rows[0] : Array.from({ length: parsedData.rows[0].length }, (_, i) => `Column ${i + 1}`),
+        rows: checked ? parsedData.rows.slice(1) : parsedData.rows
+      });
+      
+      // Reset column mapping when header toggle changes
+      setColumnMap({});
+    }
+  };
+
+  const applyColumnMapping = () => {
+    if (!parsedData) return;
+    
+    const tasks: CSVTask[] = [];
+    const { headers, rows } = parsedData;
+    
+    // Process each row based on the column mapping
+    rows.forEach(row => {
+      const task: CSVTask = { title: '', status: 'pending' };
+      
+      // Apply mapping to extract fields
+      headers.forEach((header, index) => {
+        const field = columnMap[header];
+        if (!field || index >= row.length) return;
+        
+        const value = row[index];
+        if (!value) return;
+        
+        switch (field) {
+          case 'title':
+            task.title = value;
+            break;
+          case 'description':
+            task.description = value;
+            break;
+          case 'priority':
+            task.priority = value;
+            break;
+          case 'dueDate':
+            task.dueDate = value;
+            break;
+          case 'people':
+            task.personNames = value ? value.split(';').map(p => p.trim()) : [];
+            break;
+          case 'tags':
+            task.tagNames = value ? value.split(';').map(t => t.trim()) : [];
+            break;
+        }
+      });
+      
+      // Only add tasks with a title
+      if (task.title) {
+        tasks.push(task);
+      }
+    });
+    
+    if (tasks.length === 0) {
+      toast({
+        title: "No valid tasks",
+        description: "Could not find any valid tasks in the CSV. Make sure the title column is mapped correctly.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setCsvTasks(tasks);
+    setMappingComplete(true);
   };
 
   const processTask = async (task: CSVTask, index: number): Promise<void> => {
@@ -209,8 +288,7 @@ const CSVTaskImporter = () => {
       <div>
         <h2 className="text-xl font-semibold mb-2">Bulk Import Tasks</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Import multiple tasks using a CSV file. The CSV must include at least a 'title' column.
-          Optional columns: description, priority, dueDate, people (use semicolons for multiple), tags (use semicolons for multiple).
+          Import multiple tasks using a CSV file. Map your CSV columns to task fields.
         </p>
       </div>
       
@@ -247,7 +325,35 @@ const CSVTaskImporter = () => {
         </div>
       )}
       
-      {csvTasks.length > 0 && (
+      {parsedData && !mappingComplete && (
+        <div className="space-y-4 border p-4 rounded-md bg-muted/30">
+          <div className="flex items-center space-x-2 mb-4">
+            <Switch 
+              id="has-headers" 
+              checked={hasHeaders}
+              onCheckedChange={handleHeaderToggle}
+            />
+            <Label htmlFor="has-headers">First row contains column headers</Label>
+          </div>
+          
+          <h3 className="text-md font-medium">Map Columns to Task Fields</h3>
+          <ColumnMapping
+            headers={parsedData.headers}
+            previewRows={parsedData.rows.slice(0, 3)}
+            columnMap={columnMap}
+            onColumnMapChange={setColumnMap}
+          />
+          
+          <Button 
+            onClick={applyColumnMapping} 
+            className="w-full mt-2"
+          >
+            Apply Mapping
+          </Button>
+        </div>
+      )}
+      
+      {csvTasks.length > 0 && mappingComplete && (
         <div className="space-y-4">
           <div className="border rounded-md">
             <Table>
