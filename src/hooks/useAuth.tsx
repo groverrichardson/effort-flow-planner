@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -26,8 +25,8 @@ const AuthContext = createContext<AuthContextType>({
   bypassLogin: async () => {}, // Add default implementation
 });
 
-// Dummy account credentials
-const DUMMY_USER_EMAIL = 'demo@example.com';
+// Dummy account credentials - using a valid email format
+const DUMMY_USER_EMAIL = 'demo-user@example.com';
 const DUMMY_USER_PASSWORD = 'demopassword123';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -143,18 +142,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // New function for bypass login
+  // Updated bypass login function
   const bypassLogin = async () => {
     try {
+      console.log('Attempting bypass login...');
+      
       // First check if the dummy account exists
-      const { data: users, error: checkError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', DUMMY_USER_EMAIL)
-        .limit(1);
+      const { data: existingUser, error: checkError } = await supabase.auth.signInWithPassword({
+        email: DUMMY_USER_EMAIL,
+        password: DUMMY_USER_PASSWORD
+      });
 
-      // If dummy account doesn't exist yet, create it first
-      if (checkError || (users && users.length === 0)) {
+      // If dummy account doesn't exist yet or login fails, create it
+      if (checkError) {
         console.log('Creating dummy account...');
         const { error: signUpError } = await supabase.auth.signUp({
           email: DUMMY_USER_EMAIL,
@@ -169,16 +169,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (signUpError) {
           throw signUpError;
         }
-      }
+        
+        // After creating the account, sign in
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: DUMMY_USER_EMAIL,
+          password: DUMMY_USER_PASSWORD
+        });
 
-      // Now sign in with the dummy account
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: DUMMY_USER_EMAIL,
-        password: DUMMY_USER_PASSWORD
-      });
-
-      if (signInError) {
-        throw signInError;
+        if (signInError) {
+          throw signInError;
+        }
       }
 
       toast({
