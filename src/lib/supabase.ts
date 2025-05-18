@@ -12,12 +12,12 @@ const createSupabaseClient = () => {
     // Return a mock client that doesn't perform any actual operations
     return {
       auth: {
-        signInWithPassword: async () => ({ error: new Error("Supabase client not initialized") }),
-        signUp: async () => ({ error: new Error("Supabase client not initialized") }),
-        signOut: async () => ({ error: new Error("Supabase client not initialized") }),
-        getSession: async () => ({ data: null, error: new Error("Supabase client not initialized") }),
+        signInWithPassword: async () => ({ error: { message: "Supabase client not initialized", code: "not_initialized", status: 0, __isAuthError: true } }),
+        signUp: async () => ({ error: { message: "Supabase client not initialized", code: "not_initialized", status: 0, __isAuthError: true } }),
+        signOut: async () => ({ error: { message: "Supabase client not initialized", code: "not_initialized", status: 0, __isAuthError: true } }),
+        getSession: async () => ({ data: null, error: { message: "Supabase client not initialized", code: "not_initialized", status: 0, __isAuthError: true } }),
         onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } }, error: null }),
-        signInWithOAuth: async () => ({ error: new Error("Supabase client not initialized") }),
+        signInWithOAuth: async () => ({ error: { message: "Supabase client not initialized", code: "not_initialized", status: 0, __isAuthError: true } }),
       }
     };
   }

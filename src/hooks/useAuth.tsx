@@ -87,6 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return { error: null };
     } catch (error) {
       console.error('Unexpected error during sign in:', error);
+      // Cast the error to AuthError to match the function signature
       return { error: error as AuthError };
     }
   };
@@ -110,6 +111,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return { error: null };
     } catch (error) {
       console.error('Unexpected error during sign up:', error);
+      // Cast the error to AuthError to match the function signature
       return { error: error as AuthError };
     }
   };
