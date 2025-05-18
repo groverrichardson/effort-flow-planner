@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task, Priority, EffortLevel } from '@/types';
@@ -133,7 +134,7 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
     });
   };
 
-  const handleAddNewTag = (tagName: string) => {
+  const handleAddNewTag = async (tagName: string) => {
     if (!tagName.trim()) return;
     
     // Check if tag already exists
@@ -149,17 +150,26 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
       return;
     }
     
-    // Add new tag
-    const newTag = addTag(tagName.trim());
-    if (newTag) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, newTag]
-      }));
+    try {
+      // Add new tag - this returns a Promise<Tag> now
+      const newTag = await addTag(tagName.trim());
+      if (newTag) {
+        setFormData(prev => ({
+          ...prev,
+          tags: [...prev.tags, newTag]
+        }));
+      }
+    } catch (error) {
+      console.error("Error adding new tag:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create new tag",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleAddNewPerson = (personName: string) => {
+  const handleAddNewPerson = async (personName: string) => {
     if (!personName.trim()) return;
     
     // Check if person already exists
@@ -175,13 +185,22 @@ const TaskForm = ({ task, onSuccess, onCancel }: TaskFormProps) => {
       return;
     }
     
-    // Add new person
-    const newPerson = addPerson(personName.trim());
-    if (newPerson) {
-      setFormData(prev => ({
-        ...prev,
-        people: [...prev.people, newPerson]
-      }));
+    try {
+      // Add new person - this returns a Promise<Person> now
+      const newPerson = await addPerson(personName.trim());
+      if (newPerson) {
+        setFormData(prev => ({
+          ...prev,
+          people: [...prev.people, newPerson]
+        }));
+      }
+    } catch (error) {
+      console.error("Error adding new person:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create new person",
+        variant: "destructive"
+      });
     }
   };
 
