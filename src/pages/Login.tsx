@@ -1,6 +1,6 @@
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,17 +14,28 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, signInWithGoogle, bypassLogin } = useAuth();
+  const { signIn, signUp, signInWithGoogle, bypassLogin, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if already logged in
+  useEffect(() => {
+    console.log('Login page - checking user:', user?.email || 'No user');
+    if (user) {
+      console.log('User is logged in, redirecting to home');
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log('Login page - Sign in attempt with:', email);
     
     try {
       const { error } = await signIn(email, password);
       if (!error) {
-        navigate('/');
+        console.log('Login page - Sign in successful, will redirect if user state updates');
       }
     } finally {
       setLoading(false);
@@ -34,6 +45,7 @@ const Login = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log('Login page - Sign up attempt with:', email);
     
     try {
       await signUp(email, password);
@@ -44,6 +56,8 @@ const Login = () => {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    console.log('Login page - Google sign in attempt');
+    
     try {
       await signInWithGoogle();
     } finally {
@@ -53,9 +67,11 @@ const Login = () => {
 
   const handleBypassLogin = async () => {
     setLoading(true);
+    console.log('Login page - Bypass login attempt');
+    
     try {
       await bypassLogin();
-      navigate('/');
+      // Do not navigate here - let the auth state change trigger the redirect
     } finally {
       setLoading(false);
     }
