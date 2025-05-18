@@ -9,7 +9,7 @@ import TaskDialogs from './dialogs/TaskDialogs';
 
 const TaskList = () => {
   const { tasks, completeTask, getTodaysCompletedTasks } = useTaskContext();
-  const [detailTask, setDetailTask] = useState<Task | null>(null);
+  // We're not using detailTask anymore since we go directly to edit mode
   const [editTask, setEditTask] = useState<Task | null>(null);
   
   const {
@@ -59,15 +59,6 @@ const TaskList = () => {
     setEditTask(task);
   };
 
-  const handleCloseDetail = () => {
-    setDetailTask(null);
-  };
-
-  const handleEditClick = (task: Task) => {
-    setDetailTask(null);
-    setEditTask(task);
-  };
-
   const handleCloseEdit = () => {
     setEditTask(null);
   };
@@ -106,11 +97,8 @@ const TaskList = () => {
       />
 
       <TaskDialogs 
-        detailTask={detailTask}
         editTask={editTask}
-        onCloseDetail={handleCloseDetail}
         onCloseEdit={handleCloseEdit}
-        onEditClick={handleEditClick}
       />
     </div>
   );
