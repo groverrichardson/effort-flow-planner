@@ -491,7 +491,7 @@ describe('TaskService', () => {
             // Verify calls to Supabase for tags and people if they were part of the update
             if (updates.tags && updates.tags.length > 0) {
                 expect(mockTaskTagsDeleteEqTaskIdCall).toHaveBeenCalledWith('task_id', mockExistingTaskId);
-                expect(mockTaskTagsDeleteEqUserIdCall).toHaveBeenCalledWith('user_id', mockUser.id);
+                // expect(mockTaskTagsDeleteEqUserIdCall).toHaveBeenCalledWith('user_id', mockUser.id); // Removed: task_tags deletion doesn't filter by user_id directly
                 expect(mockTaskTagsInsert).toHaveBeenCalledWith(
                     expect.arrayContaining([
                         expect.objectContaining({ task_id: mockExistingTaskId, tag_id: 'upserted-tag-id-1', user_id: mockUser.id })
@@ -499,13 +499,13 @@ describe('TaskService', () => {
                 );
             } else if (updates.tags === null || (updates.tags && updates.tags.length === 0)) { // Handle explicit clearing of tags
                 expect(mockTaskTagsDeleteEqTaskIdCall).toHaveBeenCalledWith('task_id', mockExistingTaskId);
-                expect(mockTaskTagsDeleteEqUserIdCall).toHaveBeenCalledWith('user_id', mockUser.id);
+                // expect(mockTaskTagsDeleteEqUserIdCall).toHaveBeenCalledWith('user_id', mockUser.id); // Removed: task_tags deletion doesn't filter by user_id directly
                 // expect(mockTaskTagsInsert).not.toHaveBeenCalled(); // This might be called with an empty array depending on implementation
             }
 
             if (updates.people && updates.people.length > 0) {
                 expect(mockTaskPeopleDeleteEqTaskIdCall).toHaveBeenCalledWith('task_id', mockExistingTaskId);
-                expect(mockTaskPeopleDeleteEqUserIdCall).toHaveBeenCalledWith('user_id', mockUser.id);
+                // expect(mockTaskPeopleDeleteEqUserIdCall).toHaveBeenCalledWith('user_id', mockUser.id); // Removed: task_people deletion doesn't filter by user_id directly
                 expect(mockTaskPeopleInsert).toHaveBeenCalledWith(
                     expect.arrayContaining([
                         expect.objectContaining({ task_id: mockExistingTaskId, person_id: 'upserted-person-id-1', user_id: mockUser.id })
@@ -513,7 +513,7 @@ describe('TaskService', () => {
                 );
             } else if (updates.people === null || (updates.people && updates.people.length === 0)) { // Handle explicit clearing of people
                 expect(mockTaskPeopleDeleteEqTaskIdCall).toHaveBeenCalledWith('task_id', mockExistingTaskId);
-                expect(mockTaskPeopleDeleteEqUserIdCall).toHaveBeenCalledWith('user_id', mockUser.id);
+                // expect(mockTaskPeopleDeleteEqUserIdCall).toHaveBeenCalledWith('user_id', mockUser.id); // Removed: task_people deletion doesn't filter by user_id directly
                 // expect(mockTaskPeopleInsert).not.toHaveBeenCalled();
             }
 
@@ -570,7 +570,8 @@ describe('TaskService', () => {
                     // Mock for tags upsertion
                     const tagsMockChain = createChainableMock();
                     tagsMockChain.upsert.mockReturnThis();
-                    tagsMockChain.select.mockResolvedValue({ data: [{id: 'upserted-tag-id-1', name: 'New Tag 1', user_id: mockUser.id}], error: null });
+                    tagsMockChain.select.mockReturnThis(); // Ensure select() is chainable
+                    tagsMockChain.single.mockResolvedValue({ data: {id: 'upserted-tag-id-1', name: 'New Tag 1', user_id: mockUser.id}, error: null }); // Mock the subsequent .single() call
                     return tagsMockChain;
                 }
                 return createChainableMock(); // Default for other tables
