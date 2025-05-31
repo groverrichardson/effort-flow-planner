@@ -75,7 +75,7 @@ const Textarea = React.forwardRef<
         'data-testid': dataTestId, // Pass data-testid here
         'aria-label': ariaLabel, // Pass aria-label here
         class: cn(
-          'prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
+          'max-w-none focus:outline-none w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
           // Removed placeholder:text-muted-foreground as TipTap's Placeholder extension handles this
           'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
           className // Apply className prop for additional styling
@@ -120,7 +120,7 @@ const Textarea = React.forwardRef<
       {/* The EditorContent itself will take styling from editorProps.attributes.class */}
       {/* The id prop is now primarily for the toolbar and overall wrapper if needed */}
       <div id={id} className="tiptap-wrapper flex-grow">
-        <EditorContent editor={editor} className="prose dark:prose-invert max-w-none" {...props} />
+        <EditorContent editor={editor} className="prose dark:prose-invert max-w-none px-0" {...props} />
       </div>
     </div>
   );
