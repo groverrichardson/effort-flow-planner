@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/51</span>
+                <span class='fraction'>0/53</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/51</span>
+                <span class='fraction'>0/53</span>
             </div>
         
             
@@ -144,7 +144,10 @@
 <a name='L79'></a><a href='#L79'>79</a>
 <a name='L80'></a><a href='#L80'>80</a>
 <a name='L81'></a><a href='#L81'>81</a>
-<a name='L82'></a><a href='#L82'>82</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -167,6 +170,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -190,6 +195,7 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -238,14 +244,15 @@ interface TaskListContentProps {
     showTodaysTasks: boolean;
     onTaskClick: (task: Task) =&gt; void;
     onCompleteTask: (taskId: string) =&gt; void;
-    onDeleteTask: (taskId: string) =&gt; void;
+    onArchiveTask: (taskId: string) =&gt; void; // Renamed for clarity
     isBulkEditing?: boolean;
     selectedTaskIds?: string[];
     onToggleSelectTask?: (taskId: string) =&gt; void;
     className?: string;
     selectedTaskCount?: number;
     onMarkSelectedComplete?: () =&gt; void;
-    onDeleteSelected?: () =&gt; void;
+    onArchiveSelected?: () =&gt; void; // Renamed from onDeleteSelected
+    onDeleteSelectedPermanently?: () =&gt; void;
 }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >const TaskListContent = ({</span>
@@ -254,14 +261,15 @@ interface TaskListContentProps {
 <span class="cstat-no" title="statement not covered" >    showTodaysTasks,</span>
 <span class="cstat-no" title="statement not covered" >    onTaskClick,</span>
 <span class="cstat-no" title="statement not covered" >    onCompleteTask,</span>
-<span class="cstat-no" title="statement not covered" >    onDeleteTask,</span>
+<span class="cstat-no" title="statement not covered" >    onArchiveTask, // Renamed for clarity</span>
 <span class="cstat-no" title="statement not covered" >    isBulkEditing,</span>
 <span class="cstat-no" title="statement not covered" >    selectedTaskIds,</span>
 <span class="cstat-no" title="statement not covered" >    onToggleSelectTask,</span>
 <span class="cstat-no" title="statement not covered" >    className,</span>
 <span class="cstat-no" title="statement not covered" >    selectedTaskCount,</span>
 <span class="cstat-no" title="statement not covered" >    onMarkSelectedComplete,</span>
-<span class="cstat-no" title="statement not covered" >    onDeleteSelected,</span>
+<span class="cstat-no" title="statement not covered" >    onArchiveSelected, // Renamed</span>
+<span class="cstat-no" title="statement not covered" >    onDeleteSelectedPermanently, // Added</span>
 <span class="cstat-no" title="statement not covered" >}: TaskListContentProps) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    const handleComplete = (task: Task) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >        onCompleteTask(task.id);</span>
@@ -273,11 +281,12 @@ interface TaskListContentProps {
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    return (</span>
 <span class="cstat-no" title="statement not covered" >        &lt;div className={cn("space-y-2", className)}&gt;</span>
-<span class="cstat-no" title="statement not covered" >            {isBulkEditing &amp;&amp; onMarkSelectedComplete &amp;&amp; onDeleteSelected &amp;&amp; (</span>
+<span class="cstat-no" title="statement not covered" >            {isBulkEditing &amp;&amp; onMarkSelectedComplete &amp;&amp; onArchiveSelected &amp;&amp; onDeleteSelectedPermanently &amp;&amp; (</span>
 <span class="cstat-no" title="statement not covered" >                &lt;BulkActionToolbar</span>
 <span class="cstat-no" title="statement not covered" >                    selectedTaskCount={selectedTaskCount || 0}</span>
 <span class="cstat-no" title="statement not covered" >                    onMarkSelectedComplete={onMarkSelectedComplete}</span>
-<span class="cstat-no" title="statement not covered" >                    onDeleteSelected={onDeleteSelected}</span>
+<span class="cstat-no" title="statement not covered" >                    onArchiveSelected={onArchiveSelected}</span>
+<span class="cstat-no" title="statement not covered" >                    onDeleteSelectedPermanently={onDeleteSelectedPermanently}</span>
                 /&gt;
             )}
 <span class="cstat-no" title="statement not covered" >            {tasks.length &gt; 0 ? (</span>
@@ -313,7 +322,7 @@ interface TaskListContentProps {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-05-27T18:40:25.351Z
+                at 2025-05-31T20:12:47.127Z
             </div>
         <script src="../../../../prettify.js"></script>
         <script>

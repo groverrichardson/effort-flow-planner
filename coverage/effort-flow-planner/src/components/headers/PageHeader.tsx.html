@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90.14% </span>
+                <span class="strong">90.54% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>64/71</span>
+                <span class='fraction'>67/74</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90.14% </span>
+                <span class="strong">90.54% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>64/71</span>
+                <span class='fraction'>67/74</span>
             </div>
         
             
@@ -177,7 +177,12 @@
 <a name='L112'></a><a href='#L112'>112</a>
 <a name='L113'></a><a href='#L113'>113</a>
 <a name='L114'></a><a href='#L114'>114</a>
-<a name='L115'></a><a href='#L115'>115</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -193,19 +198,22 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
@@ -270,6 +278,8 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
@@ -307,6 +317,7 @@ import {
 // import MobileFilterSection from '../filters/components/MobileFilterSection'; // No longer used directly here
 import Sidebar from '@/components/Sidebar'; // Added Sidebar import
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Task } from '@/types'; // Import Task type
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 &nbsp;
 interface PageHeaderProps {
@@ -317,6 +328,7 @@ interface PageHeaderProps {
     filterProps: any;
     isBulkEditing: boolean; // Added for bulk edit state
     onToggleBulkEdit: () =&gt; void; // Added for toggling bulk edit
+    allTasks: Task[]; // Added to pass all tasks to Sidebar for search modal
 }
 &nbsp;
 const PageHeader = ({
@@ -327,6 +339,7 @@ const PageHeader = ({
     filterProps,
     isBulkEditing, // Added
     onToggleBulkEdit, // Added
+    allTasks, // Destructure allTasks
 }: PageHeaderProps) =&gt; {
     const isMobile = useIsMobile();
     const [sheetOpen, setSheetOpen] = useState(false);
@@ -380,7 +393,7 @@ const PageHeader = ({
                             &lt;/SheetTrigger&gt;
                             &lt;SheetContent
                                 side="right"
-                                className="p-0 w-[280px] bg-background" // Removed flex flex-col, sidebar handles its own layout
+                                className="p-0 w-full bg-background" // Removed flex flex-col, sidebar handles its own layout
                                 onInteractOutside={handleInteractOutside}
                                 // style={{padding: 0}} // Ensure no padding from SheetContent itself if Sidebar manages it
                             &gt;
@@ -393,6 +406,8 @@ const PageHeader = ({
                                     onBulkImportClick={<span class="fstat-no" title="function not covered" >() =&gt; { onBulkImportClick(); setSheetOpen(false); }}</span>
                                     isBulkEditing={isBulkEditing} // Added
                                     onToggleBulkEdit={<span class="fstat-no" title="function not covered" >() =&gt; { onToggleBulkEdit(); setSheetOpen(false); }} // Added and closes sheet</span>
+                                    isMobileSheetView={true}
+                                    allTasks={allTasks} // Pass allTasks to Sidebar
                                 /&gt;
                             &lt;/SheetContent&gt;
                         &lt;/Sheet&gt;
@@ -412,7 +427,7 @@ export default PageHeader;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-05-27T18:40:25.351Z
+                at 2025-05-31T20:12:47.127Z
             </div>
         <script src="../../../../prettify.js"></script>
         <script>
