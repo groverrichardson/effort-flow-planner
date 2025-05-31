@@ -16,6 +16,7 @@ import TaskDialogs from '@/components/dialogs/TaskDialogs';
 import { Task, TaskStatus, Note } from '@/types'; // Import Task and Note types
 import UpcomingTasks from '@/components/UpcomingTasks';
 import TaskListHeader from '@/components/headers/TaskListHeader'; // Import TaskListHeader
+import { ChevronDown, ChevronRight } from 'lucide-react';
 const Index = () => {
     const { addNote } = useNoteStore(); // Get addNote from the store
     const navigate = useNavigate(); // Add useNavigate hook
@@ -47,6 +48,7 @@ const Index = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isBulkEditing, setIsBulkEditing] = useState(false); // Added for bulk edit mode
     const [searchTerm, setSearchTerm] = useState(''); // Add searchTerm state
+    const [isAllTasksExpanded, setIsAllTasksExpanded] = useState(false);
 
     // tasksFromCtx is now used directly, original useTaskContext() call for 'tasks' is covered by the log above.
     // console.log('[[INDEX_PAGE_LOG]] RECEIVED tasks from useTaskContext():', tasks ? tasks.length : 'undefined/empty', JSON.stringify(tasks?.map(t => t.id))); // This log is now redundant due to the one above.
@@ -381,17 +383,29 @@ const Index = () => {
 
                         {/* Section 3: All my tasks */}
                         <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg shadow" id="all-tasks-section">
-                            <h2 className="text-xl font-semibold mb-3 text-gray-800 dark:text-slate-100" id="all-tasks-header">
-                                All My Tasks
-                            </h2>
-                            <TaskList
-                                onTaskItemClick={handleOpenDetailedView}
-                                filteredTasks={filteredTasks}
-                                isBulkEditing={isBulkEditing}
-                                onToggleBulkEdit={handleToggleBulkEdit}
-                                viewingCompleted={viewingCompleted}
-                                showTodaysTasks={showTodaysTasks}
-                            />
+                            <button 
+                                type="button"
+                                className="flex items-center justify-between w-full text-xl font-semibold mb-3 text-gray-800 dark:text-slate-100 focus:outline-none"
+                                onClick={() => setIsAllTasksExpanded(!isAllTasksExpanded)}
+                                aria-expanded={isAllTasksExpanded}
+                                aria-controls="all-tasks-content"
+                                id="all-tasks-header-button"
+                            >
+                                <span id="all-tasks-header">All My Tasks</span>
+                                {isAllTasksExpanded ? <ChevronDown size={24} /> : <ChevronRight size={24} />}
+                            </button>
+                            {isAllTasksExpanded && (
+                                <div id="all-tasks-content">
+                                    <TaskList
+                                        onTaskItemClick={handleOpenDetailedView}
+                                        filteredTasks={filteredTasks}
+                                        isBulkEditing={isBulkEditing}
+                                        onToggleBulkEdit={handleToggleBulkEdit}
+                                        viewingCompleted={viewingCompleted}
+                                        showTodaysTasks={showTodaysTasks}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
 
