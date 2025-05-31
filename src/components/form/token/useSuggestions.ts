@@ -17,28 +17,39 @@ export const useSuggestions = ({
 }: UseSuggestionsProps) => {
   const [suggestions, setSuggestions] = useState<Suggestion>({ type: '', items: [] });
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
 
   // Check for potential auto-completion suggestions
-  const checkForSuggestions = () => {
-    if (!value || cursorPosition === 0) {
+  const checkForSuggestions = (currentValue?: string, currentPosition?: number) => {
+    const val = currentValue !== undefined ? currentValue : value;
+    const pos = currentPosition !== undefined ? currentPosition : cursorPosition;
+    if (!val || pos === 0) {
       setSuggestions({ type: '', items: [] });
       setPopoverOpen(false);
+      setSelectedIndex(-1);
       return;
     }
 
     // Get the word being typed
-    const textBeforeCursor = value.substring(0, cursorPosition);
+    const textBeforeCursor = val.substring(0, pos);
     
     // Check for @ mentions and suggest people
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
     if (lastAtIndex !== -1) {
       // Count existing @ symbols to enforce the limit of 2 people
-      const atCount = (value.match(/@/g) || []).length;
+      const atCount = (val.match(/@/g) || []).length;
       
       // Only show suggestions if we have fewer than 2 @ symbols or if we're editing an existing one
       if (atCount <= 2) {
         // Get text from @ to cursor as the search query
-        const query = textBeforeCursor.substring(lastAtIndex + 1).toLowerCase();
+        const potentialQuery = textBeforeCursor.substring(lastAtIndex + 1);
+        if (potentialQuery.endsWith(' ')) {
+          setSuggestions({ type: '', items: [] });
+          setPopoverOpen(false);
+          setSelectedIndex(-1);
+          return;
+        }
+        const query = potentialQuery.toLowerCase();
         
         // Show matching people or all people if just @ is typed
         if (query.length > 0) {
@@ -47,10 +58,12 @@ export const useSuggestions = ({
           );
           setSuggestions({ type: 'person', items: matchingPeople });
           setPopoverOpen(matchingPeople.length > 0);
+          setSelectedIndex(matchingPeople.length > 0 ? 0 : -1);
         } else {
           // When just @ is typed, show all people
           setSuggestions({ type: 'person', items: people });
           setPopoverOpen(people.length > 0);
+          setSelectedIndex(people.length > 0 ? 0 : -1);
         }
       }
       return;
@@ -59,7 +72,13 @@ export const useSuggestions = ({
     // Check for tag suggestions
     const lastHashIndex = textBeforeCursor.lastIndexOf('#');
     if (lastHashIndex !== -1) {
-      const query = textBeforeCursor.substring(lastHashIndex + 1).toLowerCase();
+      const potentialQuery = textBeforeCursor.substring(lastHashIndex + 1);
+      if (potentialQuery.endsWith(' ')) {
+        setSuggestions({ type: '', items: [] });
+        setPopoverOpen(false);
+        return;
+      }
+      const query = potentialQuery.toLowerCase();
       
       if (query.length > 0) {
         const matchingTags = tags.filter(
@@ -67,10 +86,12 @@ export const useSuggestions = ({
         );
         setSuggestions({ type: 'tag', items: matchingTags });
         setPopoverOpen(matchingTags.length > 0);
+        setSelectedIndex(matchingTags.length > 0 ? 0 : -1);
       } else {
         // Show all tags when just # is typed
         setSuggestions({ type: 'tag', items: tags });
         setPopoverOpen(tags.length > 0);
+        setSelectedIndex(tags.length > 0 ? 0 : -1);
       }
       return;
     }
@@ -78,6 +99,7 @@ export const useSuggestions = ({
     // No suggestions if not typing a tag or person
     setSuggestions({ type: '', items: [] });
     setPopoverOpen(false);
+    setSelectedIndex(-1);
   };
 
   // Apply a suggestion
@@ -111,6 +133,7 @@ export const useSuggestions = ({
     
     setSuggestions({ type: '', items: [] });
     setPopoverOpen(false);
+    setSelectedIndex(-1);
     
     return newText;
   };
@@ -119,14 +142,32 @@ export const useSuggestions = ({
   const closeSuggestions = () => {
     setSuggestions({ type: '', items: [] });
     setPopoverOpen(false);
+    setSelectedIndex(-1);
+  };
+
+  const selectNextSuggestion = () => {
+    if (suggestions.items.length > 0) {
+      setSelectedIndex(prevIndex => (prevIndex + 1) % suggestions.items.length);
+    }
+  };
+
+  const selectPreviousSuggestion = () => {
+    if (suggestions.items.length > 0) {
+      setSelectedIndex(prevIndex => 
+        (prevIndex - 1 + suggestions.items.length) % suggestions.items.length
+      );
+    }
   };
 
   return {
     suggestions,
     popoverOpen,
+    selectedIndex,
     checkForSuggestions,
     applySuggestion,
-    closeSuggestions
+    closeSuggestions,
+    selectNextSuggestion,
+    selectPreviousSuggestion
   };
 };
 

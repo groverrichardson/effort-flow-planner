@@ -6,6 +6,12 @@ export interface CSVTask {
   dueDate?: string;
   personNames?: string[];
   tagNames?: string[];
+  effortLevel?: number;
+  completed?: boolean;
+  completedDate?: string;
+  dueDateType?: string;
+  goLiveDate?: string;
+  targetDeadline?: string;
   status?: 'pending' | 'processing' | 'error' | 'success';
   error?: string;
 }

@@ -1,11 +1,13 @@
 
 import { addDays, addWeeks, addMonths, parse, isValid, getDay } from 'date-fns';
-import { Priority, EffortLevel } from '@/types';
+import { Priority, EffortLevel, ParsedTaskDetails } from '@/types';
+import { mapEffortLevel } from './parserUtils';
 
 // Traditional natural language parser without AI enhancement
-export function parseWithTraditional(input: string) {
-  const taskData: any = {};
-  const lowerInput = input.toLowerCase();
+export async function parseWithTraditional(input: string): Promise<ParsedTaskDetails | null> {
+  const taskData: Partial<ParsedTaskDetails> = {};
+  try {
+    const lowerInput = input.toLowerCase();
   
   // Extract title (everything before special syntax)
   let title = input;
@@ -52,23 +54,38 @@ export function parseWithTraditional(input: string) {
     taskData.priority = 'lowest' as Priority;
   }
   
-  // Extract effort level keywords and remove from title
-  const effortPatterns = [
-    { regex: /quick|few minutes|5 minutes/gi, level: 1 },
-    { regex: /30 minutes|half hour|short/gi, level: 2 },
-    { regex: /couple hours|few hours|this afternoon/gi, level: 4 },
-    { regex: /all day|one day|full day/gi, level: 8 },
-    { regex: /this week|several days/gi, level: 16 },
-    { regex: /couple weeks|few weeks/gi, level: 32 },
-    { regex: /month|long term|big project/gi, level: 64 }
-  ];
-  
-  for (const pattern of effortPatterns) {
-    if (pattern.regex.test(lowerInput)) {
-      title = title.replace(pattern.regex, '');
-      taskData.effortLevel = pattern.level as EffortLevel;
+  // --- Effort Parsing Logic (using centralized mapEffortLevel) ---
+  // Regex to find all effort phrases in the input
+  // This regex is primarily for identifying phrases to pass to mapEffortLevel and for removal from title.
+  // The detailed parsing is handled by mapEffortLevel from parserUtils.
+  const effortGlobalRegex = /\b(?:(\d+)\s*(minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|months?|mo)|(an?|one)\s+(minute|min|m|hour|hr|h|day|d|week|w|month|mo)|(a\s+)?(half\s+hour|half\s+day)|(a\s+)?(couple|few|several)\s*(hours?|hrs?|h|days?|d|weeks?|w)|(quick|short|all\s+day|full\s+day|this\s+afternoon|long\s+term|big\s+project))\b/gi;
+  let effortMatches;
+  let highestEffortLevel: EffortLevel | null = null;
+  let effortPhraseToRemove: string = '';
+
+  while ((effortMatches = effortGlobalRegex.exec(lowerInput)) !== null) {
+    const matchedPhrase = effortMatches[0];
+    const currentEffortLevel = mapEffortLevel(matchedPhrase); // Use imported mapEffortLevel
+    if (currentEffortLevel) {
+      if (highestEffortLevel === null || currentEffortLevel > highestEffortLevel) {
+        highestEffortLevel = currentEffortLevel;
+        effortPhraseToRemove = matchedPhrase; // Store the phrase that resulted in the highest effort
+      }
     }
   }
+
+  if (highestEffortLevel !== null) {
+    taskData.effortLevel = highestEffortLevel;
+    // Remove the specific effort phrase that contributed to the highest effort level from the title
+    if (effortPhraseToRemove) {
+      // Need to create a regex that matches the phrase case-insensitively
+      // Escape special characters in the phrase to be used in a regex
+      const escapedPhrase = effortPhraseToRemove.replace(/[.*+?^${}()|[\\\]\\]/g, '\\$&');
+      const phraseRegex = new RegExp(`\\b${escapedPhrase}\\b`, 'gi');
+      title = title.replace(phraseRegex, '');
+    }
+  }
+  // --- End Effort Parsing Logic ---
   
   // Extract date related information
   const today = new Date();
@@ -215,5 +232,9 @@ export function parseWithTraditional(input: string) {
     taskData.description = `Original input: ${input}`;
   }
   
-  return taskData;
+  return taskData as ParsedTaskDetails;
+  } catch (error) {
+    console.error('Error in traditional parsing:', error);
+    return null;
+  }
 }

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenuCheckboxItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
@@ -19,6 +19,10 @@ export const GoLiveFilterItem: React.FC<GoLiveFilterItemProps> = ({
   fullWidth
 }) => {
   if (!onSetFilterByGoLive) return null;
+
+  const handleToggle = useCallback(() => {
+    onSetFilterByGoLive(!filterByGoLive);
+  }, [onSetFilterByGoLive, filterByGoLive]);
   
   // If we're rendering the component as button (for mobile)
   if (size) {
@@ -27,7 +31,7 @@ export const GoLiveFilterItem: React.FC<GoLiveFilterItemProps> = ({
         <Button
           variant={filterByGoLive ? "default" : "outline"}
           size={size}
-          onClick={() => onSetFilterByGoLive(!filterByGoLive)}
+          onClick={handleToggle}
           className={fullWidth ? "w-full justify-between" : ""}
         >
           Has Go-Live Date {filterByGoLive ? "✓" : ""}
@@ -42,7 +46,7 @@ export const GoLiveFilterItem: React.FC<GoLiveFilterItemProps> = ({
       <DropdownMenuSeparator />
       <DropdownMenuCheckboxItem
         checked={filterByGoLive}
-        onCheckedChange={() => onSetFilterByGoLive(!filterByGoLive)}
+        onCheckedChange={handleToggle}
       >
         Has Go-Live Date
       </DropdownMenuCheckboxItem>

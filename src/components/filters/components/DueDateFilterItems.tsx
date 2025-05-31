@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
@@ -19,6 +19,11 @@ export const DueDateFilterItems: React.FC<DueDateFilterItemsProps> = ({
   fullWidth
 }) => {
   if (!onSetFilterByDueDate) return null;
+
+  const handleSetAll = useCallback(() => onSetFilterByDueDate('all'), [onSetFilterByDueDate]);
+  const handleSetToday = useCallback(() => onSetFilterByDueDate('today'), [onSetFilterByDueDate]);
+  const handleSetWeek = useCallback(() => onSetFilterByDueDate('week'), [onSetFilterByDueDate]);
+  const handleSetOverdue = useCallback(() => onSetFilterByDueDate('overdue'), [onSetFilterByDueDate]);
   
   // If we're rendering the component as buttons (for mobile)
   if (size) {
@@ -27,7 +32,7 @@ export const DueDateFilterItems: React.FC<DueDateFilterItemsProps> = ({
         <Button
           variant={filterByDueDate === 'all' ? "default" : "outline"}
           size={size}
-          onClick={() => onSetFilterByDueDate('all')}
+          onClick={handleSetAll}
           className={fullWidth ? "w-full justify-between" : ""}
         >
           All Dates
@@ -35,7 +40,7 @@ export const DueDateFilterItems: React.FC<DueDateFilterItemsProps> = ({
         <Button
           variant={filterByDueDate === 'today' ? "default" : "outline"}
           size={size}
-          onClick={() => onSetFilterByDueDate('today')}
+          onClick={handleSetToday}
           className={fullWidth ? "w-full justify-between mt-1" : ""}
         >
           Due Today
@@ -43,7 +48,7 @@ export const DueDateFilterItems: React.FC<DueDateFilterItemsProps> = ({
         <Button
           variant={filterByDueDate === 'week' ? "default" : "outline"}
           size={size}
-          onClick={() => onSetFilterByDueDate('week')}
+          onClick={handleSetWeek}
           className={fullWidth ? "w-full justify-between mt-1" : ""}
         >
           Due This Week
@@ -51,7 +56,7 @@ export const DueDateFilterItems: React.FC<DueDateFilterItemsProps> = ({
         <Button
           variant={filterByDueDate === 'overdue' ? "default" : "outline"}
           size={size}
-          onClick={() => onSetFilterByDueDate('overdue')}
+          onClick={handleSetOverdue}
           className={fullWidth ? "w-full justify-between mt-1" : ""}
         >
           Overdue
@@ -69,25 +74,25 @@ export const DueDateFilterItems: React.FC<DueDateFilterItemsProps> = ({
       
       <DropdownMenuCheckboxItem
         checked={filterByDueDate === 'all'}
-        onCheckedChange={() => onSetFilterByDueDate('all')}
+        onCheckedChange={handleSetAll}
       >
         All Dates
       </DropdownMenuCheckboxItem>
       <DropdownMenuCheckboxItem
         checked={filterByDueDate === 'today'}
-        onCheckedChange={() => onSetFilterByDueDate('today')}
+        onCheckedChange={handleSetToday}
       >
         Due Today
       </DropdownMenuCheckboxItem>
       <DropdownMenuCheckboxItem
         checked={filterByDueDate === 'week'}
-        onCheckedChange={() => onSetFilterByDueDate('week')}
+        onCheckedChange={handleSetWeek}
       >
         Due This Week
       </DropdownMenuCheckboxItem>
       <DropdownMenuCheckboxItem
         checked={filterByDueDate === 'overdue'}
-        onCheckedChange={() => onSetFilterByDueDate('overdue')}
+        onCheckedChange={handleSetOverdue}
       >
         Overdue
       </DropdownMenuCheckboxItem>

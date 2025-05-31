@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenuCheckboxItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { Person } from '@/types';
@@ -14,6 +14,78 @@ interface PeopleFilterItemsProps {
   compact?: boolean;
 }
 
+// Helper function to get initials from full name (moved to top-level)
+const getInitials = (name: string): string => {
+  // Improved to handle multi-word names better
+  return name
+    .split(' ')
+    .map(part => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .substring(0, 2); // Limit to 2 characters
+};
+
+// Memoized sub-component for DropdownMenuCheckboxItem
+interface MemoizedPersonCheckboxItemProps {
+  person: Person;
+  isSelected: boolean;
+  onTogglePerson: (personId: string) => void;
+}
+
+const MemoizedPersonCheckboxItem = memo<MemoizedPersonCheckboxItemProps>(({ person, isSelected, onTogglePerson }) => {
+  const handleCheckedChange = useCallback(() => {
+    onTogglePerson(person.id);
+  }, [onTogglePerson, person.id]);
+
+  return (
+    <DropdownMenuCheckboxItem
+      key={person.id}
+      checked={isSelected}
+      onCheckedChange={handleCheckedChange}
+    >
+      {person.name}
+    </DropdownMenuCheckboxItem>
+  );
+});
+MemoizedPersonCheckboxItem.displayName = 'MemoizedPersonCheckboxItem';
+
+// Memoized sub-component for Button variant
+interface MemoizedPersonButtonProps {
+  person: Person;
+  isSelected: boolean;
+  onTogglePerson: (personId: string) => void;
+  size: "sm" | "default";
+  className?: string;
+  fullWidth?: boolean;
+  compact?: boolean;
+}
+
+const MemoizedPersonButton = memo<MemoizedPersonButtonProps>(({ person, isSelected, onTogglePerson, size, className, fullWidth, compact }) => {
+  const handleClick = useCallback(() => {
+    onTogglePerson(person.id);
+  }, [onTogglePerson, person.id]);
+
+  // For buttons, show initials for names longer than 10 characters or with multiple words
+  const hasMultipleWords = person.name.trim().includes(' ');
+  const displayName = (person.name.length > 10 || hasMultipleWords)
+    ? getInitials(person.name) 
+    : person.name;
+
+  return (
+    <Button
+      key={person.id}
+      variant={isSelected ? "default" : "outline"}
+      size={compact ? "xs" : size}
+      onClick={handleClick}
+      className={`rounded-full ${compact ? "h-6 text-xs py-0" : ""}`.trim()}
+      title={person.name} // Show full name on hover
+    >
+      {displayName}
+    </Button>
+  );
+});
+MemoizedPersonButton.displayName = 'MemoizedPersonButton';
+
 export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
   people = [],
   selectedPeople = [],
@@ -27,42 +99,23 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
   const safePeopleArray = Array.isArray(people) ? people : [];
   const safeSelectedPeople = Array.isArray(selectedPeople) ? selectedPeople : [];
   
-  // Helper function to get initials from full name
-  const getInitials = (name: string): string => {
-    // Improved to handle multi-word names better
-    return name
-      .split(' ')
-      .map(part => part.charAt(0))
-      .join('')
-      .toUpperCase()
-      .substring(0, 2); // Limit to 2 characters
-  };
-  
   // If we're rendering as buttons (for mobile)
   if (size) {
     return (
-      <div className={`${className} flex flex-wrap gap-1`}>
+      <div className={className}>
         {safePeopleArray.length > 0 ? (
-          safePeopleArray.map((person) => {
-            // For buttons, show initials for names longer than 10 characters or with multiple words
-            const hasMultipleWords = person.name.trim().includes(' ');
-            const displayName = (person.name.length > 10 || hasMultipleWords)
-              ? getInitials(person.name) 
-              : person.name;
-            
-            return (
-              <Button
-                key={person.id}
-                variant={safeSelectedPeople.includes(person.id) ? "default" : "outline"}
-                size={compact ? "xs" : size}
-                onClick={() => onTogglePerson(person.id)}
-                className={`${fullWidth ? "justify-between" : ""} ${compact ? "h-6 text-xs py-0" : ""}`}
-                title={person.name} // Show full name on hover
-              >
-                {displayName}
-              </Button>
-            );
-          })
+          safePeopleArray.map((person) => (
+            <MemoizedPersonButton
+              key={person.id}
+              person={person}
+              isSelected={safeSelectedPeople.includes(person.id)}
+              onTogglePerson={onTogglePerson}
+              size={size}
+              className={className} // Pass own className to memoized component
+              fullWidth={fullWidth}
+              compact={compact}
+            />
+          ))
         ) : (
           <div className="text-muted-foreground text-xs">No people available</div>
         )}
@@ -75,13 +128,12 @@ export const PeopleFilterItems: React.FC<PeopleFilterItemsProps> = ({
     <>
       {safePeopleArray.length > 0 ? (
         safePeopleArray.map((person) => (
-          <DropdownMenuCheckboxItem
+          <MemoizedPersonCheckboxItem
             key={person.id}
-            checked={safeSelectedPeople.includes(person.id)}
-            onCheckedChange={() => onTogglePerson(person.id)}
-          >
-            {person.name}
-          </DropdownMenuCheckboxItem>
+            person={person}
+            isSelected={safeSelectedPeople.includes(person.id)}
+            onTogglePerson={onTogglePerson}
+          />
         ))
       ) : (
         <DropdownMenuLabel className="text-muted-foreground text-xs">

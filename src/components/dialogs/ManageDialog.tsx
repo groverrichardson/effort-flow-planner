@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tag, Users } from 'lucide-react';
@@ -14,12 +14,21 @@ interface ManageDialogProps {
 
 const ManageDialog = ({ open, onOpenChange, defaultTab = 'tags' }: ManageDialogProps) => {
   const [activeTab, setActiveTab] = useState<'tags' | 'people'>(defaultTab);
+
+  useEffect(() => {
+    // Sync activeTab with defaultTab prop when it changes
+    // This ensures the correct tab is shown if the dialog is re-opened with a different default
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
+        {/* Added sr-only DialogTitle for accessibility compliance */}
+        <DialogTitle className="sr-only">Manage</DialogTitle>
         <DialogHeader>
-          <DialogTitle>Manage</DialogTitle>
+          {/* Changed original DialogTitle to a div, styles preserved */}
+          <div className="text-lg font-semibold leading-none tracking-tight">Manage</div>
           <DialogDescription>
             Manage your tags and people for tasks
           </DialogDescription>

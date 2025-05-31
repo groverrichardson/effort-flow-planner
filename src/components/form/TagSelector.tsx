@@ -106,20 +106,7 @@ const TagSelector = ({
   return (
     <div>
       <label className="block text-xs font-medium mb-1">Tags</label>
-      <div className="flex flex-wrap gap-1 mb-1">
-        {selectedTags.map(tag => (
-          <Badge key={tag.id} variant="outline" className="tag-tag text-xs py-0 h-6 flex items-center gap-1">
-            {tag.name}
-            <button 
-              type="button" 
-              onClick={() => onToggleTag(tag.id)}
-              className="rounded-full hover:bg-accent ml-1 h-3 w-3 flex items-center justify-center"
-            >
-              <X size={10} />
-            </button>
-          </Badge>
-        ))}
-      </div>
+      {/* Popover for input and suggestions */}
       <Popover open={isPopoverOpen || forceOpen} onOpenChange={(open) => {
         setIsPopoverOpen(open);
         if (open) {
@@ -127,7 +114,12 @@ const TagSelector = ({
         }
       }}>
         <PopoverTrigger asChild>
-          <div className="relative" ref={triggerRef} onClick={handleTriggerClick}>
+          {/* Added conditional margin-bottom to this div */}
+          <div 
+            className={`relative ${selectedTags.length > 0 ? 'mb-2' : ''}`} 
+            ref={triggerRef} 
+            onClick={handleTriggerClick}
+          >
             <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={inputRef}
@@ -136,7 +128,7 @@ const TagSelector = ({
               onChange={handleInputChange}
               onFocus={handleInputFocus}
               onKeyDown={handleKeyDown}
-              className="pl-8 h-8 text-xs"
+              className="pl-8 h-10 text-xs"
             />
           </div>
         </PopoverTrigger>
@@ -171,6 +163,24 @@ const TagSelector = ({
           </div>
         </PopoverContent>
       </Popover>
+
+      {/* Selected tag pills - moved below the input and conditionally rendered */}
+      {selectedTags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {selectedTags.map(tag => (
+            <Badge key={tag.id} variant="outline" className="tag-tag text-xs py-0 h-6 flex items-center gap-1">
+              {tag.name}
+              <button 
+                type="button" 
+                onClick={() => onToggleTag(tag.id)}
+                className="rounded-full hover:bg-accent ml-1 h-3 w-3 flex items-center justify-center"
+              >
+                <X size={10} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -102,8 +102,8 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
 
   // Default desktop implementation
   return (
-    <div className="mb-4">
-      <div className="flex flex-wrap gap-2">
+    <div>
+      <div className="flex flex-wrap gap-1 items-start">
         <FilterDropdownMenu
           selectedTags={selectedTags}
           selectedPeople={selectedPeople}

@@ -25,11 +25,17 @@ interface ColumnMappingProps {
 }
 
 const FIELD_OPTIONS = [
-  { value: 'ignore', label: 'Ignore' }, // Changed empty string to 'ignore'
+  { value: 'ignore', label: 'Ignore' },
   { value: 'title', label: 'Title (required)' },
   { value: 'description', label: 'Description' },
   { value: 'priority', label: 'Priority' },
   { value: 'dueDate', label: 'Due Date' },
+  { value: 'effortLevel', label: 'Effort Level' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'completedDate', label: 'Completed Date' },
+  { value: 'dueDateType', label: 'Due Date Type' },
+  { value: 'goLiveDate', label: 'Go Live Date' },
+  { value: 'targetDeadline', label: 'Target Deadline' },
   { value: 'people', label: 'People' },
   { value: 'tags', label: 'Tags' },
 ];
@@ -64,7 +70,7 @@ const ColumnMapping = ({
         Match your CSV columns to task fields. Title is required.
       </p>
       
-      <div className="border rounded-md overflow-hidden">
+      <div className="border rounded-md overflow-hidden max-h-[400px] overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow>

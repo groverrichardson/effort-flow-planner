@@ -5,8 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { TaskProvider } from "./context/TaskContext";
+import { NoteProvider } from './context/NoteContext'; // Added NoteProvider
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Index from "./pages/Index";
+import NoteEditorPage from './components/pages/NoteEditorPage'; // Added NoteEditorPage
+import AllNotesPage from './components/pages/AllNotesPage'; // Added AllNotesPage
+import TaskDetailPage from './pages/TaskDetailPage'; // Added TaskDetailPage
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -21,7 +25,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   // Show loading state while checking authentication
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50">Loading...</div>;
   }
   
   // Redirect to login if not authenticated
@@ -44,6 +48,35 @@ const AppRoutes = () => {
             <Index />
           </ProtectedRoute>
         } />
+
+        {/* Note Editor Routes */}
+        <Route 
+          path="/tasks/:taskId/notes/new" 
+          element={<ProtectedRoute><NoteEditorPage /></ProtectedRoute>} 
+        />
+        <Route 
+          path="/notes/new" 
+          element={<ProtectedRoute><NoteEditorPage /></ProtectedRoute>} 
+        />
+        <Route 
+          path="/notes/:noteId/edit" 
+          element={<ProtectedRoute><NoteEditorPage /></ProtectedRoute>} 
+        />
+        <Route 
+          path="/tasks/:taskId/notes/:noteId/edit" 
+          element={<ProtectedRoute><NoteEditorPage /></ProtectedRoute>} 
+        />
+        <Route 
+          path="/notes"
+          element={<ProtectedRoute><AllNotesPage /></ProtectedRoute>}
+        />
+
+        {/* Task Detail Page Route */}
+        <Route 
+          path="/tasks/:taskId"
+          element={<ProtectedRoute><TaskDetailPage /></ProtectedRoute>}
+        />
+
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -56,9 +89,11 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <TaskProvider>
-          <Toaster />
-          <Sonner />
-          <AppRoutes />
+          <NoteProvider> { /* Added NoteProvider wrapper */ }
+            <Toaster />
+            <Sonner />
+            <AppRoutes />
+          </NoteProvider>
         </TaskProvider>
       </AuthProvider>
     </TooltipProvider>

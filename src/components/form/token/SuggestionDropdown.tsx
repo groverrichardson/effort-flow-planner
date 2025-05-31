@@ -6,12 +6,14 @@ interface SuggestionDropdownProps {
   popoverOpen: boolean;
   suggestions: Suggestion;
   applySuggestion: (suggestion: { id: string, name: string }) => void;
+  selectedIndex: number;
 }
 
 const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({ 
   popoverOpen, 
   suggestions, 
-  applySuggestion 
+  applySuggestion, 
+  selectedIndex
 }) => {
   if (!popoverOpen || suggestions.items.length === 0) return null;
   
@@ -23,19 +25,18 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
         left: '10px',
       }}
     >
-      <div className="px-3 py-2 border-b text-sm font-medium">
-        {suggestions.type === 'tag' ? 'Tag Suggestions' : 'People Suggestions'}
-      </div>
       <div className="p-2 max-h-[150px] overflow-y-auto">
         {suggestions.items.length === 0 ? (
           <div className="px-3 py-2.5 text-sm text-muted-foreground">
             No {suggestions.type === 'tag' ? 'tags' : 'people'} found
           </div>
         ) : (
-          suggestions.items.map((item) => (
+          suggestions.items.map((item, index) => (
             <div
               key={item.id}
-              className="px-3 py-2 hover:bg-accent cursor-pointer text-sm flex items-center border-b last:border-b-0"
+              className={`px-3 py-2 hover:bg-accent hover:text-accent-foreground cursor-pointer text-sm flex items-center border-b last:border-b-0 ${
+                index === selectedIndex ? 'bg-accent text-accent-foreground' : ''
+              }`}
               onClick={() => applySuggestion(item)}
             >
               <span className="mr-2">{suggestions.type === 'tag' ? '#' : '@'}</span>

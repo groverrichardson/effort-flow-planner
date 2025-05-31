@@ -1,0 +1,34 @@
+# Custom Instructions for Cascade Test Coverage
+
+## Goal
+
+Prioritize comprehensive test coverage, focusing on new features and addressing gaps in existing code, while ensuring code quality and preventing unintended UI modifications.
+
+## Principles
+
+-   **New Feature Focus:** New features should be the primary target for test coverage.
+-   **Functionality and UI:** Tests should cover both the functionality and UI of components.
+-   **Complete Implementation:** Tests should only be written after the feature is fully implemented and working correctly.
+-   **Existing Code Coverage:** Identify and address gaps in test coverage for existing code.
+-   **Code Quality:** Maintain high code quality and prevent unintended UI modifications.
+-   **Accessibility Headers:** If a header, subheader, or subtitle is required _solely_ for accessibility, include it in the markup but render it hidden in the UI (e.g., via `aria-label` or visually hidden CSS). Do not display it on the front end.
+
+## Workflow
+
+1. **Develop New Feature**  
+   Implement the feature and verify its correctness manually.
+2. **Write Tests**  
+   Create unit, integration, and UI tests covering the new feature’s behavior and interface.
+3. **Address Existing Coverage**  
+   Run coverage analysis, pinpoint gaps in legacy code, and write tests to fill them.
+4. **User Approval**  
+   If any test file changes are detected, pause the build and prompt the user:
+    > “New or updated tests are ready—do you approve applying them?”
+5. **Apply Changes**  
+   Only merge or update test files once the user explicitly approves.
+
+## Additional Instruction
+
+-   Do **not** add any visible headers, subheaders, or subtitles in sections or modals unless the user explicitly requests them.
+-   When accessibility demands a label or heading, include it in the code but ensure it’s visually hidden (e.g., `.sr-only`).
+-   I’ll be eventually turning this into a mobile app using median.co so use libraries and tools that will be compatible for that transition

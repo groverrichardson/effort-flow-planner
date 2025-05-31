@@ -28,18 +28,14 @@ const BulkImportDialog = ({
         <DialogTrigger asChild>
           {trigger}
         </DialogTrigger>
-      ) : (
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1">
-            <UploadIcon className="h-4 w-4" />
-            Import CSV
-          </Button>
-        </DialogTrigger>
-      )}
-      <DialogContent className="sm:max-w-md md:max-w-xl">
+      ) : null}
+      <DialogContent className="sm:max-w-lg md:max-w-2xl lg:max-w-4xl">
+        {/* Added sr-only DialogTitle for accessibility compliance */}
+        <DialogTitle className="sr-only">Bulk Import Tasks</DialogTitle>
         <DialogHeader>
-          <DialogTitle>Bulk Import Tasks</DialogTitle>
-          <DialogDescription>
+          {/* Changed original DialogTitle to a div, styles preserved */}
+          <div className="text-lg font-semibold leading-none tracking-tight" id="bulk-import-dialog-title">Bulk Import Tasks</div>
+          <DialogDescription id="bulk-import-dialog-description">
             Import multiple tasks at once using a CSV file.
           </DialogDescription>
         </DialogHeader>

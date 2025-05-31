@@ -11,6 +11,7 @@ import { ImportProgressBar } from './ImportProgressBar';
 import { CSVHelpAlert } from './CSVHelpAlert';
 import { parseRawCSV, createInitialColumnMap, generateTasksFromCSV } from './CSVUtils';
 import { CSVTask, ParsedCSVData } from './types';
+import { TaskStatus, Priority, EffortLevel } from '@/types'; // Added TaskStatus, Priority, EffortLevel for explicit typing
 
 const CSVTaskImporter = () => {
   const { addTask, tags, people, addTag, addPerson } = useTaskContext();
@@ -110,12 +111,13 @@ const CSVTaskImporter = () => {
       const newTask = {
         title: enhancedTaskData.title || task.title,
         description: task.description || enhancedTaskData.description || '',
-        priority: task.priority || enhancedTaskData.priority || 'normal',
+        status: TaskStatus.PENDING, // Added default status
+        priority: task.priority || enhancedTaskData.priority || Priority.NORMAL,
         dueDate: enhancedTaskData.dueDate || (task.dueDate ? new Date(task.dueDate) : null),
         dueDateType: enhancedTaskData.dueDateType || 'by',
         targetDeadline: enhancedTaskData.targetDeadline || null,
         goLiveDate: enhancedTaskData.goLiveDate || null,
-        effortLevel: enhancedTaskData.effortLevel || 4,
+        effortLevel: enhancedTaskData.effortLevel || EffortLevel.M, // Default to Medium effort
         completed: false,
         completedDate: null,
         tags: taskTags,
@@ -161,14 +163,8 @@ const CSVTaskImporter = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Bulk Import Tasks</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Import multiple tasks using a CSV file. Map your CSV columns to task fields.
-        </p>
-      </div>
-      
+    <div className="space-y-4 pt-4">
+      {/* Header removed, as it's now handled by BulkImportDialog */}
       <CSVFileUploader 
         file={file} 
         onFileChange={handleFileChange} 

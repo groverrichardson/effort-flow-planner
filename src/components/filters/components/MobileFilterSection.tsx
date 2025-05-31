@@ -12,7 +12,7 @@ import { DueDateFilterItems } from './DueDateFilterItems';
 import { GoLiveFilterItem } from './GoLiveFilterItem';
 
 // Mobile filters component for sidebar/hamburger menu
-interface MobileFiltersProps {
+export interface MobileFiltersProps {
   selectedTags: string[];
   selectedPeople: string[];
   selectedPriorities: Priority[];
@@ -80,41 +80,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
      selectedPriorities.length > 0 || filterByDueDate !== 'all' || filterByGoLive);
   
   return (
-    <div className="space-y-4 pr-1 h-full">
-      <h3 className="font-medium text-sm mb-2">Filters</h3>
-
-      {/* Task view toggles */}
-      {onShowAllActive && onShowToday && onShowCompleted && (
-        <div className="space-y-1 mb-4">
-          <div className="text-xs font-medium">View</div>
-          <div className="space-y-1">
-            <Button
-              variant={!showTodaysTasks && !viewingCompleted ? "default" : "outline"}
-              size="sm"
-              onClick={onShowAllActive}
-              className="w-full justify-start"
-            >
-              All Active Tasks
-            </Button>
-            <Button
-              variant={showTodaysTasks ? "default" : "outline"}
-              size="sm"
-              onClick={onShowToday}
-              className="w-full justify-start"
-            >
-              Due Today
-            </Button>
-            <Button
-              variant={viewingCompleted ? "default" : "outline"}
-              size="sm"
-              onClick={onShowCompleted}
-              className="w-full justify-start"
-            >
-              Completed Today
-            </Button>
-          </div>
-        </div>
-      )}
+    <div className="space-y-4 pr-1">
 
       {/* Active filter reset */}
       {activeFilters && (
@@ -145,7 +111,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
       {safeTags.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-medium">Tags</div>
-          <ScrollArea className="h-28 rounded-md border">
+          <ScrollArea className="min-h-8 rounded-md border dark:border-slate-700 max-h-28">
             <div className="p-1">
               <TagFilterItems
                 tags={safeTags}
@@ -165,7 +131,7 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
       {safePeople.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-medium">People</div>
-          <ScrollArea className="h-28 rounded-md border">
+          <ScrollArea className="min-h-8 rounded-md border dark:border-slate-700 max-h-28">
             <div className="p-1">
               <PeopleFilterItems
                 people={safePeople}

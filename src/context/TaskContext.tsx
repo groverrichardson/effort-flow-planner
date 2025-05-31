@@ -1,34 +1,39 @@
-
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Task, Tag, Person, Priority, EffortLevel } from '@/types';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
+import { Task, Tag, Person, Priority, EffortLevel, RecurrenceRule, TaskStatus } from '@/types';
 import { TaskService } from '@/services/TaskService';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
 
-interface TaskContextType {
+export interface TaskContextType {
   tasks: Task[];
   tags: Tag[];
   people: Person[];
-  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  recurrenceRules: RecurrenceRule[]; // Add recurrenceRules state
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'is_archived'>) => void;
   updateTask: (task: Task) => void;
-  deleteTask: (taskId: string) => void;
+  archiveTask: (taskId: string) => void; // Renamed from deleteTask
+  deleteTask: (taskId: string) => void; // For hard deletion
   completeTask: (taskId: string) => void;
   addTag: (name: string) => Promise<Tag>;
-  updateTag: (tag: Tag) => void;
+  // updateTag: (tag: Tag) => Promise<void>; // Removed as it's not in TaskService
   deleteTag: (tagId: string) => void;
   addPerson: (name: string) => Promise<Person>;
   updatePerson: (person: Person) => void;
   deletePerson: (personId: string) => void;
   getTodaysCompletedTasks: () => Task[];
+  getArchivedTasks: () => Task[]; // Added for archived tasks
   loading: boolean;
+  getRecurrenceRuleById: (id: string) => RecurrenceRule | undefined;
+  getTaskById: (id: string) => Task | undefined;
 }
 
-const TaskContext = createContext<TaskContextType | undefined>(undefined);
+export const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export function TaskProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
+  const [recurrenceRules, setRecurrenceRules] = useState<RecurrenceRule[]>([]); // State for recurrence rules
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -38,15 +43,27 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       if (user) {
         setLoading(true);
         try {
-          const [tasksData, tagsData, peopleData] = await Promise.all([
-            TaskService.getTasks(),
+          // TODO: Implement TaskService.getRecurrenceRules() properly. Using a placeholder for now.
+          const getRecurrenceRulesPlaceholder = async (): Promise<RecurrenceRule[]> => {
+            console.warn('TaskService.getRecurrenceRules() is not implemented. Returning empty array.');
+            return Promise.resolve([]);
+          };
+
+          const [tasksData, tagsData, peopleData, fetchedRecurrenceRulesData] = await Promise.all([
+            TaskService.getTasks(true), // Fetch all tasks including archived
             TaskService.getTags(),
-            TaskService.getPeople()
+            TaskService.getPeople(),
+            getRecurrenceRulesPlaceholder() // Using placeholder
           ]);
           
-          setTasks(tasksData);
-          setTags(tagsData);
-          setPeople(peopleData);
+          console.log('[TaskContext] Raw tasksData from Service:', tasksData); // DEBUG
+          setTasks(tasksData || []);
+          console.log('[TaskContext] Raw tagsData from Service:', tagsData); // DEBUG
+          setTags(tagsData || []);
+          console.log('[TaskContext] Raw peopleData from Service:', peopleData); // DEBUG
+          setPeople(peopleData || []);
+          console.log('[TaskContext] Raw recurrenceRulesData from Service:', fetchedRecurrenceRulesData); // DEBUG
+          setRecurrenceRules(fetchedRecurrenceRulesData || []);
         } catch (error) {
           console.error('Error loading data:', error);
           toast({
@@ -62,6 +79,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         setTasks([]);
         setTags([]);
         setPeople([]);
+        setRecurrenceRules([]); // Clear recurrence rules
         setLoading(false);
       }
     };
@@ -69,7 +87,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     loadData();
   }, [user]);
 
-  const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addTask = useCallback(async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'is_archived'>) => {
     if (!user) {
       toast({
         title: 'Error',
@@ -84,30 +102,58 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       
       if (newTask) {
         setTasks(prev => [newTask, ...prev]);
+        toast({
+          title: 'Success!',
+          description: 'Task created successfully.',
+          variant: 'default', 
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to create task. Please try again.',
+          variant: 'destructive'
+        });
       }
     } catch (error) {
       console.error('Error adding task:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create task',
+        description: 'An unexpected error occurred while creating the task.',
         variant: 'destructive'
       });
     }
-  };
+  }, [user, setTasks]);
 
-  const updateTask = async (updatedTask: Task) => {
+  const updateTask = useCallback(async (updatedTaskData: Task) => {
     if (!user) return;
+
+    const { id, createdAt, updatedAt, userId, ...taskUpdates } = updatedTaskData;
     
     try {
-      await TaskService.updateTask(updatedTask);
+      const updatedTaskResult = await TaskService.updateTask(id, taskUpdates);
+      console.log('[TaskContext] updatedTaskResult from TaskService:', updatedTaskResult); // DEBUG: Inspect value
       
-      setTasks(prev => 
-        prev.map(task => 
-          task.id === updatedTask.id 
-            ? { ...updatedTask, updatedAt: new Date() } 
-            : task
-        )
-      );
+      if (updatedTaskResult) {
+        setTasks(prev => 
+          prev.map(task => 
+            task.id === updatedTaskResult.id ? updatedTaskResult : task
+          )
+        );
+        toast({
+          title: 'Success!',
+          description: 'Task updated successfully.',
+          variant: 'default',
+        });
+      } else {
+        // This case might occur if TaskService.updateTask returns null on failure before throwing
+        // Or if the update didn't result in a modified task object being returned (though unlikely for a successful update)
+        console.warn('Update task did not return a result for task ID:', id);
+        toast({
+          title: 'Error',
+          description: 'Failed to update task. The update did not return a result.',
+          variant: 'destructive'
+        });
+      }
     } catch (error) {
       console.error('Error updating task:', error);
       toast({
@@ -116,9 +162,50 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         variant: 'destructive'
       });
     }
-  };
+  }, [user, setTasks]);
 
-  const deleteTask = async (taskId: string) => {
+  const archiveTask = useCallback(async (taskId: string) => {
+    if (!user) return;
+    
+    try {
+      // Update the task's is_archived status in the local state
+      setTasks(prevTasks => {
+        console.log(`[TaskContext] archiveTask - Attempting to archive task ID: ${taskId}`);
+        const newTasks = prevTasks.map(task =>
+          task.id === taskId
+            ? { ...task, is_archived: true, status: TaskStatus.CANCELLED } // Mark as archived and set status
+            : task
+        );
+        const updatedTask = newTasks.find(t => t.id === taskId);
+        console.log(`[TaskContext] archiveTask - Task ${taskId} updated in local state:`, JSON.stringify(updatedTask));
+        console.log(`[TaskContext] archiveTask - Total tasks after update: ${newTasks.length}`);
+        return newTasks;
+      });
+      
+      // Then send the archive request to the backend
+      await TaskService.archiveTask(taskId);
+      
+      toast({
+        title: 'Task Archived',
+        description: 'The task has been successfully archived.',
+      });
+    } catch (error) {
+      console.error('Error archiving task:', error);
+      
+      // If there's an error, refresh the tasks from the backend to restore correct state
+      toast({
+        title: 'Error',
+        description: 'Failed to archive task.',
+        variant: 'destructive'
+      });
+      
+      // Reload the tasks to ensure UI is in sync with backend
+      const tasksData = await TaskService.getTasks();
+      setTasks(tasksData);
+    }
+  }, [user, setTasks]);
+
+  const deleteTask = useCallback(async (taskId: string) => {
     if (!user) return;
     
     try {
@@ -130,8 +217,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       await TaskService.deleteTask(taskId);
       
       toast({
-        title: 'Task deleted',
-        description: 'Task has been successfully removed'
+        title: 'Task Deleted',
+        description: 'The task has been successfully deleted.',
       });
     } catch (error) {
       console.error('Error deleting task:', error);
@@ -147,9 +234,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const tasksData = await TaskService.getTasks();
       setTasks(tasksData);
     }
-  };
+  }, [user, setTasks]);
 
-  const completeTask = async (taskId: string) => {
+  const completeTask = useCallback(async (taskId: string) => {
     if (!user) return;
     
     try {
@@ -170,9 +257,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         variant: 'destructive'
       });
     }
-  };
+  }, [user, setTasks]);
 
-  const addTag = async (name: string): Promise<Tag> => {
+  const addTag = useCallback(async (name: string): Promise<Tag> => {
     if (!user) {
       toast({
         title: 'Error',
@@ -187,6 +274,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       
       if (newTag) {
         setTags(prev => [...prev, newTag]);
+        // No need to update tasks here as new tags are not yet associated
         return newTag;
       }
       throw new Error('Failed to create tag');
@@ -199,40 +287,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       });
       throw error;
     }
-  };
+  }, [user, setTags]);
 
-  const updateTag = async (updatedTag: Tag) => {
-    if (!user) return;
-    
-    try {
-      await TaskService.updateTag(updatedTag);
-      
-      setTags(prev => 
-        prev.map(tag => 
-          tag.id === updatedTag.id ? updatedTag : tag
-        )
-      );
-      
-      // Update tags in tasks
-      setTasks(prev => 
-        prev.map(task => ({
-          ...task,
-          tags: task.tags.map(tag => 
-            tag.id === updatedTag.id ? updatedTag : tag
-          )
-        }))
-      );
-    } catch (error) {
-      console.error('Error updating tag:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update tag',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const deleteTag = async (tagId: string) => {
+  const deleteTag = useCallback(async (tagId: string) => {
     if (!user) return;
     
     try {
@@ -255,9 +312,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         variant: 'destructive'
       });
     }
-  };
+  }, [user, setTags, setTasks]);
 
-  const addPerson = async (name: string): Promise<Person> => {
+  const addPerson = useCallback(async (name: string): Promise<Person> => {
     if (!user) {
       toast({
         title: 'Error',
@@ -284,9 +341,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       });
       throw error;
     }
-  };
+  }, [user, setPeople]);
 
-  const updatePerson = async (updatedPerson: Person) => {
+  const updatePerson = useCallback(async (updatedPerson: Person) => {
     if (!user) return;
     
     try {
@@ -315,9 +372,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         variant: 'destructive'
       });
     }
-  };
+  }, [user, setPeople, setTasks]);
 
-  const deletePerson = async (personId: string) => {
+  const deletePerson = useCallback(async (personId: string) => {
     if (!user) return;
     
     try {
@@ -340,9 +397,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         variant: 'destructive'
       });
     }
-  };
+  }, [user, setPeople, setTasks]);
 
-  const getTodaysCompletedTasks = () => {
+  const getTodaysCompletedTasks = useCallback(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -354,28 +411,71 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       
       return completedDate.getTime() === today.getTime();
     });
-  };
+  }, [tasks]);
 
-  const value = {
+  const getArchivedTasks = useCallback(() => { // Added for archived tasks
+    const archived = tasks.filter(task => task.is_archived === true);
+    console.log('[TaskContext] getArchivedTasks returning:', archived); // DEBUG
+    return archived;
+  }, [tasks]);
+
+  // Function to get a specific recurrence rule by ID
+  const getRecurrenceRuleById = useCallback((id: string): RecurrenceRule | undefined => {
+    return recurrenceRules.find(rule => rule.id === id);
+  }, [recurrenceRules]);
+
+  const getTaskById = useCallback((id: string): Task | undefined => {
+    return tasks.find(task => task.id === id);
+  }, [tasks]);
+
+  const contextValue = useMemo(() => ({
     tasks,
     tags,
     people,
+    recurrenceRules,
     addTask,
     updateTask,
-    deleteTask,
+    archiveTask, // Renamed
+    deleteTask, // New hard delete
     completeTask,
     addTag,
-    updateTag,
+    // updateTag, // Removed
     deleteTag,
     addPerson,
     updatePerson,
     deletePerson,
     getTodaysCompletedTasks,
-    loading
-  };
+    getArchivedTasks, // Added
+    loading,
+    getRecurrenceRuleById,
+    getTaskById,
+  }), [
+    tasks, 
+    tags, 
+    people, 
+    recurrenceRules, 
+    addTask, 
+    updateTask, 
+    archiveTask, // Renamed
+    deleteTask, // New hard delete
+    completeTask, 
+    addTag, 
+    // updateTag, // Removed
+    deleteTag, 
+    addPerson, 
+    updatePerson, 
+    deletePerson, 
+    getTodaysCompletedTasks, 
+    getArchivedTasks, // Added
+    loading, 
+    getRecurrenceRuleById,
+    getTaskById
+  ]);
+
+  console.log('[TaskProvider] PROVIDING contextValue.tasks:', contextValue.tasks ? contextValue.tasks.length : 'undefined/empty', JSON.stringify(contextValue.tasks?.map(t => t.id))); // Log task IDs for brevity
 
   return (
-    <TaskContext.Provider value={value}>
+    <TaskContext.Provider value={contextValue}>
       {children}
     </TaskContext.Provider>
   );

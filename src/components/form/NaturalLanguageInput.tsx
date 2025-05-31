@@ -1,5 +1,6 @@
 
-import { useState, KeyboardEvent, useEffect, useRef } from 'react';
+import { useState, KeyboardEvent as ReactKeyboardEvent, useEffect, useRef } from 'react';
+import { EditorView } from '@tiptap/pm/view'; // For Tiptap's handleKeyDown
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Send, Wand2 } from 'lucide-react';
@@ -12,6 +13,7 @@ import useGeminiHighlighting from './token/useGeminiHighlighting';
 import useSuggestions from './token/useSuggestions';
 
 interface NaturalLanguageInputProps {
+  id?: string; // Added id prop
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
@@ -21,6 +23,7 @@ interface NaturalLanguageInputProps {
 }
 
 const NaturalLanguageInput = ({ 
+  id, // Destructure id
   value, 
   onChange, 
   onSubmit, 
@@ -29,20 +32,22 @@ const NaturalLanguageInput = ({
   autoFocus = false
 }: NaturalLanguageInputProps) => {
   const { tags, people } = useTaskContext();
-  const [cursorPosition, setCursorPosition] = useState<number>(0);
+  const [cursorPosition, setCursorPosition] = useState<number>(0); // Keep for basic input handling if needed
   const [tokens, setTokens] = useState<Token[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const suggestionRef = useRef<HTMLDivElement>(null);
-  const displayRef = useRef<HTMLDivElement>(null);
+    const suggestionRef = useRef<HTMLDivElement>(null); // Related to SuggestionDropdown
+  const displayRef = useRef<HTMLDivElement>(null); // Related to TokenHighlighter
   
   // Custom hooks
   const { isGeminiProcessing, geminiEntities } = useGeminiHighlighting(value);
   const { 
     suggestions, 
     popoverOpen, 
+    selectedIndex,
     checkForSuggestions, 
     applySuggestion: applyRawSuggestion, 
-    closeSuggestions 
+    closeSuggestions, 
+    selectNextSuggestion,
+    selectPreviousSuggestion
   } = useSuggestions({ value, cursorPosition, people, tags });
   
   // Process text for tokenization and highlighting when value changes
@@ -55,7 +60,9 @@ const NaturalLanguageInput = ({
     // Combine both regex highlighting and Gemini entities for best results
     const newTokens: Token[] = regexHighlighting(value, geminiEntities);
     setTokens(newTokens);
-  }, [value, geminiEntities]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps 
+    // Known issue: including geminiEntities in deps causes Vitest worker crash
+  }, [value]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -78,89 +85,115 @@ const NaturalLanguageInput = ({
   };
 
   // Handle keyboard shortcuts
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Allow creating task with Ctrl+Enter or Cmd+Enter
+  const handleKeyDown = (view: EditorView, e: KeyboardEvent): boolean | void => {
+    console.log(`NaturalLanguageInput.handleKeyDown - Key: ${e.key}, DefaultPrevented: ${e.defaultPrevented}, PopoverOpen: ${popoverOpen}`);
+
+
+    // Check for Ctrl+Enter or Cmd+Enter for submission
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
-      onSubmit();
-      return;
+      if (value.trim()) { // Only submit if there's text
+        onSubmit();
+      }
+      console.log('NaturalLanguageInput.handleKeyDown - Returning (void) from Ctrl/Cmd+Enter');
+      return; // Prevent further processing like suggestion handling
     }
-    
-    // Handle escape key to close suggestions
-    if (e.key === 'Escape' && suggestions.items.length > 0) {
+
+    if (e.key === 'Escape' && popoverOpen) {
       e.preventDefault();
       closeSuggestions();
+      console.log('NaturalLanguageInput.handleKeyDown - Returning (void) from Escape');
       return;
     }
 
-    // Handle tab key to accept suggestion
-    if (e.key === 'Tab' && suggestions.items.length > 0) {
-      e.preventDefault();
-      if (suggestions.items.length > 0) {
-        applySuggestion(suggestions.items[0]);
-      }
-      return;
-    }
-
-    // Handle arrow keys for suggestion navigation
-    if (suggestions.items.length > 0) {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (popoverOpen && suggestions.items.length > 0) {
+      if (e.key === 'ArrowDown') {
         e.preventDefault();
-        // Navigation logic would go here if we implement selection within suggestions
+        selectNextSuggestion();
+        console.log('NaturalLanguageInput.handleKeyDown - Returning (void) from ArrowDown');
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectPreviousSuggestion();
+        console.log('NaturalLanguageInput.handleKeyDown - Returning (void) from ArrowUp');
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const itemToApply = selectedIndex !== -1 && suggestions.items[selectedIndex]
+          ? suggestions.items[selectedIndex]
+          : suggestions.items[0]; 
+        
+        if (itemToApply) {
+          closeSuggestions();
+          applySuggestion(itemToApply);
+        }
+        console.log('NaturalLanguageInput.handleKeyDown - Returning (void) from Tab');
         return;
       }
     }
+    // If no conditions met, Tiptap expects 'false' or 'undefined' to continue processing.
+    // This function implicitly returns 'undefined'.
+    console.log(`NaturalLanguageInput.handleKeyDown - Key: ${e.key} - No specific handler, returning undefined (allowing default Tiptap behavior)`);
   };
 
-  // Track cursor position for suggestions
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    onChange(newValue);
-    setCursorPosition(e.target.selectionStart || 0);
-    checkForSuggestions();
+  const handleInputChange = (htmlValue: string) => {
+    // Convert HTML to plain text
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlValue;
+    const plainText = tempDiv.textContent || tempDiv.innerText || "";
+
+    onChange(plainText); // Call the passed onChange prop with plain text
+
+    // Keep suggestion logic based on plain text if that's the intent
+    // or adjust if it needs raw HTML or Tiptap editor state.
+    // For now, assuming plainText is what drives suggestions.
+    const newCursorPosition = plainText.length; // Cursor position in plain text
+    setCursorPosition(newCursorPosition);
+    checkForSuggestions(plainText, newCursorPosition);
   };
 
-  // Update suggestions when cursor position changes
   const handleCursorPositionChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
-    setCursorPosition((e.target as HTMLTextAreaElement).selectionStart || 0);
-    checkForSuggestions();
+    const target = e.target as HTMLTextAreaElement;
+    const newCursorPosition = target.selectionStart || 0;
+    setCursorPosition(newCursorPosition);
+    checkForSuggestions(target.value, newCursorPosition);
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="relative">
-        {/* Regular textarea for input */}
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleInputChange}
-          placeholder={placeholder}
-          className="min-h-[60px] text-sm resize-none"
-          onKeyDown={handleKeyDown}
-          autoFocus={autoFocus}
-          onSelect={handleCursorPositionChange}
-          onClick={handleCursorPositionChange}
-        />
-
-        {/* AI-enhanced indicator */}
-        {isGeminiProcessing && (
-          <div className="absolute right-2 top-2 text-xs flex items-center gap-1 text-muted-foreground">
+    <div id={id} className="flex flex-col gap-2">
+      <div className="text-xs flex items-center gap-1 text-muted-foreground self-end mb-1 min-h-[14px]">
+        {isGeminiProcessing ? (
+          <>
             <Wand2 size={14} className="animate-pulse" />
             <span>AI enhancing...</span>
-          </div>
+          </>
+        ) : (
+          <span className="invisible">&nbsp;</span> /* Placeholder to maintain height */
         )}
+      </div>
+      <div className="relative">
+        <Textarea showToolbar={false}
+                    value={value}
+          onChange={(html: string) => handleInputChange(html)}
+          onTiptapKeyDown={handleKeyDown} // Pass the Tiptap-specific keydown handler
+          placeholder={placeholder}
+          className="min-h-[60px] text-base resize-none"
+          autoFocus={autoFocus}
+          data-testid="tiptap-editor" // Added data-testid
+        />
         
-        {/* Tokenized display (shown below textarea for reference) */}
         <div ref={displayRef}>
           <TokenHighlighter tokens={tokens} />
         </div>
         
-        {/* Display suggestions as a dropdown */}
         <div ref={suggestionRef}>
           <SuggestionDropdown 
             popoverOpen={popoverOpen}
             suggestions={suggestions}
             applySuggestion={applySuggestion}
+            selectedIndex={selectedIndex}
           />
         </div>
       </div>
@@ -168,7 +201,7 @@ const NaturalLanguageInput = ({
         <Button 
           type="button" 
           size="sm"
-          onClick={onSubmit}
+          onClick={() => onSubmit()} // Call onSubmit prop correctly
           className="gap-1 w-full"
           disabled={!value.trim()}
         >

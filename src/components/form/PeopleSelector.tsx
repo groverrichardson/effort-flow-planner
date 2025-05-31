@@ -20,6 +20,21 @@ const PeopleSelector = ({
   onAddNewPerson 
 }: PeopleSelectorProps) => {
   const [personSearch, setPersonSearch] = useState('');
+
+  const formatPersonName = (name: string): string => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return '';
+    }
+    const parts = trimmedName.split(' ');
+    if (parts.length === 1) {
+      return parts[0]; // Single name, return as is
+    }
+    // Multiple parts: First Name(s) + Last Initial.
+    const lastNameInitial = parts[parts.length - 1].charAt(0);
+    const firstNameParts = parts.slice(0, parts.length - 1);
+    return `${firstNameParts.join(' ')} ${lastNameInitial}.`;
+  };
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [forceOpen, setForceOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -106,20 +121,7 @@ const PeopleSelector = ({
   return (
     <div>
       <label className="block text-xs font-medium mb-1">People</label>
-      <div className="flex flex-wrap gap-1 mb-1">
-        {selectedPeople.map(person => (
-          <Badge key={person.id} variant="outline" className="people-tag text-xs py-0 h-6 flex items-center gap-1">
-            {person.name}
-            <button 
-              type="button" 
-              onClick={() => onTogglePerson(person.id)}
-              className="rounded-full hover:bg-accent ml-1 h-3 w-3 flex items-center justify-center"
-            >
-              <X size={10} />
-            </button>
-          </Badge>
-        ))}
-      </div>
+      {/* Popover for input and suggestions */}
       <Popover open={isPopoverOpen || forceOpen} onOpenChange={(open) => {
         setIsPopoverOpen(open);
         if (open) {
@@ -127,7 +129,12 @@ const PeopleSelector = ({
         }
       }}>
         <PopoverTrigger asChild>
-          <div className="relative" ref={triggerRef} onClick={handleTriggerClick}>
+          {/* Added conditional margin-bottom to this div */}
+          <div 
+            className={`relative ${selectedPeople.length > 0 ? 'mb-2' : ''}`} 
+            ref={triggerRef} 
+            onClick={handleTriggerClick}
+          >
             <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={inputRef}
@@ -136,7 +143,7 @@ const PeopleSelector = ({
               onChange={handleInputChange}
               onFocus={handleInputFocus}
               onKeyDown={handleKeyDown}
-              className="pl-8 h-8 text-xs"
+              className="pl-8 h-10 text-xs"
             />
           </div>
         </PopoverTrigger>
@@ -171,6 +178,24 @@ const PeopleSelector = ({
           </div>
         </PopoverContent>
       </Popover>
+
+      {/* Selected people pills - moved below the input and conditionally rendered */}
+      {selectedPeople.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {selectedPeople.map(person => (
+            <Badge key={person.id} variant="outline" className="people-tag text-xs py-0 h-6 flex items-center gap-1">
+              {formatPersonName(person.name)}
+              <button 
+                type="button" 
+                onClick={() => onTogglePerson(person.id)}
+                className="rounded-full hover:bg-accent ml-1 h-3 w-3 flex items-center justify-center"
+              >
+                <X size={10} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

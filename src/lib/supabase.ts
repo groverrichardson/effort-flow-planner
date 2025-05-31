@@ -1,5 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '../types/supabase';
 import { AuthError, AuthApiError } from '@supabase/supabase-js';
 
 // Get Supabase URL and anon key from environment variables
@@ -29,7 +30,8 @@ const createSupabaseClient = () => {
   }
 
   // Create and return the actual Supabase client
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  // Create and return the actual Supabase client
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       storage: localStorage,
       persistSession: true,

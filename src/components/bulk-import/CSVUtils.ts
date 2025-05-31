@@ -8,26 +8,50 @@ export const parseRawCSV = (file: File): Promise<ParsedCSVData | null> => {
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        const lines = text.split('\n').filter(line => line.trim().length > 0);
+        const lines = text.split(/\r\n|\r|\n/).filter(line => line.trim().length > 0);
         
         if (lines.length === 0) {
           toast({
-            title: "Empty CSV file",
-            description: "The CSV file doesn't contain any data",
-            variant: "destructive",
+            title: 'Empty CSV',
+            description: 'The selected CSV file is empty or contains only whitespace.',
+            variant: 'destructive',
           });
           resolve(null);
           return;
         }
 
-        // Parse CSV into rows and columns
-        const rows = lines.map(line => 
-          line.split(',').map(value => value.trim().replace(/^["'](.*)["']$/, '$1'))
-        );
+        // More robust CSV line parser that handles quoted fields
+        const parseCsvLine = (line: string): string[] => {
+          const result: string[] = [];
+          let currentField = '';
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+              if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+                // Handle escaped quote ""
+                currentField += '"';
+                i++; // Skip next quote
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (char === ',' && !inQuotes) {
+              result.push(currentField.trim());
+              currentField = '';
+            } else {
+              currentField += char;
+            }
+          }
+          result.push(currentField.trim()); // Add the last field
+          return result;
+        };
+
+        const headers = parseCsvLine(lines[0]);
+        const rows = lines.slice(1).map(line => parseCsvLine(line));
         
         resolve({
-          headers: rows[0],
-          rows: rows.slice(1)
+          headers,
+          rows
         });
       } catch (error) {
         toast({
@@ -99,6 +123,32 @@ export const generateTasksFromCSV = (parsedData: ParsedCSVData, columnMap: Recor
           break;
         case 'tags':
           task.tagNames = value ? value.split(';').map(t => t.trim()) : [];
+          break;
+        case 'effortLevel':
+          const effort = parseInt(value, 10);
+          if (!isNaN(effort)) {
+            task.effortLevel = effort;
+          }
+          break;
+        case 'completed':
+          const lowerValue = value.toLowerCase();
+          if (['true', 'yes', '1'].includes(lowerValue)) {
+            task.completed = true;
+          } else if (['false', 'no', '0'].includes(lowerValue)) {
+            task.completed = false;
+          }
+          break;
+        case 'completedDate':
+          task.completedDate = value;
+          break;
+        case 'dueDateType':
+          task.dueDateType = value;
+          break;
+        case 'goLiveDate':
+          task.goLiveDate = value;
+          break;
+        case 'targetDeadline':
+          task.targetDeadline = value;
           break;
       }
     });

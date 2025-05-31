@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -65,15 +65,43 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
   showTodaysTasks,
   viewingCompleted
 }) => {
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const handleToggleTag = useCallback((tagId: string) => {
+    onToggleTag(tagId);
+  }, [onToggleTag]);
+
+  const handleTogglePerson = useCallback((personId: string) => {
+    onTogglePerson(personId);
+  }, [onTogglePerson]);
+
+  const handleTogglePriority = useCallback((priority: Priority) => {
+    onTogglePriority(priority);
+  }, [onTogglePriority]);
+
+  const handleSetFilterByDueDate = useCallback((value: string) => {
+    onSetFilterByDueDate(value);
+  }, [onSetFilterByDueDate]);
+
+  const handleSetFilterByGoLive = useCallback((value: boolean) => {
+    onSetFilterByGoLive(value);
+  }, [onSetFilterByGoLive]);
+
+  const handleToggleShowCompletedClick = useCallback(() => {
+    if (onToggleShowCompleted) {
+      onToggleShowCompleted();
+    }
+  }, [onToggleShowCompleted]);
+
+  const handleResetFiltersClick = useCallback(() => {
+    onResetFilters();
+  }, [onResetFilters]);
   
   return (
-    <DropdownMenu open={filtersOpen} onOpenChange={setFiltersOpen}>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
           size="sm"
-          className="gap-1"
+          className="gap-1 h-8"
         >
           <Filter size={14} />
           Filter Tasks
@@ -88,10 +116,7 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
             <TagFilterItems
               tags={tags}
               selectedTags={selectedTags}
-              onToggleTag={(tagId) => {
-                onToggleTag(tagId);
-                setFiltersOpen(true);
-              }}
+              onToggleTag={handleToggleTag}
             />
 
             <DropdownMenuSeparator />
@@ -101,43 +126,28 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
             <PeopleFilterItems
               people={people}
               selectedPeople={selectedPeople}
-              onTogglePerson={(personId) => {
-                onTogglePerson(personId);
-                setFiltersOpen(true);
-              }}
+              onTogglePerson={handleTogglePerson}
             />
 
             <PriorityFilterItems 
               selectedPriorities={selectedPriorities}
-              onTogglePriority={(priority) => {
-                onTogglePriority(priority);
-                setFiltersOpen(true);
-              }}
+              onTogglePriority={handleTogglePriority}
             />
 
             <DueDateFilterItems
               filterByDueDate={filterByDueDate}
-              onSetFilterByDueDate={(value) => {
-                onSetFilterByDueDate(value);
-                setFiltersOpen(true);
-              }}
+              onSetFilterByDueDate={handleSetFilterByDueDate}
             />
 
             <GoLiveFilterItem
               filterByGoLive={filterByGoLive}
-              onSetFilterByGoLive={(value) => {
-                onSetFilterByGoLive(value);
-                setFiltersOpen(true);
-              }}
+              onSetFilterByGoLive={handleSetFilterByGoLive}
             />
             
             {onToggleShowCompleted && (
               <div className="px-2 py-1.5">
                 <Button
-                  onClick={() => {
-                    onToggleShowCompleted();
-                    setFiltersOpen(false);
-                  }}
+                  onClick={handleToggleShowCompletedClick}
                   variant={showCompleted ? "default" : "outline"}
                   size="sm"
                   className="w-full justify-start"
@@ -153,10 +163,7 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
           <>
             <DropdownMenuSeparator />
             <FilterResetButton
-              onResetFilters={() => {
-                onResetFilters();
-                setFiltersOpen(false);
-              }}
+              onResetFilters={handleResetFiltersClick}
             />
           </>
         )}

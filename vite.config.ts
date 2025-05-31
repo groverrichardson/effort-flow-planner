@@ -1,22 +1,46 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
+
+import react from '@vitejs/plugin-react-swc';
+import path from 'path';
+// import { componentTagger } from 'lovable-tagger'; // Assuming this was a valid import from your original setup
 
 // https://vitejs.dev/config/
+/// <reference types="vitest" />
+import { defineConfig } from 'vitest/config';
+
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
+    host: '::',
     port: 8080,
   },
   plugins: [
     react(),
-    mode === 'development' &&
-    componentTagger(),
+    // mode === 'development' && componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
     },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/setupTests.ts', './src/vitest.setup.ts'], // Merged setup files
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/**/*.spec.tsx'], // Merged include patterns
+    testTimeout: 10000,
+    css: true, // Added from vitest.config.ts
+    // pool: 'forks', // Temporarily commented out for troubleshooting
+    // poolOptions: { // Temporarily commented out for troubleshooting
+    //   forks: {}
+    // },
+
+    // server: { // Added from vitest.config.ts - Temporarily commented out for troubleshooting
+    //   deps: {
+    //     inline: [/^(?!.*vitest).*$/],
+    //   },
+    // },
+    // you might want to disable it, if you don't want to run UI tests
+    // environmentMatchGlobs: [
+    //   ['**/*.test.tsx', 'jsdom'],
+    // ],
   },
 }));

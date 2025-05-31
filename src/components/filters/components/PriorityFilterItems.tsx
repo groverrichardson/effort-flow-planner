@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Priority } from '@/types';
@@ -20,6 +20,11 @@ export const PriorityFilterItems: React.FC<PriorityFilterItemsProps> = ({
   fullWidth
 }) => {
   if (!onTogglePriority) return null;
+
+  const handleToggleHigh = useCallback(() => onTogglePriority('high'), [onTogglePriority]);
+  const handleToggleNormal = useCallback(() => onTogglePriority('normal'), [onTogglePriority]);
+  const handleToggleLow = useCallback(() => onTogglePriority('low'), [onTogglePriority]);
+  const handleToggleLowest = useCallback(() => onTogglePriority('lowest'), [onTogglePriority]);
   
   // If we're rendering as buttons (for mobile)
   if (size) {
@@ -28,32 +33,32 @@ export const PriorityFilterItems: React.FC<PriorityFilterItemsProps> = ({
         <Button
           variant={selectedPriorities.includes('high') ? "default" : "outline"}
           size={size}
-          onClick={() => onTogglePriority('high')}
-          className={fullWidth ? "flex-1" : ""}
+          onClick={handleToggleHigh}
+          className="rounded-full"
         >
           High
         </Button>
         <Button
           variant={selectedPriorities.includes('normal') ? "default" : "outline"}
           size={size}
-          onClick={() => onTogglePriority('normal')}
-          className={fullWidth ? "flex-1 ml-1" : "ml-1"}
+          onClick={handleToggleNormal}
+          className="rounded-full"
         >
           Normal
         </Button>
         <Button
           variant={selectedPriorities.includes('low') ? "default" : "outline"}
           size={size}
-          onClick={() => onTogglePriority('low')}
-          className={fullWidth ? "flex-1 ml-1" : "ml-1"}
+          onClick={handleToggleLow}
+          className="rounded-full"
         >
           Low
         </Button>
         <Button
           variant={selectedPriorities.includes('lowest') ? "default" : "outline"}
           size={size}
-          onClick={() => onTogglePriority('lowest')}
-          className={fullWidth ? "flex-1 ml-1" : "ml-1"}
+          onClick={handleToggleLowest}
+          className="rounded-full"
         >
           Lowest
         </Button>
@@ -70,25 +75,25 @@ export const PriorityFilterItems: React.FC<PriorityFilterItemsProps> = ({
       
       <DropdownMenuCheckboxItem
         checked={selectedPriorities.includes('high')}
-        onCheckedChange={() => onTogglePriority('high')}
+        onCheckedChange={handleToggleHigh}
       >
         High
       </DropdownMenuCheckboxItem>
       <DropdownMenuCheckboxItem
         checked={selectedPriorities.includes('normal')}
-        onCheckedChange={() => onTogglePriority('normal')}
+        onCheckedChange={handleToggleNormal}
       >
         Normal
       </DropdownMenuCheckboxItem>
       <DropdownMenuCheckboxItem
         checked={selectedPriorities.includes('low')}
-        onCheckedChange={() => onTogglePriority('low')}
+        onCheckedChange={handleToggleLow}
       >
         Low
       </DropdownMenuCheckboxItem>
       <DropdownMenuCheckboxItem
         checked={selectedPriorities.includes('lowest')}
-        onCheckedChange={() => onTogglePriority('lowest')}
+        onCheckedChange={handleToggleLowest}
       >
         Lowest
       </DropdownMenuCheckboxItem>
