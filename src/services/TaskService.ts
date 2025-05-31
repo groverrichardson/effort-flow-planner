@@ -724,7 +724,7 @@ export const TaskService = {
                 ? new Date(mainTaskInput.originalScheduledDate).toISOString()
                 : null,
             is_recurring_instance: mainTaskInput.isRecurringInstance ?? false,
-            original_recurring_task_id: mainTaskInput.originalRecurringTaskId,
+            originalRecurringTaskId: mainTaskInput.originalRecurringTaskId,
             is_archived: false,
             // recurrence_rule_id will be set later if a rule is created
         };
@@ -911,7 +911,7 @@ export const TaskService = {
             taskChangesForSupabase.is_recurring_instance =
                 mainTaskUpdates.isRecurringInstance;
         if (mainTaskUpdates.originalRecurringTaskId !== undefined)
-            taskChangesForSupabase.original_recurring_task_id =
+            taskChangesForSupabase.originalRecurringTaskId =
                 mainTaskUpdates.originalRecurringTaskId;
         // recurrence_rule_id is handled by manageRecurrenceRuleForUpdate
         // is_archived is handled by archiveTask/unarchiveTask

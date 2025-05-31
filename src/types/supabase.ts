@@ -138,7 +138,70 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "task_people_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "task_people_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_recurrence_rules: {
+        Row: {
+          bymonthday: number | null
+          bysetpos: number | null
+          byweekday: string[] | null
+          count: number | null
+          created_at: string | null
+          dtstart: string | null
+          frequency: string | null
+          id: string
+          interval: number | null
+          task_id: string
+          until_date: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bymonthday?: number | null
+          bysetpos?: number | null
+          byweekday?: string[] | null
+          count?: number | null
+          created_at?: string | null
+          dtstart?: string | null
+          frequency?: string | null
+          id?: string
+          interval?: number | null
+          task_id: string
+          until_date?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          bymonthday?: number | null
+          bysetpos?: number | null
+          byweekday?: string[] | null
+          count?: number | null
+          created_at?: string | null
+          dtstart?: string | null
+          frequency?: string | null
+          id?: string
+          interval?: number | null
+          task_id?: string
+          until_date?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_task"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
@@ -261,7 +324,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_recurrenceRuleId_fkey"
+            columns: ["recurrenceRuleId"]
+            isOneToOne: false
+            referencedRelation: "task_recurrence_rules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
