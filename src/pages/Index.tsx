@@ -13,10 +13,9 @@ import { useTaskFiltering } from '@/hooks/useTaskFiltering';
 import { useNoteStore } from '@/store/noteStore'; // Import useNoteStore
 import { useNavigate } from 'react-router-dom';
 import TaskDialogs from '@/components/dialogs/TaskDialogs';
-import { Task, Note } from '@/types'; // Import Task and Note types
+import { Task, TaskStatus, Note } from '@/types'; // Import Task and Note types
 import UpcomingTasks from '@/components/UpcomingTasks';
 import TaskListHeader from '@/components/headers/TaskListHeader'; // Import TaskListHeader
-
 const Index = () => {
     const { addNote } = useNoteStore(); // Get addNote from the store
     const navigate = useNavigate(); // Add useNavigate hook
@@ -96,6 +95,48 @@ const Index = () => {
 
     // Mobile quick task input scrolling behavior
     // Removed handleSetFilterByGoLiveBoolean adapter, assuming filterByGoLive from hook is boolean
+    const owedToOthersTasks = useMemo(() => {
+        const isDateTodayOrPastHelper = (dateInput: Date | string | null | undefined): boolean => {
+            if (!dateInput) return false;
+
+            let taskDate: Date;
+
+            if (typeof dateInput === 'string') {
+                const datePart = dateInput.split('T')[0];
+                const parts = datePart.split('-');
+                if (parts.length !== 3) return false;
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+                const day = parseInt(parts[2], 10);
+                taskDate = new Date(year, month, day);
+                if (isNaN(taskDate.getTime())) return false; // Check if parsing was valid
+            } else if (dateInput instanceof Date) {
+                // Create a new Date object at midnight for accurate date-only comparison
+                taskDate = new Date(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate());
+                if (isNaN(taskDate.getTime())) return false; // Should not happen for valid Date
+            } else {
+                return false; // Should not be reached with current types, but good for safety
+            }
+            
+            const currentDate = new Date();
+            const todayAtMidnight = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+
+            // Check if the task date is on or before today (midnight)
+            return taskDate.getTime() <= todayAtMidnight.getTime();
+        };
+
+        return (tasksFromCtx || [])
+            .filter(task =>
+                task.status !== TaskStatus.COMPLETED &&
+                isDateTodayOrPastHelper(task.dueDate) &&
+                task.people && task.people.length > 0
+            )
+            .sort((a, b) => {
+                // Optional: Sort by title for consistent ordering
+                return (a.title || '').localeCompare(b.title || '');
+            });
+    }, [tasksFromCtx]);
+
     const handleOpenDetailedView = (task: Task) => {
         // setDetailedTask(task); // No longer setting state for a modal
         navigate(`/tasks/${task.id}`); // Navigate to the TaskDetailPage
@@ -269,50 +310,91 @@ const Index = () => {
 
     return (
         <div className="flex h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50">
-            {' '}
-            {/* Main flex container */}
             {/* Main content area */}
             <div
                 className="flex-grow overflow-y-auto"
-                ref={scrollableContainerRef}>
-                {' '}
-                {/* Main content area, THIS is likely the scrollable part */}
+                ref={scrollableContainerRef}
+            >
                 <div className="container px-2 md:px-6 md:max-w-4xl md:mx-auto py-8 pb-20 md:pb-8 relative">
                     <PageHeader
                         onCreateTaskClick={openCreateTaskDialog}
                         onManageTagsClick={handleManageTags}
                         onManagePeopleClick={handleManagePeople}
                         onBulkImportClick={openBulkImportDialog}
-                        filterProps={filterProps}
-                        isBulkEditing={isBulkEditing} // Added
-                        onToggleBulkEdit={handleToggleBulkEdit} // Added
-                        allTasks={tasksFromCtx || []} // Pass all tasks to PageHeader
+                        filterProps={filterProps} // Pass all filter props for mobile menu
+                        isBulkEditing={isBulkEditing}
+                        onToggleBulkEdit={handleToggleBulkEdit}
+                        allTasks={tasksFromCtx || []} // Pass all tasks to PageHeader for search modal trigger
                     />
+
                     {/* Quick task input shows at the top on desktop */}
                     {!isMobile && <QuickTaskInput />}
-                    {/* Wrapper for UpcomingTasks and TaskList */}
-                    <div className="mt-6 space-y-6 bg-white dark:bg-slate-800 rounded-lg">
-                        <UpcomingTasks
-                            tasks={tasksFromCtx}
-                            onTaskClick={handleOpenDetailedView}
-                        />
 
-                        {/* TaskListControls was here, now removed. Sidebar will handle controls. */}
+                    {/* Reorganized content area with three sections */}
+                    <div className="mt-6 space-y-6" data-component-name="Index-Reorganized-Sections-Wrapper">
+                        {/* Section 1: Suggestions for what to work on next */}
+                        <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg shadow" id="suggestions-section">
+                            <h2 className="text-xl font-semibold mb-3 text-gray-800 dark:text-slate-100" id="suggestions-header">
+                                Suggestions for Next Steps
+                            </h2>
+                            <p className="text-gray-600 dark:text-slate-300" id="suggestions-placeholder">
+                                Future home of intelligent task suggestions. For now, consider what's most important or time-sensitive!
+                            </p>
+                        </div>
 
-                        {/* Task list */}
-                        <div className="mt-6 md:mt-0">
+                        {/* Section 2: Items due today involving tagged people */}
+                        <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg shadow" id="owed-to-others-section">
+                            <h2 className="text-xl font-semibold mb-3 text-gray-800 dark:text-slate-100" id="owed-to-others-header">
+                                Owed to Others (Due Today or Past Due)
+                            </h2>
+                        {owedToOthersTasks.length > 0 ? (
+                            <ul className="space-y-2" id="owed-to-others-list">
+                                {owedToOthersTasks.map(task => (
+                                    <li
+                                        key={task.id}
+                                        onClick={() => handleOpenDetailedView(task)}
+                                        className="p-3 bg-white dark:bg-slate-700/50 rounded-md shadow-sm hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer transition-colors duration-150 ease-in-out"
+                                        id={`owed-task-item-${task.id}`}
+                                        role="button"
+                                        tabIndex={0}
+                                        onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') handleOpenDetailedView(task); }}
+                                        aria-label={`View task: ${task.title}`}
+                                    >
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-medium text-gray-800 dark:text-slate-100 truncate" title={task.title}>{task.title}</span>
+                                            {/* You could add a small 'Due Today' badge here if desired */}
+                                        </div>
+                                        {task.people && task.people.length > 0 && (
+                                            <div className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                                                With: {task.people.map(p => p.name).join(', ')}
+                                            </div>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-gray-600 dark:text-slate-300" id="owed-to-others-empty-placeholder">
+                                No tasks owed to others are due today or past due.
+                            </p>
+                        )}
+                        </div>
+
+                        {/* Section 3: All my tasks */}
+                        <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg shadow" id="all-tasks-section">
+                            <h2 className="text-xl font-semibold mb-3 text-gray-800 dark:text-slate-100" id="all-tasks-header">
+                                All My Tasks
+                            </h2>
                             <TaskList
                                 onTaskItemClick={handleOpenDetailedView}
                                 filteredTasks={filteredTasks}
-                                // filterControlProps, onCreateTaskClick, and onCreateNoteClick are removed as controls are in Sidebar
                                 isBulkEditing={isBulkEditing}
                                 onToggleBulkEdit={handleToggleBulkEdit}
-                                viewingCompleted={viewingCompleted} // Pass directly from hook
-                                showTodaysTasks={showTodaysTasks} // Pass directly from hook
+                                viewingCompleted={viewingCompleted}
+                                showTodaysTasks={showTodaysTasks}
                             />
                         </div>
-                    </div>{' '}
-                    {/* END of new white section wrapper */}
+                    </div>
+
                     {/* Quick task input shows at the bottom on mobile - sticky with transition */}
                     {isMobile && (
                         <div
@@ -323,22 +405,22 @@ const Index = () => {
                                 showMobileInput
                                     ? 'translate-y-0'
                                     : 'translate-y-full'
-                            }`}>
+                            }`}
+                        >
                             <QuickTaskInput />
                         </div>
                     )}
+
                     {/* Create Task Dialog */}
                     <CreateTaskDialog
                         open={createTaskOpen}
                         onOpenChange={setCreateTaskOpen}
                     />
                     <TaskDialogs
-                        editTask={detailedTask} // Changed from editingTask to detailedTask based on context
-                        onCloseEdit={handleCloseDetailedView} // Changed from handleCloseEditDialog
-                        onDeleteTask={handleDeleteFromDetailedView} // Changed from handleDeleteTask
-                        onOpenCreateNoteDialog={
-                            handleOpenCreateNoteDialogForTask
-                        } // Pass handler for task-specific note
+                        editTask={detailedTask}
+                        onCloseEdit={handleCloseDetailedView}
+                        onDeleteTask={handleDeleteFromDetailedView}
+                        onOpenCreateNoteDialog={handleOpenCreateNoteDialogForTask}
                     />
                     {/* Manage Tags/People Dialog */}
                     <ManageDialog
@@ -351,25 +433,24 @@ const Index = () => {
                         open={bulkImportOpen}
                         onOpenChange={setBulkImportOpen}
                     />
-                </div>{' '}
-                {/* Closing tag for 'container max-w-4xl mx-auto ...' div */}
-            </div>{' '}
-            {/* Closing tag for 'flex-grow overflow-y-auto' div */}
+                </div> {/* Closing tag for 'container max-w-4xl mx-auto ...' div */}
+            </div> {/* Closing tag for 'flex-grow overflow-y-auto' div */}
+
             {/* Sidebar rendered after main content to appear on the right */}
             {!isMobile && (
                 <>
                     {console.log('[[INDEX_SIDEBAR_BLOCK]] Entered desktop sidebar rendering block. Passing tasks:', tasksFromCtx ? tasksFromCtx.length : 'undefined/empty', JSON.stringify(tasksFromCtx?.map(t => t.id)))}
                     <Sidebar
-                    filterControls={filterProps}
-                    isOpen={isSidebarOpen}
-                    onToggle={toggleSidebar}
-                    onManageTagsClick={handleManageTags}
-                    onManagePeopleClick={handleManagePeople}
-                    onBulkImportClick={openBulkImportDialog}
-                    isBulkEditing={isBulkEditing} // Added
-                    onToggleBulkEdit={handleToggleBulkEdit} // Added
-                    allTasks={tasksFromCtx} // Pass all tasks to the Sidebar for the search modal
-                />
+                        filterControls={filterProps}
+                        isOpen={isSidebarOpen}
+                        onToggle={toggleSidebar}
+                        onManageTagsClick={handleManageTags}
+                        onManagePeopleClick={handleManagePeople}
+                        onBulkImportClick={openBulkImportDialog}
+                        isBulkEditing={isBulkEditing}
+                        onToggleBulkEdit={handleToggleBulkEdit}
+                        allTasks={tasksFromCtx} // Pass all tasks to the Sidebar for the search modal
+                    />
                 </>
             )}
         </div> /* Closing tag for 'flex h-screen' div */
