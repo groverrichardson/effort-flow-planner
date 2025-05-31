@@ -1006,8 +1006,7 @@ export const TaskService = {
             const { error: deleteTagsError } = await supabase
                 .from('task_tags')
                 .delete()
-                .eq('task_id', taskId)
-                .eq('user_id', user.id);
+                .eq('task_id', taskId);
 
             if (deleteTagsError) {
                 console.error(
@@ -1197,11 +1196,11 @@ export const TaskService = {
             .from('tasks')
             .select(
                 `
-        *,
-        task_recurrence_rules (*),
-        task_tags (tags (*)),
-        task_people (people (*))
-      `
+                *,
+                task_recurrence_rules!recurrenceRuleId (*),
+                task_tags (tags (*)),
+                task_people (people (*))
+                `
             )
             .eq('id', taskId)
             .eq('user_id', user.id)

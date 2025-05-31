@@ -97,20 +97,18 @@ const mockDbTaskDefaults: Omit<DbTask, 'id' | 'user_id' | 'created_at' | 'update
     description: '',
     status: TaskStatus.PENDING,
     priority: Priority.NORMAL,
-    due_date: new Date().toISOString(),
+    due_date: new Date().toISOString(), // DbTask expects ISO string for dates
     due_date_type: DueDateType.SPECIFIC,
-    effort_level: EffortLevel.M, // Assuming 'M' is a key in your EffortLevel enum
+    effort_level: EffortLevel.M, // Default effort level
     completed: false,
     completed_date: null,
-    dependencies: null,
-    target_deadline: null,
-    go_live_date: null,
-    recurrence_rule_id: null,
+    dependencies: [],
+    recurrenceRuleId: null, // Changed from recurrence_rule_id to recurrenceRuleId
     original_scheduled_date: null,
     is_recurring_instance: false,
-    original_recurring_task_id: null,
+    originalRecurringTaskId: null, // Changed from original_recurring_task_id
     is_archived: false,
-    parent_task_id: null,
+    parent_task_id: null, // Reverted to parent_task_id
     project_id: null,
     assignee_id: null,
 };
@@ -540,6 +538,60 @@ describe('TaskService', () => {
             mockUpdateSingleCall.mockResolvedValueOnce({ data: null, error: mockError });
 
             await expect(TaskService.updateTask('some-id', updates)).rejects.toThrow(/^Failed to update task details: Supabase DB error/);
+        });
+
+        it('should correctly delete old tags without using user_id on task_tags table', async () => {
+            mockAuthenticatedUser();
+            const mockExistingTaskId = 'task-to-update-tags';
+            const updates: TaskUpdatePayload = {
+                tags: [{ id: 'tag-new-1', name: 'New Tag 1' }], // Corrected Tag structure
+                status: TaskStatus.PENDING, // Added missing property
+                completed: false, // Added missing property
+            };
+
+            // Mock the chain for task_tags deletion
+            const mockTaskTagsDeleteEq = vi.fn().mockReturnThis(); // spy on .eq()
+            const mockTaskTagsDelete = vi.fn(() => ({ eq: mockTaskTagsDeleteEq, delete: vi.fn().mockReturnThis() })); // .delete()
+            (supabase.from as Mock).mockImplementation((tableName: string) => {
+                if (tableName === 'tasks') {
+                    // Return the standard chainable mock for 'tasks' table operations
+                    const tasksMockChain = createChainableMock();
+                    tasksMockChain.single.mockResolvedValue({ data: { ...mockDbTaskDefaults, id: mockExistingTaskId, user_id: mockUser.id, title: 'Original Title' }, error: null });
+                    return tasksMockChain;
+                }
+                if (tableName === 'task_tags') {
+                    return {
+                        delete: vi.fn(() => ({ eq: mockTaskTagsDeleteEq })),
+                        // Mock other methods if needed for tag creation part
+                        insert: vi.fn().mockReturnThis(), 
+                    };
+                }
+                if (tableName === 'tags') {
+                    // Mock for tags upsertion
+                    const tagsMockChain = createChainableMock();
+                    tagsMockChain.upsert.mockReturnThis();
+                    tagsMockChain.select.mockResolvedValue({ data: [{id: 'upserted-tag-id-1', name: 'New Tag 1', user_id: mockUser.id}], error: null });
+                    return tagsMockChain;
+                }
+                return createChainableMock(); // Default for other tables
+            });
+
+            await TaskService.updateTask(mockExistingTaskId, updates);
+
+            // Check the call to delete tags
+            expect(supabase.from).toHaveBeenCalledWith('task_tags');
+            expect(mockTaskTagsDeleteEq).toHaveBeenCalledWith('task_id', mockExistingTaskId);
+            
+            // Crucially, ensure 'user_id' was NOT part of the .eq() calls for task_tags deletion
+            const eqCalls = mockTaskTagsDeleteEq.mock.calls;
+            let userIdFilterFound = false;
+            for (const call of eqCalls) {
+                if (call[0] === 'user_id') {
+                    userIdFilterFound = true;
+                    break;
+                }
+            }
+            expect(userIdFilterFound).toBe(false);
         });
 }); // Closes the describe('updateTask', ...) block
 
