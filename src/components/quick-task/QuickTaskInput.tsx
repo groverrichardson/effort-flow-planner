@@ -5,11 +5,15 @@ import NaturalLanguageInput from '@/components/form/NaturalLanguageInput';
 import { toast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, XIcon } from 'lucide-react'; // Added XIcon
 import { useQuickTaskInputState } from '@/hooks/useQuickTaskInputState';
-import { TaskStatus } from '@/types';
+import { TaskStatus, Priority, EffortLevel, DueDateType, Tag, Person } from '@/types';
 
-const QuickTaskInput = () => {
+interface QuickTaskInputProps {
+  onClose?: () => void;
+}
+
+const QuickTaskInput: React.FC<QuickTaskInputProps> = ({ onClose }) => {
     const { addTask, tags, people, addTag, addPerson } = useTaskContext();
     const { inputValue, setInputValue } = useQuickTaskInputState();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -24,68 +28,59 @@ const QuickTaskInput = () => {
             // Use the enhanced natural language parser (now async)
             const taskData = await naturalLanguageToTask(inputValue);
 
+            if (!taskData) {
+                toast({
+                    title: 'Error',
+                    description: 'Could not parse task input. Please try rephrasing.',
+                    variant: 'destructive',
+                });
+                setIsProcessing(false);
+                return;
+            }
+
             console.log('Parsed task data:', taskData);
 
-            // Process tags from names - create new tags if needed
+            let resolvedTags: Tag[] = [];
             if (taskData.tagNames && taskData.tagNames.length > 0) {
-                taskData.tags = await Promise.all(
+                resolvedTags = await Promise.all(
                     taskData.tagNames.map(async (tagName) => {
-                        // Try to find an existing tag
                         const existingTag = tags.find(
-                            (t) =>
-                                t.name.toLowerCase() === tagName.toLowerCase()
+                            (t) => t.name.toLowerCase() === tagName.toLowerCase()
                         );
-                        // Create a new tag if it doesn't exist
                         return existingTag || (await addTag(tagName));
                     })
                 );
-                delete taskData.tagNames;
-            } else {
-                taskData.tags = [];
             }
 
-            // Process people from names - create new people if needed
-            let peopleToAdd = [];
+            let resolvedPeople: Person[] = [];
             if (taskData.peopleNames && taskData.peopleNames.length > 0) {
-                // Limit to a maximum of 2 people
                 const limitedPeopleNames = taskData.peopleNames.slice(0, 2);
-
                 console.log('Processing people:', limitedPeopleNames);
-
-                peopleToAdd = await Promise.all(
+                resolvedPeople = await Promise.all(
                     limitedPeopleNames.map(async (personName) => {
-                        // Try to find an existing person by exact match
                         const existingPerson = people.find(
-                            (p) =>
-                                p.name.toLowerCase() ===
-                                personName.toLowerCase()
+                            (p) => p.name.toLowerCase() === personName.toLowerCase()
                         );
-
-                        // Create a new person if they don't exist
                         return existingPerson || (await addPerson(personName));
                     })
                 );
-                taskData.people = peopleToAdd;
-                delete taskData.peopleNames;
-            } else {
-                taskData.people = [];
             }
 
             // Set default values for required fields
             const newTask = {
                 title: taskData.title || inputValue,
                 description: taskData.description || '',
-                priority: taskData.priority || 'normal',
+                priority: taskData.priority || Priority.NORMAL,
                 dueDate: taskData.dueDate || null,
-                dueDateType: taskData.dueDateType || 'by',
-                targetDeadline: taskData.targetDeadline || null,
+                dueDateType: taskData.dueDate ? DueDateType.BY : DueDateType.NONE, // Default based on dueDate presence
+                targetDeadline: null, // Not provided by current parser
                 goLiveDate: taskData.goLiveDate || null,
-                effortLevel: taskData.effortLevel || 4,
+                effortLevel: taskData.effortLevel || EffortLevel.M, // Default to Medium effort
                 completed: false,
                 completedDate: null,
-                tags: taskData.tags || [],
-                people: taskData.people || [],
-                dependencies: taskData.dependencies || [],
+                tags: resolvedTags,
+                people: resolvedPeople,
+                dependencies: [], // Not provided by current parser
                 status: TaskStatus.PENDING, // Add default status
             };
 
@@ -99,6 +94,7 @@ const QuickTaskInput = () => {
                 description: `"${newTask.title}" has been created`,
             });
             setInputValue('');
+            onClose?.(); // Call onClose after successful submission
         } catch (error) {
             console.error('Error creating task:', error);
             toast({
@@ -114,7 +110,7 @@ const QuickTaskInput = () => {
 
     if (isMobile) {
         return (
-            <div>
+            <div className="p-4 bg-background border-t fixed bottom-0 left-0 right-0 z-50">
                 {/* The 'Processing your task...' message container has been removed. */}
                 {isProcessing && (
                     <div className="flex items-center space-x-2 mb-4 p-2 border border-input rounded-md bg-muted/20">
@@ -129,9 +125,20 @@ const QuickTaskInput = () => {
                     onSubmit={handleQuickTaskSubmit}
                     placeholder="What would you like to get done?"
                 />
-                <div className="mt-1 text-xs text-muted-foreground">
-                    Use #tag for tags, @person for people, "high priority" or
-                    dates like "due tomorrow"
+                <div className="flex justify-between items-center mt-2">
+                    <div className="text-xs text-muted-foreground flex-1">
+                        Use #tag, @person, "high priority", dates like "due tomorrow"
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onClose}
+                        aria-label="Close quick task input"
+                        className="ml-2"
+                        id="quick-task-cancel-button"
+                    >
+                        <XIcon className="h-5 w-5" />
+                    </Button>
                 </div>
             </div>
         );

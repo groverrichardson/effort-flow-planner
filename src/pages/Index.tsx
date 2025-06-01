@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import TaskList from '@/components/TaskList';
 import QuickTaskInput from '@/components/quick-task/QuickTaskInput';
 import PageHeader from '@/components/headers/PageHeader';
+import { Button } from '@/components/ui/button'; // Added Button import
 import Sidebar from '@/components/Sidebar'; // Import the new Sidebar
 import CreateTaskDialog from '@/components/dialogs/CreateTaskDialog';
 import ManageDialog from '@/components/dialogs/ManageDialog';
@@ -16,7 +17,7 @@ import TaskDialogs from '@/components/dialogs/TaskDialogs';
 import { Task, TaskStatus, Note } from '@/types'; // Import Task and Note types
 import UpcomingTasks from '@/components/UpcomingTasks';
 import TaskListHeader from '@/components/headers/TaskListHeader'; // Import TaskListHeader
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 const Index = () => {
     const { addNote } = useNoteStore(); // Get addNote from the store
     const navigate = useNavigate(); // Add useNavigate hook
@@ -26,12 +27,9 @@ const Index = () => {
     const [manageActiveTab, setManageActiveTab] = useState<'tags' | 'people'>(
         'tags'
     );
-    const [showMobileInput, setShowMobileInput] = useState(true);
-    const prevScrollY = useRef(0);
     const isMobile = useIsMobile();
-    const scrollableContainerRef = useRef<HTMLDivElement>(null);
+    const [isQuickInputActive, setIsQuickInputActive] = useState(false); // New state for FAB
 
-    // MOVED/MODIFIED LOG FROM PREVIOUS ATTEMPT - GENERAL STATE IN INDEX
     const taskContextValue = useTaskContext();
     console.log('[[INDEX_COMPONENT_ROOT]] Raw taskContextValue:', taskContextValue);
     const { tasks: tasksFromCtx, tags, people, getTodaysCompletedTasks, getArchivedTasks, deleteTask } = taskContextValue;
@@ -79,7 +77,7 @@ const Index = () => {
         handleShowCompleted,
         viewingArchived, // Added
         handleShowArchived, // Added
-        archivedTasksCount, // Added
+        archivedTasks, 
         filteredTasks,
         // todaysTasks was already destructured above, remove duplicate
     } = useTaskFiltering({
@@ -88,60 +86,9 @@ const Index = () => {
         getArchivedTasks: getArchivedTasks, // Pass the getArchivedTasks function from context
         searchTerm: searchTerm, // Pass the searchTerm state to the hook
     }); // Added getArchivedTasks and searchTerm
-    console.log(
-        '[Index] From useTaskFiltering - viewingArchived:',
-        viewingArchived,
-        'archivedTasksCount:',
-        archivedTasksCount
-    ); // DEBUG
-
-    // Mobile quick task input scrolling behavior
-    // Removed handleSetFilterByGoLiveBoolean adapter, assuming filterByGoLive from hook is boolean
-    const owedToOthersTasks = useMemo(() => {
-        const isDateTodayOrPastHelper = (dateInput: Date | string | null | undefined): boolean => {
-            if (!dateInput) return false;
-
-            let taskDate: Date;
-
-            if (typeof dateInput === 'string') {
-                const datePart = dateInput.split('T')[0];
-                const parts = datePart.split('-');
-                if (parts.length !== 3) return false;
-                const year = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
-                const day = parseInt(parts[2], 10);
-                taskDate = new Date(year, month, day);
-                if (isNaN(taskDate.getTime())) return false; // Check if parsing was valid
-            } else if (dateInput instanceof Date) {
-                // Create a new Date object at midnight for accurate date-only comparison
-                taskDate = new Date(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate());
-                if (isNaN(taskDate.getTime())) return false; // Should not happen for valid Date
-            } else {
-                return false; // Should not be reached with current types, but good for safety
-            }
-            
-            const currentDate = new Date();
-            const todayAtMidnight = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
-
-            // Check if the task date is on or before today (midnight)
-            return taskDate.getTime() <= todayAtMidnight.getTime();
-        };
-
-        return (tasksFromCtx || [])
-            .filter(task =>
-                task.status !== TaskStatus.COMPLETED &&
-                isDateTodayOrPastHelper(task.dueDate) &&
-                task.people && task.people.length > 0
-            )
-            .sort((a, b) => {
-                // Optional: Sort by title for consistent ordering
-                return (a.title || '').localeCompare(b.title || '');
-            });
-    }, [tasksFromCtx]);
 
     const handleOpenDetailedView = (task: Task) => {
-        // setDetailedTask(task); // No longer setting state for a modal
-        navigate(`/tasks/${task.id}`); // Navigate to the TaskDetailPage
+        setDetailedTask(task);
     };
 
     const handleCloseDetailedView = () => {
@@ -149,70 +96,8 @@ const Index = () => {
     };
 
     const handleDeleteFromDetailedView = (taskId: string) => {
-        deleteTask(taskId); // deleteTask from context
-        setDetailedTask(null);
-        // TaskDialogs might show its own toast, or add one here if needed
-    };
-
-    useEffect(() => {
-        const scrollableElement = scrollableContainerRef.current;
-
-        if (!isMobile || !scrollableElement) {
-            // If not mobile, or the scrollable element isn't available yet, ensure input is conceptually visible for non-mobile
-            // or reset scroll tracking if element disappears.
-            if (!isMobile) setShowMobileInput(true); // Ensure desktop always shows if it were to use this state
-            prevScrollY.current = 0;
-            return;
-        }
-
-        const handleScroll = () => {
-            const currentScrollY = scrollableElement.scrollTop;
-            const SCROLL_THRESHOLD_FOR_REAPPEAR = 50;
-
-            setShowMobileInput((prevIsVisible) => {
-                let nextVisibleState = prevIsVisible;
-                if (currentScrollY < 10) {
-                    // At the very top, always show
-                    nextVisibleState = true;
-                } else if (currentScrollY > prevScrollY.current) {
-                    // Scrolling Down
-                    nextVisibleState = false;
-                } else if (currentScrollY < prevScrollY.current) {
-                    // Scrolling Up
-                    nextVisibleState = true; // Show as soon as scrolling up starts
-                }
-                // If currentScrollY === prevScrollY.current (no change), nextVisibleState remains prevIsVisible
-                return nextVisibleState;
-            });
-            prevScrollY.current = currentScrollY;
-        };
-
-        // Initial call to set state based on current scroll position
-        handleScroll();
-
-        scrollableElement.addEventListener('scroll', handleScroll, {
-            passive: true,
-        });
-
-        return () => {
-            // Check scrollableElement again in cleanup in case it's gone by then
-            if (scrollableContainerRef.current) {
-                scrollableContainerRef.current.removeEventListener(
-                    'scroll',
-                    handleScroll
-                );
-            }
-        };
-    }, [isMobile]); // Rerun when isMobile changes; ref.current availability handled inside.
-
-    const handleManageTags = useCallback(() => {
-        setManageActiveTab('tags');
-        setManageDialogOpen(true);
-    }, [setManageActiveTab, setManageDialogOpen]);
-
-    const handleManagePeople = () => {
-        setManageActiveTab('people');
-        setManageDialogOpen(true);
+        deleteTask(taskId);
+        setDetailedTask(null); // Close detailed view after deletion
     };
 
     const openCreateTaskDialog = useCallback(() => {
@@ -243,7 +128,16 @@ const Index = () => {
         setBulkImportOpen(true);
     }, [setBulkImportOpen]);
 
-    // Props for Sidebar, memoized for stability
+    const handleManageTags = useCallback(() => {
+        setManageActiveTab('tags');
+        setManageDialogOpen(true);
+    }, [setManageActiveTab, setManageDialogOpen]);
+
+    const handleManagePeople = useCallback(() => {
+        setManageActiveTab('people');
+        setManageDialogOpen(true);
+    }, [setManageActiveTab, setManageDialogOpen]);
+
     const filterProps = useMemo(
         () => ({
             // Search related
@@ -314,10 +208,9 @@ const Index = () => {
         <div className="flex h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50">
             {/* Main content area */}
             <div
-                className="flex-grow overflow-y-auto"
-                ref={scrollableContainerRef}
+                className="flex-grow overflow-y-auto pb-16 md:pb-0"
             >
-                <div className="container px-2 md:px-6 md:max-w-4xl md:mx-auto py-8 pb-20 md:pb-8 relative">
+                <div className="container max-w-4xl mx-auto p-0 md:p-4">
                     <PageHeader
                         onCreateTaskClick={openCreateTaskDialog}
                         onManageTagsClick={handleManageTags}
@@ -409,20 +302,21 @@ const Index = () => {
                         </div>
                     </div>
 
-                    {/* Quick task input shows at the bottom on mobile - sticky with transition */}
-                    {isMobile && (
-                        <div
-                            data-testid="mobile-quick-task-container"
-                            className={`fixed bottom-0 left-0 right-0 pt-0 px-4 pb-4 bg-background z-50 border-t
-                            transition-all duration-300 transform
-                            ${
-                                showMobileInput
-                                    ? 'translate-y-0'
-                                    : 'translate-y-full'
-                            }`}
+                    {/* Mobile FAB and Quick Task Input */}
+                    {isMobile && !isQuickInputActive && (
+                        <Button
+                            id="mobile-fab-quick-add"
+                            variant="default"
+                            size="icon"
+                            className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
+                            onClick={() => setIsQuickInputActive(true)}
+                            aria-label="Open quick task input"
                         >
-                            <QuickTaskInput />
-                        </div>
+                            <Plus className="h-7 w-7" />
+                        </Button>
+                    )}
+                    {isMobile && isQuickInputActive && (
+                        <QuickTaskInput onClose={() => setIsQuickInputActive(false)} />
                     )}
 
                     {/* Create Task Dialog */}
