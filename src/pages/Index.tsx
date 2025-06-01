@@ -18,7 +18,7 @@ import { Task, TaskStatus, Note } from '@/types'; // Import Task and Note types
 import UpcomingTasks from '@/components/UpcomingTasks';
 import TaskListHeader from '@/components/headers/TaskListHeader'; // Import TaskListHeader
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
-const Index = () => {
+function IndexPage() {
     const { addNote } = useNoteStore(); // Get addNote from the store
     const navigate = useNavigate(); // Add useNavigate hook
     const [createTaskOpen, setCreateTaskOpen] = useState(false);
@@ -47,6 +47,7 @@ const Index = () => {
     const [isBulkEditing, setIsBulkEditing] = useState(false); // Added for bulk edit mode
     const [searchTerm, setSearchTerm] = useState(''); // Add searchTerm state
     const [isAllTasksExpanded, setIsAllTasksExpanded] = useState(false);
+    const [isOwedToOthersExpanded, setIsOwedToOthersExpanded] = useState(true); // Default to expanded
 
     // tasksFromCtx is now used directly, original useTaskContext() call for 'tasks' is covered by the log above.
     // console.log('[[INDEX_PAGE_LOG]] RECEIVED tasks from useTaskContext():', tasks ? tasks.length : 'undefined/empty', JSON.stringify(tasks?.map(t => t.id))); // This log is now redundant due to the one above.
@@ -87,8 +88,45 @@ const Index = () => {
         searchTerm: searchTerm, // Pass the searchTerm state to the hook
     }); // Added getArchivedTasks and searchTerm
 
+    const owedToOthersTasks = useMemo(() => {
+        if (!tasksFromCtx) {
+        console.log('[owedToOthersTasks] tasksFromCtx is null/undefined');
+        return [];
+    }
+        const today = new Date();
+    console.log('[owedToOthersTasks] Initial today:', today.toISOString());
+        today.setHours(0, 0, 0, 0);
+    console.log('[owedToOthersTasks] Normalized today (start of day):', today.toISOString()); // Start of today
+
+        console.log('[owedToOthersTasks] Filtering tasksFromCtx count:', tasksFromCtx.length);
+    return tasksFromCtx.filter(task => {
+        console.log(`[owedToOthersTasks] Checking task: ${task.id} - ${task.title}`);
+            const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+        console.log(`[owedToOthersTasks] Task ${task.id} - Original dueDate: ${task.dueDate}, Parsed dueDate: ${dueDate?.toISOString()}`);
+            if (dueDate) {
+                dueDate.setHours(0,0,0,0);
+            console.log(`[owedToOthersTasks] Task ${task.id} - Normalized dueDate: ${dueDate?.toISOString()}`); // Normalize dueDate to start of day for comparison
+            }
+            const hasPeople = task.people && task.people.length > 0;
+            const isPastOrDueToday = dueDate && dueDate.getTime() <= today.getTime();
+            const notCompleted = task.status !== TaskStatus.COMPLETED;
+            console.log(`[owedToOthersTasks] Task ${task.id} - Conditions: hasPeople=${hasPeople}, isPastOrDueToday=${isPastOrDueToday} (dueDate: ${dueDate?.getTime()}, today: ${today.getTime()}), notCompleted=${notCompleted}`);
+            return (
+                hasPeople &&
+                isPastOrDueToday &&
+                notCompleted
+            );
+        });
+    }, [tasksFromCtx]);
+
     const handleOpenDetailedView = (task: Task) => {
+        console.log(`[Index.tsx handleOpenDetailedView] Received task: ${task?.title}, ID: ${task?.id}`);
         setDetailedTask(task);
+        if (task && task.id) {
+            navigate(`/tasks/${task.id}`);
+        } else {
+            console.error('[IndexPage handleOpenDetailedView] Task or task.id is undefined, cannot navigate. Task:', task);
+        }
     };
 
     const handleCloseDetailedView = () => {
@@ -152,7 +190,7 @@ const Index = () => {
             todaysCount: todaysTasks.length, // Corrected to use length of todaysTasks array
             completedCount: completedTasks.length,
             viewingArchived,
-            archivedCount: archivedTasksCount,
+            archivedCount: archivedTasks.length,
             onShowAllActive: handleShowAllActive,
             onShowToday: handleShowToday,
             onShowCompleted: handleShowCompleted,
@@ -182,7 +220,7 @@ const Index = () => {
             todaysTasks,
             completedTasks,
             viewingArchived,
-            archivedTasksCount, // Header related states and counts
+            archivedTasks, // Header related states and counts
             handleShowAllActive,
             handleShowToday,
             handleShowCompleted,
@@ -203,6 +241,7 @@ const Index = () => {
         ]
     );
     console.log('[Index] filterProps for TaskListControls:', filterProps); // DEBUG
+    console.log('[Index PRE-RETURN] owedToOthersTasks:', JSON.stringify(owedToOthersTasks, null, 2));
 
     return (
         <div className="flex h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50">
@@ -237,41 +276,48 @@ const Index = () => {
                             </p>
                         </div>
 
-                        {/* Section 2: Items due today involving tagged people */}
+                        {/* Section 2: Owed to Others */}
                         <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-lg shadow" id="owed-to-others-section">
-                            <h2 className="text-xl font-semibold mb-3 text-gray-800 dark:text-slate-100" id="owed-to-others-header">
-                                Owed to Others (Due Today or Past Due)
-                            </h2>
-                        {owedToOthersTasks.length > 0 ? (
-                            <ul className="space-y-2" id="owed-to-others-list">
-                                {owedToOthersTasks.map(task => (
-                                    <li
-                                        key={task.id}
-                                        onClick={() => handleOpenDetailedView(task)}
-                                        className="p-3 bg-white dark:bg-slate-700/50 rounded-md shadow-sm hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer transition-colors duration-150 ease-in-out"
-                                        id={`owed-task-item-${task.id}`}
-                                        role="button"
-                                        tabIndex={0}
-                                        onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') handleOpenDetailedView(task); }}
-                                        aria-label={`View task: ${task.title}`}
-                                    >
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-medium text-gray-800 dark:text-slate-100 truncate" title={task.title}>{task.title}</span>
-                                            {/* You could add a small 'Due Today' badge here if desired */}
-                                        </div>
-                                        {task.people && task.people.length > 0 && (
-                                            <div className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-                                                With: {task.people.map(p => p.name).join(', ')}
-                                            </div>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-gray-600 dark:text-slate-300" id="owed-to-others-empty-placeholder">
-                                No tasks owed to others are due today or past due.
-                            </p>
-                        )}
+                            <button 
+                                type="button"
+                                className="flex items-center justify-between w-full text-xl font-semibold mb-3 text-gray-800 dark:text-slate-100 focus:outline-none"
+                                onClick={() => setIsOwedToOthersExpanded(!isOwedToOthersExpanded)}
+                                aria-expanded={isOwedToOthersExpanded}
+                                aria-controls="owed-to-others-content"
+                                id="owed-to-others-header-button"
+                            >
+                                <span id="owed-to-others-header">Owed to Others (Due Today or Past Due)</span>
+                                {isOwedToOthersExpanded ? <ChevronDown size={24} /> : <ChevronRight size={24} />}
+                            </button>
+                            {isOwedToOthersExpanded && (
+                                <div id="owed-to-others-content">
+                                    {/* Log OwedToOthersTasks state before rendering the list or placeholder */}
+                                    {(() => {
+                                        console.log('[Index OWED_TO_OTHERS_SECTION] owedToOthersTasks (inside JSX):', JSON.stringify(owedToOthersTasks, null, 2));
+                                        return null;
+                                    })()}
+
+                                    {owedToOthersTasks.length > 0 ? (
+                                        <TaskList
+                                            onTaskItemClick={handleOpenDetailedView}
+                                            filteredTasks={owedToOthersTasks} // Pass the filtered 'owed to others' tasks
+                                            isBulkEditing={isBulkEditing}
+                                            onToggleBulkEdit={handleToggleBulkEdit}
+                                            viewingCompleted={false} // This section shows active tasks
+                                            showTodaysTasks={true} // This section focuses on today/past due
+                                            dataTestId="owed-to-others-task-list" // Corrected prop name
+                                        />
+                                    ) : (
+                                        <p 
+                                            className="text-gray-600 dark:text-slate-300" 
+                                            id="owed-to-others-placeholder-message" // Existing ID, kept for consistency if used elsewhere
+                                            data-testid="owed-to-others-placeholder" // Add the missing data-testid
+                                        >
+                                            No tasks owed to others are due today or past due.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Section 3: All my tasks */}
@@ -289,32 +335,26 @@ const Index = () => {
                             </button>
                             {isAllTasksExpanded && (
                                 <div id="all-tasks-content">
-                                    <TaskList
-                                        onTaskItemClick={handleOpenDetailedView}
-                                        filteredTasks={filteredTasks}
-                                        isBulkEditing={isBulkEditing}
-                                        onToggleBulkEdit={handleToggleBulkEdit}
-                                        viewingCompleted={viewingCompleted}
-                                        showTodaysTasks={showTodaysTasks}
-                                    />
+                                    {filteredTasks.length > 0 ? (
+                                        <TaskList
+                                            onTaskItemClick={handleOpenDetailedView}
+                                            filteredTasks={filteredTasks} // These are 'allTasks' from the useTaskFiltering hook
+                                            isBulkEditing={isBulkEditing}
+                                            onToggleBulkEdit={handleToggleBulkEdit} // Use the correct handler
+                                            viewingCompleted={viewingCompleted}
+                                            showTodaysTasks={false} // This section shows all tasks
+                                            placeholder={<p className="text-gray-600 dark:text-slate-300" id="all-tasks-placeholder">No tasks available. Add some tasks or adjust your filters!</p>}
+                                            dataTestId="all-my-tasks-list" // Added for testability
+                                        />
+                                    ) : (
+                                        <p className="text-gray-600 dark:text-slate-300" id="all-tasks-placeholder-message" data-testid="all-tasks-placeholder">
+                                            No tasks available. Add some tasks or adjust your filters!
+                                        </p>
+                                    )}
                                 </div>
                             )}
                         </div>
-                    </div>
-
-                    {/* Mobile FAB and Quick Task Input */}
-                    {isMobile && !isQuickInputActive && (
-                        <Button
-                            id="mobile-fab-quick-add"
-                            variant="default"
-                            size="icon"
-                            className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
-                            onClick={() => setIsQuickInputActive(true)}
-                            aria-label="Open quick task input"
-                        >
-                            <Plus className="h-7 w-7" />
-                        </Button>
-                    )}
+                    </div> {/* Closing tag for 'mt-6 space-y-6' sections wrapper div (from L260) */}
                     {isMobile && isQuickInputActive && (
                         <QuickTaskInput onClose={() => setIsQuickInputActive(false)} />
                     )}
@@ -342,6 +382,18 @@ const Index = () => {
                         onOpenChange={setBulkImportOpen}
                     />
                 </div> {/* Closing tag for 'container max-w-4xl mx-auto ...' div */}
+                {/* Floating Action Button for Quick Task Input on Mobile */} 
+                {isMobile && (
+                    <Button
+                        onClick={() => setIsQuickInputActive(true)}
+                        className="fixed bottom-20 md:bottom-4 right-4 h-14 w-14 rounded-full shadow-lg z-50 bg-primary hover:bg-primary/90 text-primary-foreground"
+                        size="icon"
+                        aria-label="Add Quick Task"
+                        id="mobile-quick-add-fab"
+                    >
+                        <Plus className="h-7 w-7" />
+                    </Button>
+                )}
             </div> {/* Closing tag for 'flex-grow overflow-y-auto' div */}
 
             {/* Sidebar rendered after main content to appear on the right */}
@@ -365,4 +417,4 @@ const Index = () => {
     );
 };
 
-export default Index;
+export default IndexPage;

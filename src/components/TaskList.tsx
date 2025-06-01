@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTaskContext } from '@/context/TaskContext';
 import { Task } from '@/types';
 import { useTaskFiltering } from '@/hooks/useTaskFiltering';
-import TaskListControls from './headers/TaskListControls';
+// import TaskListControls from './headers/TaskListControls';
 import TaskListContent from './list/TaskListContent';
 import BulkActionToolbar from './toolbars/BulkActionToolbar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -15,6 +15,8 @@ interface TaskListProps {
     onToggleBulkEdit: () => void; // Added from Index
     viewingCompleted: boolean; // Added: to be passed to TaskListContent
     showTodaysTasks: boolean; // Added: to be passed to TaskListContent
+    placeholder?: React.ReactNode; // Added to display when task list is empty
+    dataTestId?: string; // Added for testability
 }
 
 const TaskList = ({
@@ -24,6 +26,7 @@ const TaskList = ({
     onToggleBulkEdit,
     viewingCompleted,
     showTodaysTasks,
+    dataTestId, // Added for testability
 }: TaskListProps) => {
     const {
         tasks,
@@ -138,7 +141,7 @@ const TaskList = ({
     );
 
     return (
-        <div className="mt-6 space-y-6 bg-white dark:bg-slate-800 p-4 rounded-lg">
+        <div className="mt-6 space-y-6 bg-white dark:bg-slate-800 p-4 rounded-lg" data-testid={dataTestId}>
             {/* TaskListControls removed from here, now handled in Index.tsx */}
 
             <TaskListContent
