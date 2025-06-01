@@ -107,7 +107,7 @@ const Textarea = React.forwardRef<
                     'data-testid': dataTestId, // Pass data-testid here
                     'aria-label': ariaLabel, // Pass aria-label here
                     class: cn(
-                        'max-w-none focus:outline-none w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
+                        'max-w-none focus:outline-none w-full min-h-[80px] rounded-md border border-input bg-background pl-3 pr-0 py-2 text-sm ring-offset-background',
                         // Removed placeholder:text-muted-foreground as TipTap's Placeholder extension handles this
                         'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
                         className // Apply className prop for additional styling
