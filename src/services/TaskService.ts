@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { formatISO } from 'date-fns';
 import type { Database } from '@/types/supabase'; // Added import
 import {
     Task,
@@ -73,6 +74,7 @@ interface DbTask {
     go_live_date?: string | null; // ISO date string
     effort_level: EffortLevel;
     completed_date?: string | null; // ISO date string
+    scheduled_start_date?: string | null; // ISO date string
     dependencies?: string[] | null; // Assuming array of task IDs
     created_at: string; // ISO date string
     updated_at: string; // ISO date string
@@ -130,6 +132,9 @@ const mapDbTaskToTask = (
         completed: dbTask.completed_date ? true : false,
         completedDate: dbTask.completed_date
             ? new Date(dbTask.completed_date)
+            : null,
+        scheduled_start_date: dbTask.scheduled_start_date
+            ? new Date(dbTask.scheduled_start_date)
             : null,
         tags:
             tags ||
@@ -652,182 +657,261 @@ export const TaskService = {
     },
 
     async createTask(
-        taskInput: Omit<
-            Task,
-            | 'id'
-            | 'createdAt'
-            | 'updatedAt'
-            | 'userId'
-            | 'is_archived'
-            | 'recurrenceRule'
-        > & {
-            recurrenceRule?: Omit<
-                RecurrenceRule,
-                'id' | 'taskId' | 'userId' | 'createdAt' | 'updatedAt'
-            >;
-        }
-    ): Promise<Task> {
-        console.log(
-            '[TaskService.createTask] Called with input:',
-            JSON.stringify(taskInput)
+    taskInput: Omit<
+    Task,
+    | 'id'
+    | 'createdAt'
+    | 'updatedAt'
+    | 'userId'
+    | 'is_archived'
+    | 'recurrenceRule'
+        // Add scheduled_start_date here if it's not part of the Omit and should be optional/handled
+    > & {
+    recurrenceRule?: Omit<
+    RecurrenceRule,
+        'id' | 'taskId' | 'userId' | 'createdAt' | 'updatedAt'
+        >;
+        // Ensure scheduled_start_date is part of taskInput if it's expected
+    }
+): Promise<Task> {
+    console.log(
+        '[TaskService.createTask] Called with input:',
+        JSON.stringify(taskInput)
+    );
+    const {
+        data: { user },
+        error: userError,
+    } = await supabase.auth.getUser();
+    console.log(
+    '[TaskService.createTask] supabase.auth.getUser response - user:',
+    user ? user.id : 'null',
+        'error:',
+        userError
+    );
+
+    if (userError || !user) {
+    console.error(
+        '[TaskService.createTask] User not authenticated or error fetching user:',
+        userError
         );
-        const {
-            data: { user },
-            error: userError,
-        } = await supabase.auth.getUser();
-        console.log(
-            '[TaskService.createTask] supabase.auth.getUser response - user:',
-            user ? user.id : 'null',
-            'error:',
-            userError
+        throw new Error('User not authenticated');
+    }
+
+    const { tags, people, recurrenceRule, ...mainTaskInput } = taskInput;
+    console.log(
+        '[TaskService.createTask] mainTaskInput after destructuring:',
+        JSON.stringify(mainTaskInput)
+    );
+    console.log('[TaskService.createTask] tags:', tags);
+    console.log('[TaskService.createTask] people:', people);
+    console.log('[TaskService.createTask] recurrenceRule:', recurrenceRule);
+
+    const dbTaskPayload: Database['public']['Tables']['tasks']['Insert'] = {
+    user_id: user.id,
+    title: mainTaskInput.title,
+    description: mainTaskInput.description,
+    status: mainTaskInput.status ?? TaskStatus.PENDING,
+    priority: mainTaskInput.priority ?? Priority.NORMAL,
+    due_date: mainTaskInput.dueDate
+        ? formatISO(new Date(mainTaskInput.dueDate)) // Using formatISO
+        : null,
+    due_date_type: mainTaskInput.dueDateType,
+    target_deadline: mainTaskInput.targetDeadline
+        ? formatISO(new Date(mainTaskInput.targetDeadline)) // Using formatISO
+    : null,
+    go_live_date: mainTaskInput.goLiveDate
+        ? formatISO(new Date(mainTaskInput.goLiveDate)) // Using formatISO
+        : null,
+    effort_level: mainTaskInput.effortLevel ?? EffortLevel.M,
+    completed_date: mainTaskInput.completedDate
+        ? formatISO(new Date(mainTaskInput.completedDate)) // Using formatISO
+        : null,
+    // Ensure scheduled_start_date is handled from mainTaskInput
+    scheduled_start_date: mainTaskInput.scheduled_start_date
+        ? formatISO(new Date(mainTaskInput.scheduled_start_date), { representation: 'date' })
+        : null,
+    dependencies: mainTaskInput.dependencies,
+    original_scheduled_date: mainTaskInput.originalScheduledDate
+            ? formatISO(new Date(mainTaskInput.originalScheduledDate)) // Using formatISO
+            : null,
+        is_recurring_instance: mainTaskInput.isRecurringInstance ?? false,
+    originalRecurringTaskId: mainTaskInput.originalRecurringTaskId,
+    is_archived: false,
+        // recurrence_rule_id will be set later if a rule is created
+    };
+
+    console.log(
+    '[TaskService.createTask] About to call supabase.from("tasks").insert with payload:',
+    JSON.stringify(dbTaskPayload)
+    );
+    const { data: createdTaskData, error: taskError } = await supabase
+    .from('tasks')
+    .insert(dbTaskPayload)
+    .select()
+    .single<DbTask>();
+
+    if (taskError) {
+    console.error('Error creating task in Supabase:', taskError);
+    throw new Error(
+            `Error creating task in Supabase: ${taskError?.message}`
         );
+    }
+    if (!createdTaskData) {
+        console.error('Task creation failed silently.');
+    throw new Error('Task creation failed silently.');
+    }
+    console.log('[TaskService.createTask] Task created successfully.');
 
-        if (userError || !user) {
-            console.error(
-                '[TaskService.createTask] User not authenticated or error fetching user:',
-                userError
-            );
-            throw new Error('User not authenticated');
-        }
+    let createdRecurrenceRuleId: string | null = null;
+    if (recurrenceRule && createdTaskData.id) {
+    console.log(
+    '[TaskService.createTask] About to call supabase.from("task_recurrence_rules").insert'
+    );
+    const dbRecurrenceRuleData: Omit<
+    DbRecurrenceRule,
+        'id' | 'created_at' | 'updated_at' | 'task_id'
+    > & { task_id: string; interval: number } = {
+    ...recurrenceRule,
+    task_id: createdTaskData.id,
+    user_id: user.id,
+    interval: recurrenceRule.interval ?? 1, // Default interval to 1 if not provided
+    };
+        const { data: recurrenceData, error: recurrenceError } =
+        await supabase
+        .from('task_recurrence_rules')
+    .insert(dbRecurrenceRuleData)
+    .select()
+        .single<DbRecurrenceRule>();
 
-        const { tags, people, recurrenceRule, ...mainTaskInput } = taskInput;
-        console.log(
-            '[TaskService.createTask] mainTaskInput after destructuring:',
-            JSON.stringify(mainTaskInput)
-        );
-        console.log('[TaskService.createTask] tags:', tags);
-        console.log('[TaskService.createTask] people:', people);
-        console.log('[TaskService.createTask] recurrenceRule:', recurrenceRule);
+    if (recurrenceError) {
+    console.error(
+        'Error creating recurrence rule:',
+        recurrenceError
+    );
+    // Optionally, decide if you want to roll back task creation or just log and continue
+        } else if (recurrenceData) {
+            createdRecurrenceRuleId = recurrenceData.id;
+            // Update the main task with the recurrence rule ID
+            const { error: updateTaskError } = await supabase
+                .from('tasks')
+                .update({ recurrence_rule_id: createdRecurrenceRuleId })
+                .eq('id', createdTaskData.id); // Ensure you target the correct task
 
-        const dbTaskPayload: Database['public']['Tables']['tasks']['Insert'] = {
-            user_id: user.id,
-            title: mainTaskInput.title,
-            description: mainTaskInput.description,
-            status: mainTaskInput.status ?? TaskStatus.PENDING,
-            priority: mainTaskInput.priority ?? Priority.NORMAL,
-            due_date: mainTaskInput.dueDate
-                ? new Date(mainTaskInput.dueDate).toISOString()
-                : null,
-            due_date_type: mainTaskInput.dueDateType,
-            target_deadline: mainTaskInput.targetDeadline
-                ? new Date(mainTaskInput.targetDeadline).toISOString()
-                : null,
-            go_live_date: mainTaskInput.goLiveDate
-                ? new Date(mainTaskInput.goLiveDate).toISOString()
-                : null,
-            effort_level: mainTaskInput.effortLevel ?? EffortLevel.M,
-            completed_date: mainTaskInput.completedDate
-                ? new Date(mainTaskInput.completedDate).toISOString()
-                : null,
-            dependencies: mainTaskInput.dependencies,
-            original_scheduled_date: mainTaskInput.originalScheduledDate
-                ? new Date(mainTaskInput.originalScheduledDate).toISOString()
-                : null,
-            is_recurring_instance: mainTaskInput.isRecurringInstance ?? false,
-            originalRecurringTaskId: mainTaskInput.originalRecurringTaskId,
-            is_archived: false,
-            // recurrence_rule_id will be set later if a rule is created
-        };
-
-        console.log(
-            '[TaskService.createTask] About to call supabase.from("tasks").insert with payload:',
-            JSON.stringify(dbTaskPayload)
-        );
-        const { data: createdTaskData, error: taskError } = await supabase
-            .from('tasks')
-            .insert(dbTaskPayload)
-            .select()
-            .single<DbTask>();
-
-        if (taskError) {
-            console.error('Error creating task in Supabase:', taskError);
-            throw new Error(
-                `Error creating task in Supabase: ${taskError?.message}`
-            );
-        }
-        if (!createdTaskData) {
-            console.error('Task creation failed silently.');
-            throw new Error('Task creation failed silently.');
-        }
-        console.log('[TaskService.createTask] Task created successfully.');
-
-        let createdRecurrenceRuleId: string | null = null;
-        if (recurrenceRule && createdTaskData.id) {
-            console.log(
-                '[TaskService.createTask] About to call supabase.from("task_recurrence_rules").insert'
-            );
-            const dbRecurrenceRuleData: Omit<
-                DbRecurrenceRule,
-                'id' | 'created_at' | 'updated_at' | 'task_id'
-            > & { task_id: string; interval: number } = {
-                ...recurrenceRule,
-                task_id: createdTaskData.id,
-                user_id: user.id,
-                interval: recurrenceRule.interval ?? 1, // Default interval to 1 if not provided
-            };
-            const { data: recurrenceData, error: recurrenceError } =
-                await supabase
-                    .from('task_recurrence_rules')
-                    .insert(dbRecurrenceRuleData)
-                    .select()
-                    .single<DbRecurrenceRule>();
-
-            if (recurrenceError) {
+            if (updateTaskError) {
                 console.error(
-                    'Error creating recurrence rule:',
-                    recurrenceError
+                    'Error updating task with recurrence rule ID:',
+                    updateTaskError
                 );
-                // Optionally, decide if you want to roll back task creation or just log and continue
-            } else if (recurrenceData) {
-                createdRecurrenceRuleId = recurrenceData.id;
-                // Update the main task with the recurrence rule ID
-                const { error: updateTaskError } = await supabase
-                    .from('tasks')
-                    .update({ recurrence_rule_id: createdRecurrenceRuleId })
-                    .eq('id', createdTaskData.id);
-                if (updateTaskError) {
-                    console.error(
-                        'Error updating task with recurrence_rule_id:',
-                        updateTaskError
-                    );
+                // Handle this error, perhaps log it or throw if critical
+            } else {
+                // Update the createdTaskData in memory if needed, or re-fetch
+                createdTaskData.recurrence_rule_id = createdRecurrenceRuleId;
+            }
+        }
+    }
+    // ... rest of the function (tag/people handling, mapDbTaskToTask call)
+    // Ensure the mapDbTaskToTask call receives the potentially updated createdTaskData
+
+    // Handle tags
+    const createdTags: Tag[] = [];
+    if (tags && tags.length > 0) {
+        for (const tag of tags) {
+            let tagId = typeof tag === 'string' ? tag : tag.id;
+            if (typeof tag === 'object' && !tag.id) {
+                // If it's a new tag object without an ID, create it
+                const { data: newTag, error: newTagError } = await supabase
+                    .from('tags')
+                    .insert({ name: tag.name, user_id: user.id })
+                    .select()
+                    .single();
+                if (newTagError || !newTag) {
+                    console.error('Error creating new tag:', newTagError);
+                    continue; // Skip this tag
+                }
+                tagId = newTag.id;
+                createdTags.push(newTag as Tag);
+            } else if (typeof tag === 'object' && tag.id) {
+                 createdTags.push(tag); // Existing tag object
+            } else {
+                // It's a tag ID, fetch it to include in the returned task
+                const { data: existingTag, error: fetchTagError } = await supabase
+                    .from('tags')
+                    .select('*')
+                    .eq('id', tagId)
+                    .single();
+                if (!fetchTagError && existingTag) {
+                    createdTags.push(existingTag as Tag);
+                }
+            }
+
+            // Link tag to task
+            if (tagId) { // Ensure tagId is valid before linking
+                const { error: linkError } = await supabase
+                    .from('task_tags')
+                    .insert({ task_id: createdTaskData.id, tag_id: tagId });
+                if (linkError) {
+                    console.error('Error linking tag to task:', linkError);
                 }
             }
         }
-        // TODO: Properly map createdTaskData and associate tags/people before returning.
-        // Map the created task (and its related entities) to the Task type
-        const finalRecurrenceRule =
-            createdRecurrenceRuleId && recurrenceRule
-                ? mapDbRecurrenceRuleToRecurrenceRule({
-                      ...recurrenceRule,
-                      id: createdRecurrenceRuleId,
-                      task_id: createdTaskData.id,
-                      user_id: user.id,
-                      created_at: new Date().toISOString(), // Approximate, DB will have actual
-                      updated_at: new Date().toISOString(), // Approximate
-                      // Ensure all DbRecurrenceRule fields are present if needed by mapDbRecurrenceRuleToRecurrenceRule
-                      frequency: recurrenceRule.frequency,
-                      interval: recurrenceRule.interval ?? 1,
-                  })
-                : null;
+    }
 
-        const taskTags = tags
-            ? await this.getTagsForTask(createdTaskData.id, user.id)
-            : [];
-        const taskPeople = people
-            ? await this.getPeopleForTask(createdTaskData.id, user.id)
-            : [];
+    // Handle people (similar logic to tags if needed, or simpler if just IDs)
+    const associatedPeople: Person[] = [];
+    if (people && people.length > 0) {
+        for (const person of people) {
+             let personId = typeof person === 'string' ? person : person.id;
+             if (typeof person === 'object' && !person.id) {
+                const { data: newPerson, error: newPersonError } = await supabase
+                    .from('people')
+                    .insert({ name: person.name, user_id: user.id }) // Assuming 'name' is the primary field
+                    .select()
+                    .single();
+                if (newPersonError || !newPerson) {
+                    console.error('Error creating new person:', newPersonError);
+                    continue;
+                }
+                personId = newPerson.id;
+                associatedPeople.push(newPerson as Person);
+            } else if (typeof person === 'object' && person.id) {
+                associatedPeople.push(person);
+            } else {
+                 const { data: existingPerson, error: fetchPersonError } = await supabase
+                    .from('people')
+                    .select('*')
+                    .eq('id', personId)
+                    .single();
+                if (!fetchPersonError && existingPerson) {
+                    associatedPeople.push(existingPerson as Person);
+                }
+            }
 
-        // Update createdTaskData with the recurrence_rule_id if it was set
-        if (createdRecurrenceRuleId) {
-            createdTaskData.recurrence_rule_id = createdRecurrenceRuleId;
+            if (personId) { // Ensure personId is valid before linking
+                const { error: linkError } = await supabase
+                    .from('task_people')
+                    .insert({ task_id: createdTaskData.id, person_id: personId });
+                if (linkError) {
+                    console.error('Error linking person to task:', linkError);
+                }
+            }
         }
+    }
+    
+    // Fetch the full recurrence rule if it was created to pass to mapDbTaskToTask
+    let finalRecurrenceRule: RecurrenceRule | null = null;
+    if (createdRecurrenceRuleId) {
+        const {data: ruleData, error: ruleError} = await supabase
+            .from('task_recurrence_rules')
+            .select('*')
+            .eq('id', createdRecurrenceRuleId)
+            .single<DbRecurrenceRule>();
+        if (!ruleError && ruleData) {
+            finalRecurrenceRule = mapDbRecurrenceRuleToRecurrenceRule(ruleData);
+        }
+    }
 
-        return mapDbTaskToTask(
-            createdTaskData,
-            finalRecurrenceRule,
-            taskTags,
-            taskPeople
-        );
+
+    return mapDbTaskToTask(createdTaskData, finalRecurrenceRule, createdTags, associatedPeople);
     }, // End of createTask method
 
     async updateTask(
@@ -856,7 +940,7 @@ export const TaskService = {
 
         const taskChangesForSupabase: Database['public']['Tables']['tasks']['Update'] =
             {
-                updated_at: new Date().toISOString(),
+                updated_at: formatISO(new Date()),
             };
 
         // Populate taskChangesForSupabase using mainTaskUpdates for snake_case conversion and clarity
@@ -870,49 +954,54 @@ export const TaskService = {
             taskChangesForSupabase.priority = mainTaskUpdates.priority;
         if (mainTaskUpdates.dueDate !== undefined)
             taskChangesForSupabase.due_date = mainTaskUpdates.dueDate
-                ? new Date(mainTaskUpdates.dueDate).toISOString()
+                ? formatISO(new Date(mainTaskUpdates.dueDate))
                 : null;
         if (mainTaskUpdates.dueDateType !== undefined)
             taskChangesForSupabase.due_date_type = mainTaskUpdates.dueDateType;
         if (mainTaskUpdates.targetDeadline !== undefined)
             taskChangesForSupabase.target_deadline =
                 mainTaskUpdates.targetDeadline
-                    ? new Date(mainTaskUpdates.targetDeadline).toISOString()
+                    ? formatISO(new Date(mainTaskUpdates.targetDeadline))
                     : null;
         if (mainTaskUpdates.goLiveDate !== undefined)
             taskChangesForSupabase.go_live_date = mainTaskUpdates.goLiveDate
-                ? new Date(mainTaskUpdates.goLiveDate).toISOString()
+                ? formatISO(new Date(mainTaskUpdates.goLiveDate))
                 : null;
         if (mainTaskUpdates.effortLevel !== undefined)
             taskChangesForSupabase.effort_level = mainTaskUpdates.effortLevel;
         if (mainTaskUpdates.completed !== undefined) {
             taskChangesForSupabase.completed_date = mainTaskUpdates.completed
                 ? mainTaskUpdates.completedDate
-                    ? new Date(mainTaskUpdates.completedDate).toISOString()
-                    : new Date().toISOString()
+                ? formatISO(new Date(mainTaskUpdates.completedDate))
+                    : formatISO(new Date())
                 : null;
         } else if (mainTaskUpdates.completedDate !== undefined) {
             // Only consider if 'completed' is not set
             taskChangesForSupabase.completed_date =
                 mainTaskUpdates.completedDate
-                    ? new Date(mainTaskUpdates.completedDate).toISOString()
+                ? formatISO(new Date(mainTaskUpdates.completedDate))
                     : null;
         }
         if (mainTaskUpdates.dependencies !== undefined)
             taskChangesForSupabase.dependencies = mainTaskUpdates.dependencies;
-        if (mainTaskUpdates.originalScheduledDate !== undefined)
+            if (mainTaskUpdates.scheduled_start_date !== undefined) { // Added this block
+        taskChangesForSupabase.scheduled_start_date = mainTaskUpdates.scheduled_start_date
+            ? formatISO(new Date(mainTaskUpdates.scheduled_start_date), { representation: 'date' })
+            : null;
+    }
+    if (mainTaskUpdates.originalScheduledDate !== undefined)
             taskChangesForSupabase.original_scheduled_date =
                 mainTaskUpdates.originalScheduledDate
-                    ? new Date(
-                          mainTaskUpdates.originalScheduledDate
-                      ).toISOString()
+                ? formatISO(new Date(
+                mainTaskUpdates.originalScheduledDate
+                ))
                     : null;
         if (mainTaskUpdates.isRecurringInstance !== undefined)
             taskChangesForSupabase.is_recurring_instance =
                 mainTaskUpdates.isRecurringInstance;
         if (mainTaskUpdates.originalRecurringTaskId !== undefined)
-            taskChangesForSupabase.originalRecurringTaskId =
-                mainTaskUpdates.originalRecurringTaskId;
+        taskChangesForSupabase.originalRecurringTaskId = // Corrected: use originalRecurringTaskId from mainTaskUpdates
+        mainTaskUpdates.originalRecurringTaskId;
         // recurrence_rule_id is handled by manageRecurrenceRuleForUpdate
         // is_archived is handled by archiveTask/unarchiveTask
 
@@ -1414,7 +1503,7 @@ export const TaskService = {
                 .from('tasks')
                 .update({
                     is_archived: true,
-                    updated_at: new Date().toISOString(),
+                    updated_at: formatISO(new Date()),
                 })
                 .eq('id', taskId)
                 .eq('user_id', userId)
@@ -1514,7 +1603,7 @@ export const TaskService = {
                 .from('tasks')
                 .update({
                     is_archived: false,
-                    updated_at: new Date().toISOString(),
+                    updated_at: formatISO(new Date()),
                 })
                 .eq('id', taskId)
                 .eq('user_id', userId)

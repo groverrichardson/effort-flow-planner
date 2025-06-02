@@ -278,6 +278,7 @@ export type Database = {
           id: string
           is_archived: boolean | null
           is_recurring_instance: boolean | null
+          scheduled_start_date: string | null
           linked_note_ids: string[] | null
           parent_task_id: string | null
           priority: string | null
@@ -299,6 +300,7 @@ export type Database = {
           id?: string
           is_archived?: boolean | null
           is_recurring_instance?: boolean | null
+          scheduled_start_date?: string | null
           linked_note_ids?: string[] | null
           parent_task_id?: string | null
           priority?: string | null

@@ -1,5 +1,6 @@
 /// <reference types="vitest/globals" />
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import { formatISO } from 'date-fns';
 import { type User } from '@supabase/supabase-js';
 import TaskService from './TaskService'; // Assuming default export
 import { supabase } from '@/integrations/supabase/client';
@@ -408,8 +409,8 @@ describe('TaskService', () => {
                 status: updates.status,
                 priority: updates.priority,
                 effort_level: updates.effortLevel,
-                completed_date: updates.completed ? new Date().toISOString() : null,
-                updated_at: new Date().toISOString(), // TaskService sets this
+                completed_date: updates.completed ? formatISO(new Date()) : null,
+                updated_at: formatISO(new Date()), // TaskService sets this
             };
 
             const mockUpdatedDbTaskResponse: Partial<DbTaskWithRelations> = {
