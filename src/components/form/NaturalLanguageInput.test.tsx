@@ -1,3 +1,32 @@
+// Mock for document.createRange().getClientRects and getBoundingClientRect
+if (typeof window !== 'undefined' && window.document && !window.document.createRange) {
+  window.document.createRange = () => {
+    const range = new Range();
+    range.getBoundingClientRect = vi.fn(() => ({ x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, bottom: 0, right: 0, toJSON: () => ({}) }));
+    range.getClientRects = vi.fn(() => ({ item: () => null, length: 0, [Symbol.iterator]: vi.fn(), toJSON: () => [] }));
+    return range;
+  };
+}
+// More specific fix if createRange exists but methods are missing
+if (typeof window !== 'undefined' && window.document && typeof window.document.createRange === 'function') {
+  const originalCreateRange = window.document.createRange.bind(window.document);
+  window.document.createRange = () => {
+    const range = originalCreateRange();
+    if (typeof range.getBoundingClientRect !== 'function') {
+      range.getBoundingClientRect = vi.fn(() => ({ x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, bottom: 0, right: 0, toJSON: () => ({}) }));
+    }
+    if (typeof range.getClientRects !== 'function') {
+      range.getClientRects = vi.fn(() => ({ item: () => null, length: 0, [Symbol.iterator]: vi.fn(), toJSON: () => [] }));
+    }
+    return range;
+  };
+}
+
+// Mock for document.elementFromPoint
+if (typeof document !== 'undefined' && typeof document.elementFromPoint !== 'function') {
+  document.elementFromPoint = vi.fn(() => null);
+}
+
 import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
