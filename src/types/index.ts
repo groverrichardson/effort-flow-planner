@@ -1,4 +1,17 @@
 
+// Add this TaskSegment definition
+export interface TaskSegment {
+  id?: string; // Optional: if segments are stored as separate entities with their own IDs
+  parent_task_id: string; // ID of the original task this segment belongs to
+  effort_points: number; // Effort points allocated to this segment
+  scheduled_date: string; // ISO date string for when this segment is scheduled
+  status: TaskStatus; // Status of this segment (e.g., PENDING, IN_PROGRESS, COMPLETED)
+  // Optional: Add user_id, created_at, updated_at if segments are first-class DB entities
+  // user_id?: string;
+  // created_at?: string;
+  // updated_at?: string;
+}
+
 export enum Priority {
   HIGH = 'high',
   NORMAL = 'normal',
@@ -78,6 +91,8 @@ export interface Task {
   createdAt: Date;
   updatedAt: Date;
   originalScheduledDate?: Date | null; // The date this instance was scheduled to occur based on the rule
+  is_archived?: boolean; // Assuming this was added from memory
+  segments?: TaskSegment[]; // <-- ADDED
   recurrenceRuleId?: string; // Link to a RecurrenceRule
   recurrenceRule?: RecurrenceRule; // Full recurrence rule object, if fetched
   isRecurringInstance?: boolean; // True if this task is an instance of a recurring series
@@ -109,6 +124,7 @@ export interface TaskCore {
   isRecurringInstance?: boolean;
   originalRecurringTaskId?: string | null;
   scheduled_start_date?: Date | string | null;
+  segments?: TaskSegment[]; // <-- ADDED
   recurrenceRule?: RecurrenceRule | Omit<RecurrenceRule, 'id' | 'taskId' | 'userId' | 'createdAt' | 'updatedAt'> | null;
 }
 
