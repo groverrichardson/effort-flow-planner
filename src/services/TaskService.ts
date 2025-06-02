@@ -515,6 +515,75 @@ export const TaskService = {
         }
     },
 
+    async getTasksContributingToEffortOnDate(targetDate: string, userId: string): Promise<Task[]> {
+        try {
+            // Query for PENDING tasks scheduled on the targetDate
+            const { data: pendingTasksData, error: pendingError } = await supabase
+                .from('tasks')
+                .select(`
+                    *,
+                    task_recurrence_rules(*),
+                    task_tags(tags(*)),
+                    task_people(people(*))
+                `)
+                .eq('user_id', userId)
+                .eq('status', TaskStatus.PENDING)
+                .eq('is_archived', false)
+                .eq('scheduled_start_date', targetDate);
+
+            if (pendingError) {
+                console.error('[TaskService.getTasksContributingToEffortOnDate] Error fetching PENDING tasks:', pendingError);
+                throw pendingError;
+            }
+
+            // Query for IN_PROGRESS tasks active on the targetDate
+            const { data: inProgressTasksData, error: inProgressError } = await supabase
+                .from('tasks')
+                .select(`
+                    *,
+                    task_recurrence_rules(*),
+                    task_tags(tags(*)),
+                    task_people(people(*))
+                `)
+                .eq('user_id', userId)
+                .eq('status', TaskStatus.IN_PROGRESS)
+                .eq('is_archived', false)
+                .lte('scheduled_start_date', targetDate)
+                .gte('scheduled_completion_date', targetDate);
+
+            if (inProgressError) {
+                console.error('[TaskService.getTasksContributingToEffortOnDate] Error fetching IN_PROGRESS tasks:', inProgressError);
+                throw inProgressError;
+            }
+
+            const combinedDbTasks = [
+                ...(pendingTasksData || []),
+                ...(inProgressTasksData || [])
+            ];
+
+            // Deduplicate tasks: although status-based queries should prevent direct overlap,
+            // this ensures safety if a task somehow matched both (e.g., data inconsistency)
+            const uniqueDbTasks = Array.from(new Map(combinedDbTasks.map(task => [task.id, task])).values());
+
+            return uniqueDbTasks.map(dbTask => {
+                const recurrenceRule = dbTask.task_recurrence_rules
+                    ? mapDbRecurrenceRuleToRecurrenceRule(
+                        Array.isArray(dbTask.task_recurrence_rules)
+                            ? dbTask.task_recurrence_rules[0]
+                            : dbTask.task_recurrence_rules
+                      )
+                    : null;
+                const tags = dbTask.task_tags?.map((tt: any) => tt.tags as Tag).filter(Boolean) || [];
+                const people = dbTask.task_people?.map((tp: any) => tp.people as Person).filter(Boolean) || [];
+                return mapDbTaskToTask(dbTask as DbTask, recurrenceRule, tags, people);
+            });
+
+        } catch (error) {
+            console.error('[TaskService.getTasksContributingToEffortOnDate] Unexpected error:', error);
+            throw new Error('Failed to fetch tasks contributing to effort on date.');
+        }
+    },
+
     async getTags(): Promise<Tag[]> {
         const userId = await this.getCurrentUserId();
         if (!userId) {
@@ -1678,6 +1747,67 @@ export const TaskService = {
                     (error as Error).message
                 }`
             );
+        }
+    },
+
+    async getTasksContributingToEffortOnDate(dateISO: string, userId: string): Promise<Task[]> {
+        if (!userId) {
+            console.error('[TaskService.getTasksContributingToEffortOnDate] User ID is required.');
+            throw new Error('User ID is required');
+        }
+        if (!dateISO) {
+            console.error('[TaskService.getTasksContributingToEffortOnDate] Date ISO string is required.');
+            throw new Error('Date ISO string is required');
+        }
+
+        console.log(`[TaskService.getTasksContributingToEffortOnDate] Fetching tasks for user ${userId} on date ${dateISO}`);
+
+        try {
+            const { data: dbTasks, error } = await supabase
+                .from('tasks')
+                .select(`
+                    *,
+                    task_recurrence_rules(*),
+                    task_tags!inner(tags(*)),
+                    task_people!inner(people(*))
+                `)
+                .eq('user_id', userId)
+                .lte('scheduled_start_date', dateISO) // Task starts on or before this date
+                .gte('scheduled_completion_date', dateISO) // Task ends on or after this date
+                .neq('status', TaskStatus.COMPLETED) // Not completed
+                .eq('is_archived', false); // Not archived
+
+            if (error) {
+                console.error(`[TaskService.getTasksContributingToEffortOnDate] Supabase error fetching tasks for ${dateISO}:`, error);
+                throw error;
+            }
+
+            if (!dbTasks) {
+                console.log(`[TaskService.getTasksContributingToEffortOnDate] No tasks found for user ${userId} on date ${dateISO}.`);
+                return [];
+            }
+            
+            console.log(`[TaskService.getTasksContributingToEffortOnDate] Found ${dbTasks.length} tasks for user ${userId} on date ${dateISO}.`);
+
+            return dbTasks.map(dbTask => {
+                const recurrenceRule = dbTask.task_recurrence_rules 
+                    ? mapDbRecurrenceRuleToRecurrenceRule(
+                        Array.isArray(dbTask.task_recurrence_rules) 
+                            ? dbTask.task_recurrence_rules[0] 
+                            : dbTask.task_recurrence_rules
+                    ) 
+                    : null;
+                const tags = dbTask.task_tags?.map((tt: any) => tt.tags as Tag).filter(Boolean) || [];
+                const people = dbTask.task_people?.map((tp: any) => tp.people as Person).filter(Boolean) || [];
+                return mapDbTaskToTask(dbTask, recurrenceRule, tags, people);
+            });
+
+        } catch (error) {
+            console.error(`[TaskService.getTasksContributingToEffortOnDate] Unexpected error:`, error);
+            if (error instanceof Error && error.message.includes('Supabase error')) {
+                throw error;
+            }
+            throw new Error(`An unexpected error occurred while fetching tasks contributing to effort on ${dateISO}.`);
         }
     },
 }; // End of TaskService object
