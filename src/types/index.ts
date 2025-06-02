@@ -99,7 +99,6 @@ export interface TaskCore {
   completed: boolean;
   completedDate?: Date | string | null;
   is_archived?: boolean;
-  scheduled_start_date?: Date | null;
   // Relationships - IDs or full objects can be passed for creation/update
   tags?: (string | Tag)[]; // Array of tag IDs or Tag objects
   people?: (string | Person)[]; // Array of person IDs or Person objects
@@ -110,7 +109,6 @@ export interface TaskCore {
   originalRecurringTaskId?: string | null;
   scheduled_start_date?: Date | string | null;
   recurrenceRule?: RecurrenceRule | Omit<RecurrenceRule, 'id' | 'taskId' | 'userId' | 'createdAt' | 'updatedAt'> | null;
-  scheduled_start_date?: Date | string | null;
 }
 
 // Payload for creating a new task. Some fields are mandatory.
