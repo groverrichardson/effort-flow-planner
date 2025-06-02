@@ -107,6 +107,7 @@ export interface TaskCore {
   originalScheduledDate?: Date | string | null;
   isRecurringInstance?: boolean;
   originalRecurringTaskId?: string | null;
+  scheduled_start_date?: Date | string | null;
   recurrenceRule?: RecurrenceRule | Omit<RecurrenceRule, 'id' | 'taskId' | 'userId' | 'createdAt' | 'updatedAt'> | null;
 }
 
