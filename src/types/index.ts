@@ -7,6 +7,7 @@ export enum Priority {
 }
 
 export enum EffortLevel {
+  NONE = 0,
   XS = 1,
   S = 2,
   M = 4,
