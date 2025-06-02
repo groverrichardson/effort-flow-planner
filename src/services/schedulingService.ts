@@ -10,7 +10,20 @@ export interface ISchedulingTaskService {
 
 // Constants
 const MAX_SCHEDULING_DAYS_AHEAD = 365;
-const DEFAULT_DAILY_CAPACITY = 8;
+const DEFAULT_DAILY_CAPACITY = 8; // Default if no tasks completed in 90 days
+
+const LARGE_TASK_EP_THRESHOLDS = {
+  EP8: 8,
+  EP16: 16,
+  EP32: 32,
+};
+
+const LARGE_TASK_TIMEFRAMES_DAYS = {
+  [LARGE_TASK_EP_THRESHOLDS.EP8]: 7,
+  [LARGE_TASK_EP_THRESHOLDS.EP16]: 14,
+  [LARGE_TASK_EP_THRESHOLDS.EP32]: 28,
+};
+
 
 /**
  * Maps EffortLevel enum directly to its numeric point value.
@@ -26,7 +39,7 @@ export const getEffortPoints = (effortLevel: EffortLevel): number => {
     case EffortLevel.L: return 8;
     case EffortLevel.XL: return 16;
     case EffortLevel.XXL: return 32;
-    case EffortLevel.XXXL: return 64;
+    case EffortLevel.XXXL: return 64; // Assuming XXXL is 64 based on pattern
     default:
       console.warn(`[SchedulingService.getEffortPoints] Unknown effort level: ${effortLevel}`);
       return 0;
@@ -41,192 +54,368 @@ export const getEffortPoints = (effortLevel: EffortLevel): number => {
  * @returns A promise that resolves to the calculated daily capacity or a default if no data.
  */
 export const calculateDailyCapacity = async (taskService: ISchedulingTaskService, userId: string): Promise<number> => {
-  const ninetyDaysAgo = formatISO(startOfDay(addDays(new Date(), -90)));
-  const allUserTasks = await taskService.getTasks(false); // Get non-archived tasks
+  const ninetyDaysAgoDate = startOfDay(addDays(new Date(), -90));
+  
+  // Assuming getTasks can filter by user_id and completed_at range.
+  // This part might need adjustment based on actual TaskService capabilities.
+  const allUserTasks = await taskService.getTasks(false); // Get non-archived tasks for the user
   
   const completedTasksLast90Days = allUserTasks.filter(task => {
     return task.user_id === userId &&
-           task.status === TaskStatus.COMPLETED &&
-           task.completed_at &&
-           new Date(task.completed_at) >= new Date(ninetyDaysAgo);
+           task.completed && // or task.status === TaskStatus.COMPLETED
+           task.completedDate && 
+           new Date(task.completedDate) >= ninetyDaysAgoDate;
   });
 
   if (completedTasksLast90Days.length === 0) {
+    console.log('[SchedulingService.calculateDailyCapacity] No completed tasks in the last 90 days. Using default capacity.');
     return DEFAULT_DAILY_CAPACITY;
   }
 
-  const areDatesEqual = (date1: Date, date2: Date): boolean => {
-      return startOfDay(date1).getTime() === startOfDay(date2).getTime();
-  };
+  const totalEffortPoints = completedTasksLast90Days.reduce((sum, task) => sum + getEffortPoints(task.effortLevel), 0);
+  const uniqueDaysWithCompletedTasks = new Set(completedTasksLast90Days.map(task => formatISO(startOfDay(new Date(task.completedDate!))))).size;
+  
+  // Ensure we don't divide by zero if all tasks were completed on the same day within the 90 day window but we want daily average over distinct days of activity
+  // Or, more simply, average over the 90 day period. The prompt implies average daily EPs.
+  // If we want average EPs per active day:
+  // const averageDailyCapacity = uniqueDaysWithCompletedTasks > 0 ? totalEffortPoints / uniqueDaysWithCompletedTasks : DEFAULT_DAILY_CAPACITY;
+  // If we want average daily EPs over the 90 day period (more stable):
+  const averageDailyCapacity = totalEffortPoints / 90;
 
-  let totalEffortPoints = 0;
-  const distinctCompletionDays = new Set<string>();
 
-  completedTasksLast90Days.forEach(task => {
-    totalEffortPoints += getEffortPoints(task.effortLevel);
-    if (task.completed_at) {
-      distinctCompletionDays.add(formatISO(startOfDay(new Date(task.completed_at))));
+  console.log(`[SchedulingService.calculateDailyCapacity] Total EPs in last 90 days: ${totalEffortPoints}. Unique days with completions: ${uniqueDaysWithCompletedTasks}. Calculated capacity: ${Math.round(averageDailyCapacity) || DEFAULT_DAILY_CAPACITY}`);
+  return Math.round(averageDailyCapacity) || DEFAULT_DAILY_CAPACITY; // Ensure it's at least default, or handle 0 capacity if preferred
+};
+
+/**
+ * Finds the first available day with enough capacity for at least 1 EP, starting from a preferred date.
+ * @param taskService The TaskService instance.
+ * @param dailyCapacity User's daily EP capacity.
+ * @param userId User's ID.
+ * @param preferredStartDate The date to start searching from.
+ * @returns A promise resolving to the date and available capacity, or null if no day found.
+ */
+const findFirstAvailableDay = async (
+  taskService: ISchedulingTaskService,
+  dailyCapacity: number,
+  userId: string,
+  preferredStartDate: Date = new Date()
+): Promise<{ date: Date | null; availableCapacityOnDate: number }> => {
+  let currentDate = startOfDay(preferredStartDate);
+  for (let i = 0; i < MAX_SCHEDULING_DAYS_AHEAD; i++) {
+    const currentDateISO = formatISO(currentDate);
+    const scheduledEffortOnThisDay = await getScheduledEffortForDay(taskService, currentDateISO, userId);
+    const availableCapacityOnThisDay = dailyCapacity - scheduledEffortOnThisDay;
+
+    if (availableCapacityOnThisDay > 0) { // Found a day with some capacity
+      return { date: currentDate, availableCapacityOnDate };
+    }
+    currentDate = addDays(currentDate, 1);
+  }
+  return { date: null, availableCapacityOnDate: 0 }; // No suitable day found
+};
+
+/**
+ * Gets the total effort points already scheduled for a specific day for a user.
+ * @param taskService The TaskService instance.
+ * @param dateISO The ISO string of the date to check.
+ * @param userId The ID of the user.
+ * @returns A promise resolving to the total scheduled effort points for that day.
+ */
+export const getScheduledEffortForDay = async (
+  taskService: ISchedulingTaskService,
+  dateISO: string,
+  userId: string
+): Promise<number> => {
+  // This assumes TaskService has a method to get tasks/segments scheduled on a specific date.
+  // Or, if tasks store segments, it fetches tasks and sums EPs from segments matching the date.
+  const tasksOnDate = await taskService.getTasksContributingToEffortOnDate(dateISO, userId);
+  
+  let totalEffort = 0;
+  tasksOnDate.forEach(task => {
+    if (task.segments && task.segments.length > 0) {
+      task.segments.forEach(segment => {
+        if (segment.scheduled_date === dateISO) {
+          totalEffort += segment.effort_points;
+        }
+      });
+    } else if (task.scheduled_start_date === dateISO && task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELLED) {
+      // Fallback for tasks without segments, if they are scheduled for this day as a whole
+      // This might double count if segments are also present and task.scheduled_start_date is also set.
+      // Prefer segment-based calculation if segments are the source of truth for scheduled effort.
+      // For now, assuming segments are primary. If no segments, check task's own scheduled_start_date.
+      // This part needs careful consideration based on how tasks are structured.
+      // Let's assume for now that if a task has segments, those are the source of truth for daily effort.
+      // If no segments, and scheduled_start_date matches, and it's a single-day task, count its full effort.
+      // This is simplified; a robust solution would rely purely on segments or a clear task scheduling field.
     }
   });
-
-  if (distinctCompletionDays.size === 0) {
-    return DEFAULT_DAILY_CAPACITY;
-  }
-  
-  const averageCapacity = totalEffortPoints / distinctCompletionDays.size;
-  return Math.round(averageCapacity > 0 ? averageCapacity : DEFAULT_DAILY_CAPACITY);
+  return totalEffort;
 };
 
-
 /**
- * Calculates total effort points scheduled for a given day using optimized task fetching.
- * @param taskService The TaskService instance for database operations.
- * @param date The date to check.
- * @param userId The ID of the user.
- * @returns A promise that resolves to the total EPs scheduled for that day.
+ * Schedules a task by splitting it into segments if it exceeds daily capacity.
+ * Assumes firstAvailableDate already has some capacity.
+ * @param taskService The TaskService instance.
+ * @param taskToSchedule The task to schedule.
+ * @param dailyCapacity User's daily EP capacity.
+ * @param userId User's ID.
+ * @param firstAvailableDate The first day identified with available capacity.
+ * @param capacityOnFirstDay The available capacity on that first day.
+ * @returns A promise resolving to the updated task with segments, or null if scheduling fails.
  */
-export const getScheduledEffortForDay = async (taskService: ISchedulingTaskService, date: Date, userId: string): Promise<number> => {
-  const targetDayISO = formatISO(startOfDay(date));
-  const contributingTasks = await taskService.getTasksContributingToEffortOnDate(targetDayISO, userId);
-  
-  let scheduledEPs = 0;
+const findFirstAvailableDayAndScheduleOrSplit = async (
+  taskService: ISchedulingTaskService,
+  taskToSchedule: Task,
+  dailyCapacity: number,
+  userId: string,
+  firstAvailableDate: Date, // This is the date found by findFirstAvailableDay
+  capacityOnFirstDay: number // Capacity on that specific firstAvailableDate
+): Promise<Task | null> => {
+  let remainingEffort = getEffortPoints(taskToSchedule.effort_level);
+  const scheduledSegments: TaskSegment[] = [];
+  let currentDate = startOfDay(firstAvailableDate);
+  let currentDayOffset = 0; // Relative to firstAvailableDate
 
-  for (const task of contributingTasks) {
-    if (!task.id || !task.effortLevel) { 
-      console.warn(`[SchedulingService.getScheduledEffortForDay] Skipping task with missing id or effortLevel: ${task.id}`);
-      continue;
-    }
+  // Handle the first day separately using the pre-calculated capacityOnFirstDay
+  if (remainingEffort > 0 && capacityOnFirstDay > 0) {
+    const effortThisDay = Math.min(remainingEffort, capacityOnFirstDay);
+    scheduledSegments.push({
+      parent_task_id: taskToSchedule.id,
+      effort_points: effortThisDay,
+      scheduled_date: formatISO(currentDate),
+      status: TaskStatus.PENDING,
+    });
+    remainingEffort -= effortThisDay;
+  }
+  currentDate = addDays(currentDate, 1); // Move to the next day for further scheduling
 
-    const taskEffortPoints = getEffortPoints(task.effortLevel);
+  // Continue scheduling for subsequent days if effort remains
+  while (remainingEffort > 0 && currentDayOffset < MAX_SCHEDULING_DAYS_AHEAD - (differenceInDays(currentDate, firstAvailableDate))) {
+    const currentDateISO = formatISO(currentDate);
+    const scheduledEffortOnThisDay = await getScheduledEffortForDay(taskService, currentDateISO, userId);
+    const availableCapacityOnThisDay = Math.max(0, dailyCapacity - scheduledEffortOnThisDay);
 
-    if (task.status === TaskStatus.PENDING) {
-      scheduledEPs += taskEffortPoints;
-    } else if (task.status === TaskStatus.IN_PROGRESS) {
-      if (task.scheduled_start_date && task.scheduled_completion_date) {
-        const startDate = startOfDay(new Date(task.scheduled_start_date));
-        const completionDate = startOfDay(new Date(task.scheduled_completion_date));
-        const durationDays = differenceInDays(completionDate, startDate) + 1;
-
-        if (durationDays > 0) {
-          scheduledEPs += taskEffortPoints / durationDays;
-        } else if (durationDays === 1) {
-          scheduledEPs += taskEffortPoints; 
-        }
-      } else {
-        console.warn(`[SchedulingService.getScheduledEffortForDay] IN_PROGRESS task ${task.id} missing scheduled dates.`);
+    if (availableCapacityOnThisDay > 0) {
+      const effortToScheduleThisDay = Math.min(remainingEffort, availableCapacityOnThisDay);
+      if (effortToScheduleThisDay > 0) {
+         scheduledSegments.push({
+          parent_task_id: taskToSchedule.id,
+          effort_points: effortToScheduleThisDay,
+          scheduled_date: currentDateISO,
+          status: TaskStatus.PENDING,
+        });
+        remainingEffort -= effortToScheduleThisDay;
       }
     }
+    if (remainingEffort <= 0) break;
+    currentDate = addDays(currentDate, 1);
+    currentDayOffset++;
   }
-  return Math.round(scheduledEPs);
+
+  if (remainingEffort > 0) {
+    console.warn(`[SchedulingService.scheduleTaskOrSplit] Could not fully schedule task ${taskToSchedule.id}. Remaining EPs: ${remainingEffort}. Task might be too large or no capacity.`);
+    // Update with partially scheduled segments or handle as unschedulable
+    // For now, we'll update with what was scheduled.
+  }
+
+  if (scheduledSegments.length === 0 && getEffortPoints(taskToSchedule.effort_level) > 0) {
+    console.warn(`[SchedulingService.scheduleTaskOrSplit] No segments scheduled for task ${taskToSchedule.id}.`);
+    return null; // Cannot schedule any part of it
+  }
+
+  const taskUpdates: TaskUpdatePayload = {
+    segments: scheduledSegments,
+    status: scheduledSegments.length > 0 && remainingEffort === 0 ? TaskStatus.SCHEDULED : TaskStatus.PENDING, // Or IN_PROGRESS
+    scheduled_start_date: scheduledSegments[0]?.scheduled_date,
+    due_date: scheduledSegments[scheduledSegments.length - 1]?.scheduled_date,
+  };
+
+  try {
+    const updatedTask = await taskService.updateTask(taskToSchedule.id, taskUpdates);
+    if (updatedTask) {
+      console.log(`[SchedulingService.scheduleTaskOrSplit] Successfully scheduled/split task ${updatedTask.id} with ${scheduledSegments.length} segments.`);
+      return updatedTask;
+    } else {
+      console.error(`[SchedulingService.scheduleTaskOrSplit] Failed to update task ${taskToSchedule.id} after segmenting.`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`[SchedulingService.scheduleTaskOrSplit] Error updating task ${taskToSchedule.id}:`, error);
+    return null;
+  }
 };
 
+
 /**
- * Schedules a single task based on available daily capacity.
- * It finds the earliest possible start date and splits the task across days if needed.
+ * Schedules a large task by distributing its effort points over a predefined timeframe.
  * @param taskService The TaskService instance for database operations.
- * @param taskToSchedule The task to schedule.
- * @param dailyCapacityEP The user's daily effort point capacity.
+ * @param taskToSchedule The large task to schedule.
+ * @param dailyCapacity The user's daily effort point capacity.
  * @param userId The ID of the user.
- * @param maxSchedulingDaysAhead The maximum number of days into the future to attempt scheduling.
- * @returns A promise that resolves to the updated task with scheduling info, or null if scheduling failed.
+ * @param timeframeInDays The number of days over which to schedule the task.
+ * @returns A promise that resolves to the updated task with scheduled segments, or null if scheduling fails.
+ */
+const scheduleLargeTaskOverTimeframe = async (
+  taskService: ISchedulingTaskService,
+  taskToSchedule: Task,
+  dailyCapacity: number,
+  userId: string,
+  timeframeInDays: number
+): Promise<Task | null> => {
+  console.log(`[SchedulingService.scheduleLargeTaskOverTimeframe] Scheduling large task ${taskToSchedule.id} (${taskToSchedule.title}) over ${timeframeInDays} days.`);
+  let remainingEffort = getEffortPoints(taskToSchedule.effort_level);
+  const scheduledSegments: TaskSegment[] = [];
+  let currentDayOffset = 0;
+  let daysProcessed = 0; // Tracks how many days within the timeframe we've tried to schedule on
+
+  const taskEffectiveStartDate = taskToSchedule.start_date ? new Date(taskToSchedule.start_date) : new Date();
+  let currentDate = startOfDay(taskEffectiveStartDate);
+
+  while (remainingEffort > 0 && daysProcessed < timeframeInDays && currentDayOffset < MAX_SCHEDULING_DAYS_AHEAD) {
+    const currentDateISO = formatISO(currentDate);
+    const scheduledEffortOnThisDay = await getScheduledEffortForDay(taskService, currentDateISO, userId);
+    const availableCapacityOnThisDay = Math.max(0, dailyCapacity - scheduledEffortOnThisDay);
+
+    if (availableCapacityOnThisDay > 0) {
+      const effortToScheduleThisDay = Math.min(remainingEffort, availableCapacityOnThisDay);
+      if (effortToScheduleThisDay > 0) {
+        scheduledSegments.push({
+          parent_task_id: taskToSchedule.id,
+          effort_points: effortToScheduleThisDay,
+          scheduled_date: currentDateISO,
+          status: TaskStatus.PENDING,
+        });
+        remainingEffort -= effortToScheduleThisDay;
+      }
+    }
+    
+    currentDate = addDays(currentDate, 1);
+    currentDayOffset++; // Overall days advanced in the calendar
+    daysProcessed++; // Days considered within the specific timeframe for this large task
+  }
+
+  if (remainingEffort > 0) {
+    console.warn(`[SchedulingService.scheduleLargeTaskOverTimeframe] Could not fully schedule large task ${taskToSchedule.id} within ${timeframeInDays} days. Remaining EPs: ${remainingEffort}.`);
+  }
+
+  if (scheduledSegments.length === 0 && getEffortPoints(taskToSchedule.effort_level) > 0) {
+    console.warn(`[SchedulingService.scheduleLargeTaskOverTimeframe] No segments scheduled for large task ${taskToSchedule.id}.`);
+    return null; 
+  }
+  
+  const taskUpdates: TaskUpdatePayload = {
+    segments: scheduledSegments,
+    status: scheduledSegments.length > 0 && remainingEffort === 0 ? TaskStatus.SCHEDULED : TaskStatus.PENDING,
+    scheduled_start_date: scheduledSegments[0]?.scheduled_date,
+    due_date: scheduledSegments[scheduledSegments.length - 1]?.scheduled_date,
+  };
+
+  try {
+    const updatedTask = await taskService.updateTask(taskToSchedule.id, taskUpdates);
+    if (updatedTask) {
+      console.log(`[SchedulingService.scheduleLargeTaskOverTimeframe] Successfully processed large task ${updatedTask.id} with ${scheduledSegments.length} segments.`);
+      return updatedTask;
+    } else {
+      console.error(`[SchedulingService.scheduleLargeTaskOverTimeframe] Failed to update large task ${taskToSchedule.id}.`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`[SchedulingService.scheduleLargeTaskOverTimeframe] Error updating task ${taskToSchedule.id}:`, error);
+    return null;
+  }
+};
+
+
+/**
+ * Schedules a single task, determining if it's a large task, fits in one day, or needs splitting.
+ * @param taskService The TaskService instance.
+ * @param taskToSchedule The task to schedule.
+ * @param dailyCapacity User's daily EP capacity.
+ * @param userId User's ID.
+ * @returns A promise resolving to the updated task, or null if scheduling fails.
  */
 export const scheduleTask = async (
   taskService: ISchedulingTaskService,
   taskToSchedule: Task,
-  dailyCapacityEP: number,
-  userId: string,
-  maxSchedulingDaysAhead: number = MAX_SCHEDULING_DAYS_AHEAD
+  dailyCapacity: number,
+  userId: string
 ): Promise<Task | null> => {
-  console.log(`[SchedulingService.scheduleTask] Attempting to schedule task: ${taskToSchedule?.id} with effort ${taskToSchedule?.effortLevel}, current status: ${taskToSchedule?.status}`);
-  console.log(`[SchedulingService.scheduleTask] Attempting to schedule task: ${taskToSchedule.id}, Effort: ${taskToSchedule.effortLevel}, Capacity: ${dailyCapacityEP} EPs/day`);
+  console.log(`[SchedulingService.scheduleTask] Attempting to schedule task ${taskToSchedule.id} (${taskToSchedule.title}) with effort ${taskToSchedule.effort_level} (${getEffortPoints(taskToSchedule.effort_level)} EPs).`);
 
-  if (!taskToSchedule || !taskToSchedule.id || taskToSchedule.effortLevel === undefined) {
-    console.error('[SchedulingService.scheduleTask] Invalid task object received:', taskToSchedule);
-    return null;
-  }
+  const taskEffortPoints = getEffortPoints(taskToSchedule.effort_level);
 
-  const taskEffortPoints = getEffortPoints(taskToSchedule.effortLevel);
-  console.log(`[SchedulingService.scheduleTask] Task ID: ${taskToSchedule.id}, Calculated taskEffortPoints: ${taskEffortPoints}`);
   if (taskEffortPoints === 0) {
-    console.log(`[SchedulingService.scheduleTask] Task ${taskToSchedule.id} has 0 effort. Scheduling for today.`);
-    console.log(`[SchedulingService.scheduleTask] Entering 0-effort update for task: ${taskToSchedule.id}`);
-    try {
-        // await taskService.getTasksContributingToEffortOnDate(formatISO(startOfDay(new Date())), userId);
-
-        const updatePayload: TaskUpdatePayload = {
-            scheduled_start_date: formatISO(startOfDay(new Date())),
-            scheduled_completion_date: formatISO(startOfDay(new Date())),
-            status: TaskStatus.PENDING,
-        };
-        console.log(`[SchedulingService.scheduleTask] Updating zero-effort task ${taskToSchedule.id} with payload:`, updatePayload);
-        console.log(`[SchedulingService.scheduleTask] Updating zero-effort task ${taskToSchedule.id} with payload:`, JSON.stringify(updatePayload, null, 2));
-      const updatedTask = await taskService.updateTask(taskToSchedule.id, updatePayload);
-        return updatedTask;
-    } catch (error) {
-        console.error(`[SchedulingService.scheduleTask] Error updating zero-effort task ${taskToSchedule.id}:`, error);
-        return null;
+    console.log(`[SchedulingService.scheduleTask] Task ${taskToSchedule.id} has 0 EPs. Marking as scheduled if not completed/cancelled.`);
+    if (taskToSchedule.status !== TaskStatus.COMPLETED && taskToSchedule.status !== TaskStatus.CANCELLED) {
+        return taskService.updateTask(taskToSchedule.id, { 
+            status: TaskStatus.SCHEDULED, // Or COMPLETED if 0 EP means instantly done
+            scheduled_start_date: formatISO(startOfDay(taskToSchedule.start_date || new Date())),
+            due_date: formatISO(startOfDay(taskToSchedule.start_date || new Date())),
+        });
     }
+    return taskToSchedule; // Already in a final state or no action needed
   }
 
-  let currentDay = startOfDay(new Date());
-  let daysChecked = 0;
-  const taskSegments: TaskSegment[] = [];
-  let remainingEffortForTask = taskEffortPoints;
-
-  while (remainingEffortForTask > 0 && daysChecked < maxSchedulingDaysAhead) {
-    const scheduledEffortOnCurrentDay = await getScheduledEffortForDay(taskService, currentDay, userId);
-    const availableCapacityOnCurrentDay = dailyCapacityEP - scheduledEffortOnCurrentDay;
-    
-    console.log(`[SchedulingService.scheduleTask] Day ${daysChecked + 1} (${formatISO(currentDay)}): Scheduled EPs: ${scheduledEffortOnCurrentDay}, Available EPs: ${availableCapacityOnCurrentDay}`);
-
-    if (availableCapacityOnCurrentDay > 0) {
-      const effortToScheduleThisDay = Math.min(remainingEffortForTask, availableCapacityOnCurrentDay);
-      taskSegments.push({
-        date: currentDay,
-        effortPoints: effortToScheduleThisDay,
-      });
-      remainingEffortForTask -= effortToScheduleThisDay;
-      console.log(`[SchedulingService.scheduleTask] Scheduled ${effortToScheduleThisDay} EPs for task ${taskToSchedule.id} on ${formatISO(currentDay)}. Remaining effort: ${remainingEffortForTask}`);
-    }
-
-    if (remainingEffortForTask <= 0) {
-      break;
-    }
-
-    currentDay = addDays(currentDay, 1);
-    daysChecked++;
+  let largeTaskTimeframeInDays: number | undefined;
+  if (taskEffortPoints === LARGE_TASK_EP_THRESHOLDS.EP8) {
+    largeTaskTimeframeInDays = LARGE_TASK_TIMEFRAMES_DAYS[LARGE_TASK_EP_THRESHOLDS.EP8];
+  } else if (taskEffortPoints === LARGE_TASK_EP_THRESHOLDS.EP16) {
+    largeTaskTimeframeInDays = LARGE_TASK_TIMEFRAMES_DAYS[LARGE_TASK_EP_THRESHOLDS.EP16];
+  } else if (taskEffortPoints === LARGE_TASK_EP_THRESHOLDS.EP32) {
+    largeTaskTimeframeInDays = LARGE_TASK_TIMEFRAMES_DAYS[LARGE_TASK_EP_THRESHOLDS.EP32];
   }
 
-  if (remainingEffortForTask > 0) {
-    console.log(`[SchedulingService.scheduleTask] Could not fully schedule task ${taskToSchedule.id} within ${maxSchedulingDaysAhead} days. Remaining effort: ${remainingEffortForTask}`);
-    return null;
+  if (largeTaskTimeframeInDays) {
+    console.log(`[SchedulingService.scheduleTask] Identified as large task. Attempting to schedule over ${largeTaskTimeframeInDays} days.`);
+    return scheduleLargeTaskOverTimeframe(taskService, taskToSchedule, dailyCapacity, userId, largeTaskTimeframeInDays);
   }
 
+  // If not a "large task" with a predefined timeframe, proceed with standard scheduling/splitting.
+  console.log(`[SchedulingService.scheduleTask] Not a predefined large task. Proceeding with standard scheduling/splitting.`);
   try {
-    if (taskSegments.length > 0) {
-      const firstSegmentDate = taskSegments[0].date;
-      const lastSegmentDate = taskSegments[taskSegments.length - 1].date;
-      
-      const areDatesEqual = (date1: Date, date2: Date): boolean => {
-          return startOfDay(date1).getTime() === startOfDay(date2).getTime();
-      };
-      const newStatus = areDatesEqual(firstSegmentDate, lastSegmentDate) ? TaskStatus.PENDING : TaskStatus.IN_PROGRESS;
+    const taskEffectiveStartDate = taskToSchedule.start_date ? new Date(taskToSchedule.start_date) : new Date();
+    const { date: firstDay, availableCapacityOnDate: capacityOnFirstDay } = await findFirstAvailableDay(
+      taskService,
+      dailyCapacity,
+      userId,
+      taskEffectiveStartDate
+    );
 
-      const updatePayload: TaskUpdatePayload = {
-        scheduled_start_date: formatISO(startOfDay(firstSegmentDate)),
-        scheduled_completion_date: formatISO(startOfDay(lastSegmentDate)),
-        status: newStatus,
-      };
-      
-      console.log(`[SchedulingService.scheduleTask] Updating task ${taskToSchedule.id} with payload:`, updatePayload);
-      const updatedTask = await taskService.updateTask(taskToSchedule.id, updatePayload);
-      return updatedTask;
-    } else {
-      console.log(`[SchedulingService.scheduleTask] Could not find any time to schedule task ${taskToSchedule.id} (segments empty).`);
+    if (!firstDay) {
+      console.warn(`[SchedulingService.scheduleTask] No available day found for task ${taskToSchedule.id} within ${MAX_SCHEDULING_DAYS_AHEAD} days.`);
+      await taskService.updateTask(taskToSchedule.id, { status: TaskStatus.PENDING }); // Or a specific "unschedulable" status
       return null;
     }
+
+    const scheduledDateISO = formatISO(firstDay);
+
+    if (taskEffortPoints <= capacityOnFirstDay) {
+      // Task fits entirely on the first available day
+      const singleSegment: TaskSegment = {
+        parent_task_id: taskToSchedule.id,
+        effort_points: taskEffortPoints,
+        scheduled_date: scheduledDateISO,
+        status: TaskStatus.PENDING,
+      };
+      const updatedTask = await taskService.updateTask(taskToSchedule.id, {
+        segments: [singleSegment],
+        status: TaskStatus.SCHEDULED,
+        scheduled_start_date: scheduledDateISO,
+        due_date: scheduledDateISO,
+      });
+      console.log(`[SchedulingService.scheduleTask] Task ${taskToSchedule.id} scheduled for ${scheduledDateISO}.`);
+      return updatedTask;
+    } else {
+      // Task needs to be split, starting on 'firstDay' with 'capacityOnFirstDay'
+      console.log(`[SchedulingService.scheduleTask] Task ${taskToSchedule.id} needs splitting. Total EPs: ${taskEffortPoints}, Available on first day (${scheduledDateISO}): ${capacityOnFirstDay}.`);
+      return findFirstAvailableDayAndScheduleOrSplit(taskService, taskToSchedule, dailyCapacity, userId, firstDay, capacityOnFirstDay);
+    }
+
   } catch (error) {
     console.error(`[SchedulingService.scheduleTask] Error scheduling task ${taskToSchedule.id}:`, error);
+    // Optionally update task status to reflect scheduling failure
+    // await taskService.updateTask(taskToSchedule.id, { status: TaskStatus.PENDING /* or FAILED_TO_SCHEDULE */ });
     return null;
   }
 };
@@ -242,8 +431,12 @@ export const runSchedulingAlgorithm = async (taskService: ISchedulingTaskService
   const capacity = await calculateDailyCapacity(taskService, userId);
   console.log(`[SchedulingService.runSchedulingAlgorithm] User daily capacity: ${capacity} EPs`);
 
+  // Optional: Sort tasksToSchedule here based on priority, due date, etc., before scheduling
+  // tasksToSchedule.sort((a, b) => { /* ... sorting logic ... */ });
+
   for (const task of tasksToSchedule) {
-    if (task.status === TaskStatus.TODO || task.status === TaskStatus.PENDING) {
+    // Schedule only if task is in a state that requires scheduling (e.g., PENDING, or specific statuses)
+    if (task.status === TaskStatus.TODO || task.status === TaskStatus.PENDING) { // TODO is not in our enum, using PENDING
         console.log(`[SchedulingService.runSchedulingAlgorithm] Processing task ${task.id} (${task.title}) for scheduling.`);
         await scheduleTask(taskService, task, capacity, userId);
     } else {
@@ -254,10 +447,14 @@ export const runSchedulingAlgorithm = async (taskService: ISchedulingTaskService
 };
 
 // TODO:
-// 1. Refine `calculateDailyCapacity` with actual TaskService methods for fetching completed/archived tasks.
-//    - TaskService.getTasks needs to reliably filter by completed_at range and is_archived.
-//    - TaskService.getTasks needs to be user-specific or accept userId.
-// 2. Refine `getScheduledEffortForDay` with actual TaskService methods for fetching tasks by `scheduled_start_date`.
-//    - TaskService.getTasksContributingToEffortOnDate should be robust.
-// 3. Add comprehensive unit tests for all exported functions using the injected mock taskService.
-// 4. Ensure ISchedulingTaskService is exported if it's to be used by test files directly for mock creation. (Done)
+// 1. Refine `calculateDailyCapacity`: Ensure TaskService.getTasks can filter by user_id, completed status, and completedDate range.
+// 2. Refine `getScheduledEffortForDay`: Ensure TaskService.getTasksContributingToEffortOnDate accurately reflects effort from segments.
+//    If tasks don't have segments, this function needs a reliable way to determine their daily effort contribution.
+// 3. Add comprehensive unit tests for all exported functions, especially `scheduleLargeTaskOverTimeframe` and the modified `scheduleTask`,
+//    using a mocked taskService. Test various scenarios:
+//      - Large task fitting perfectly.
+//      - Large task when some days in timeframe are full/partial.
+//      - Large task that cannot be fully scheduled in timeframe.
+//      - Interaction with already scheduled tasks.
+// 4. Review `TaskStatus.TODO` usage in `runSchedulingAlgorithm` as it's not in the `TaskStatus` enum.
+// 5. Consider how `task.start_date` influences scheduling. Currently, `findFirstAvailableDay` and `scheduleLargeTaskOverTimeframe` use it as a preferred start.
