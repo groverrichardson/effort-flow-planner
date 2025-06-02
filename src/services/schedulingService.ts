@@ -135,7 +135,7 @@ export const scheduleTask = async (
 
     if (availableDate) {
       const updatedTask = await TaskService.updateTask(taskToSchedule.id, {
-        scheduled_start_date: formatISO(availableDate, { representation: 'date' }),
+        scheduled_start_date: formatISO(availableDate),
       });
       return updatedTask;
     } else {

@@ -728,7 +728,7 @@ export const TaskService = {
         : null,
     // Ensure scheduled_start_date is handled from mainTaskInput
     scheduled_start_date: mainTaskInput.scheduled_start_date
-        ? formatISO(new Date(mainTaskInput.scheduled_start_date), { representation: 'date' })
+        ? formatISO(new Date(mainTaskInput.scheduled_start_date))
         : null,
     dependencies: mainTaskInput.dependencies,
     original_scheduled_date: mainTaskInput.originalScheduledDate
@@ -986,7 +986,7 @@ export const TaskService = {
             taskChangesForSupabase.dependencies = mainTaskUpdates.dependencies;
             if (mainTaskUpdates.scheduled_start_date !== undefined) { // Added this block
         taskChangesForSupabase.scheduled_start_date = mainTaskUpdates.scheduled_start_date
-            ? formatISO(new Date(mainTaskUpdates.scheduled_start_date), { representation: 'date' })
+            ? formatISO(new Date(mainTaskUpdates.scheduled_start_date))
             : null;
     }
     if (mainTaskUpdates.originalScheduledDate !== undefined)
