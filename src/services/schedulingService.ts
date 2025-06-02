@@ -25,15 +25,9 @@ export const calculateDailyCapacity = async (userId: string): Promise<number> =>
   try {
     const ninetyDaysAgo = addDays(new Date(), -90);
     
-    // Assuming TaskService.getTasks can filter appropriately or a new method is added.
-    // This is a simplified placeholder; actual implementation will depend on TaskService capabilities.
-    const tasks = await TaskService.getTasks({
-      userId,
-      status: TaskStatus.COMPLETED, 
-      // completed_at_gte: ninetyDaysAgo.toISOString(), // Supabase uses 'timestamp with time zone' so ISO string is fine
-      // completed_at_lte: new Date().toISOString(),
-      is_archived: false, 
-    });
+    // Fetch all tasks including archived ones, then filter client-side
+    // TODO: Update TaskService to support more granular filtering
+    const tasks = await TaskService.getTasks(false);
 
     // Filter tasks completed in the last 90 days client-side if not possible server-side fully
     const recentCompletedTasks = tasks.filter(task => 
@@ -72,11 +66,9 @@ export const getScheduledEffortForDay = async (date: Date, userId: string): Prom
 
     // We need a way to query tasks where scheduled_start_date = specific date.
     // TaskService.getTasks might need enhancement or a new method like getTasksScheduledOnDate.
-    const tasks = await TaskService.getTasks({
-        userId,
-        // This is a conceptual filter. Actual implementation in TaskService will be needed.
-        // scheduled_start_date: formatISO(dayStart, { representation: 'date' })
-    });
+    // Fetch all tasks including archived ones, then filter client-side
+    // TODO: Update TaskService to support more granular filtering
+    const tasks = await TaskService.getTasks(false);
     
     // Client-side filter until TaskService method is robust for scheduled_start_date
     const tasksForDay = tasks.filter(task => 
