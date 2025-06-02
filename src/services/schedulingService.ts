@@ -45,9 +45,8 @@ export const calculateDailyCapacity = async (taskService: ISchedulingTaskService
   const allUserTasks = await taskService.getTasks(false); // Get non-archived tasks
   
   const completedTasksLast90Days = allUserTasks.filter(task => {
-    // Assuming task.user_id exists and filtering by it if getTasks doesn't handle it.
-    // This example assumes tasks are already filtered by user or task.user_id is checked.
-    return task.status === TaskStatus.COMPLETED &&
+    return task.user_id === userId &&
+           task.status === TaskStatus.COMPLETED &&
            task.completed_at &&
            new Date(task.completed_at) >= new Date(ninetyDaysAgo);
   });
