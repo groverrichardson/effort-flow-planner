@@ -1299,6 +1299,22 @@ export const TaskService = {
                             .select()
                             .single();
                     }
+                });
+                const upsertedPeopleResults = await Promise.all(
+                    personUpsertPromises
+                );
+
+                const newPeopleLinks: {
+                    task_id: string;
+                    person_id: string;
+                    user_id: string;
+                }[] = [];
+                for (const result of upsertedPeopleResults) {
+                    if (result.error || !result.data) {
+                        console.error(
+                            '[TaskService.updateTask] Error upserting person:',
+                            result.error
+                        );
                         throw new Error(
                             `Failed to update task people: Error upserting person. ${result.error?.message}`
                         );
