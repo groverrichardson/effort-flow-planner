@@ -1,9 +1,10 @@
 import { Task, EffortLevel, TaskStatus, TaskUpdatePayload, TaskSegment, Priority } from '@/types';
+import { GetTasksFilters } from './TaskService';
 import { differenceInDays, addDays, startOfDay, formatISO } from 'date-fns';
 
 // Interface for the TaskService dependency that schedulingService will use
 export interface ISchedulingTaskService {
-  getTasks: (isArchived?: boolean, projectId?: string | null) => Promise<Task[]>;
+  getTasks: (filters: GetTasksFilters) => Promise<Task[]>;
   updateTask: (taskId: string, updates: TaskUpdatePayload) => Promise<Task | null>;
   getTasksContributingToEffortOnDate: (dateISO: string, userId: string) => Promise<Task[]>;
 }
@@ -63,46 +64,51 @@ export const calculateDailyCapacity = async (
   taskService: ISchedulingTaskService,
   userId: string
 ): Promise<number> => {
-  console.log('[SchedulingService.calculateDailyCapacity] Calculating daily capacity...');
-  try {
-    // TODO: This needs to be refined. Assuming getTasks can filter by user, completed, and date range.
-    // For now, let's assume it gets all tasks for the user and we filter locally.
-    // This is highly inefficient and should be fixed by enhancing TaskService.
-    const allUserTasks = await taskService.getTasks(false); // Get non-archived tasks
-    
-    const ninetyDaysAgo = startOfDay(addDays(new Date(), -90));
-    
-    const completedTasksInLast90Days = allUserTasks.filter(task => 
-      task.user_id === userId &&
-      task.status === TaskStatus.COMPLETED && 
-      task.completedDate && 
-      new Date(task.completedDate) >= ninetyDaysAgo
-    );
+  console.log(`[SchedulingService.calculateDailyCapacity] Calculating for user ${userId}`);
+  const today = startOfDay(new Date());
+  const ninetyDaysAgo = startOfDay(addDays(today, -90));
 
-    if (completedTasksInLast90Days.length === 0) {
-      console.log('[SchedulingService.calculateDailyCapacity] No completed tasks in last 90 days. Using default capacity.');
+  const filters: GetTasksFilters = {
+    userId: userId,
+    isArchived: false,
+    status: TaskStatus.COMPLETED,
+    completedAfter: formatISO(ninetyDaysAgo),
+    completedBefore: formatISO(today),
+  };
+
+  try {
+    console.log('[SchedulingService.calculateDailyCapacity] Fetching tasks with filters:', JSON.stringify(filters));
+    const completedTasks = await taskService.getTasks(filters);
+
+    if (completedTasks.length === 0) {
+      console.log('[SchedulingService.calculateDailyCapacity] No completed tasks in the last 90 days matching criteria. Using default capacity.');
       return DEFAULT_DAILY_CAPACITY;
     }
 
-    const totalEffortPoints = completedTasksInLast90Days.reduce((sum, task) => {
-      return sum + getEffortPoints(task.effortLevel);
+    const totalEffortPoints = completedTasks.reduce((sum, task) => {
+      // Ensure effortLevel is valid before calling getEffortPoints
+      return sum + (task.effortLevel ? getEffortPoints(task.effortLevel) : 0);
     }, 0);
     
-    const uniqueCompletionDays = new Set(completedTasksInLast90Days.map(task => 
-        task.completedDate ? startOfDay(new Date(task.completedDate)).toISOString() : ''
-    ).filter(dateStr => dateStr !== '')).size;
+    const uniqueCompletionDays = new Set(
+        completedTasks.map(task => task.completedDate ? formatISO(startOfDay(new Date(task.completedDate))) : '')
+                      .filter(dateStr => dateStr !== '') // Filter out empty strings from tasks without completedDate
+    ).size;
 
-    // If tasks were completed, but all on the same day or no valid completion dates, 
-    // avoid division by zero or skewed capacity. Use a minimum of 1 day for calculation if any tasks exist.
-    const daysWithEffort = Math.max(uniqueCompletionDays, 1);
+    if (uniqueCompletionDays === 0) {
+        console.log('[SchedulingService.calculateDailyCapacity] No unique completion days found, though tasks exist. Using default capacity.');
+        return DEFAULT_DAILY_CAPACITY;
+    }
 
-    const averageDailyEffort = totalEffortPoints / daysWithEffort;
-    console.log(`[SchedulingService.calculateDailyCapacity] Total EP in 90 days: ${totalEffortPoints}, Unique days with effort: ${daysWithEffort}, Avg Daily EP: ${averageDailyEffort}`);
-    return Math.max(1, Math.round(averageDailyEffort)); // Ensure capacity is at least 1
+    const averageDailyEffort = totalEffortPoints / uniqueCompletionDays;
+    console.log(`[SchedulingService.calculateDailyCapacity] Total EPs: ${totalEffortPoints}, Unique Days: ${uniqueCompletionDays}, Avg Daily EPs: ${averageDailyEffort.toFixed(2)}`);
+    
+    return Math.max(1, Math.round(averageDailyEffort)); // Ensure at least 1 EP capacity if there was activity
 
   } catch (error) {
     console.error('[SchedulingService.calculateDailyCapacity] Error calculating daily capacity:', error);
-    return DEFAULT_DAILY_CAPACITY; // Fallback to default on error
+    console.warn('[SchedulingService.calculateDailyCapacity] Falling back to default capacity due to error.');
+    return DEFAULT_DAILY_CAPACITY;
   }
 };
 

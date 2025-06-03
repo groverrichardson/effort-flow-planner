@@ -27,6 +27,15 @@ import {
     setMonth,
 } from 'date-fns';
 
+export interface GetTasksFilters {
+    userId?: string; // Will be fetched if not provided
+    projectId?: string | null;
+    status?: TaskStatus;
+    isArchived?: boolean; // Default will be false if not specified by caller
+    completedAfter?: string; // ISO date string (inclusive)
+    completedBefore?: string; // ISO date string (inclusive)
+}
+
 // DB specific types (representing raw Supabase responses)
 interface DbRecurrenceRule {
     id: string;
@@ -437,32 +446,53 @@ export const TaskService = {
     },
 
     // Tasks
-    async getTasks(includeArchived = false): Promise<Task[]> {
-        const { data: user, error: userError } = await supabase.auth.getUser();
-        if (userError || !user?.user) {
-            console.error(
-                '[TaskService.getTasks] User not found or error fetching user:',
-                userError
-            );
-            return [];
+    async getTasks(filters: GetTasksFilters = {}): Promise<Task[]> {
+        let userIdToUse = filters.userId;
+        if (!userIdToUse) {
+            const { data: user, error: userError } = await supabase.auth.getUser();
+            if (userError || !user?.user) {
+                console.error(
+                    '[TaskService.getTasks] User not found or error fetching user (and no userId provided in filters):',
+                    userError
+                );
+                return [];
+            }
+            userIdToUse = user.user.id;
         }
-        const userId = user.user.id;
 
         console.log(
-            `[TaskService.getTasks] Fetching tasks for user ${userId}, includeArchived: ${includeArchived}`
+            `[TaskService.getTasks] Fetching tasks for user ${userIdToUse} with filters: ${JSON.stringify(filters)}`
         );
+
+        // Prepare parameters for the RPC call
+        const rpcParams: any = {
+            p_user_id: userIdToUse,
+            // Default isArchived to false if not specified, otherwise use the provided value
+            p_include_archived: filters.isArchived === undefined ? false : filters.isArchived,
+        };
+
+        if (filters.projectId !== undefined) {
+            rpcParams.p_project_id = filters.projectId;
+        }
+        if (filters.status) {
+            rpcParams.p_status = filters.status;
+        }
+        if (filters.completedAfter) {
+            rpcParams.p_completed_after = filters.completedAfter;
+        }
+        if (filters.completedBefore) {
+            rpcParams.p_completed_before = filters.completedBefore;
+        }
+
         try {
             const { data: rpcData, error: rpcError } = await supabase.rpc(
                 'get_tasks_with_relations_for_user',
-                {
-                    p_user_id: userId,
-                    p_include_archived: includeArchived, // Assuming this parameter exists in the RPC
-                }
+                rpcParams
             );
 
             if (rpcError) {
                 console.error(
-                    `[TaskService.getTasks] RPC error fetching tasks for user ${userId}:`,
+                    `[TaskService.getTasks] RPC error fetching tasks for user ${userIdToUse}:`,
                     rpcError
                 );
                 throw new Error(`Failed to fetch tasks: ${rpcError.message}`);
@@ -470,7 +500,7 @@ export const TaskService = {
 
             if (!rpcData || !Array.isArray(rpcData)) {
                 console.warn(
-                    `[TaskService.getTasks] No tasks found or unexpected data format for user ${userId} via RPC.`
+                    `[TaskService.getTasks] No tasks found or unexpected data format for user ${userIdToUse} via RPC.`
                 );
                 return [];
             }
@@ -500,7 +530,7 @@ export const TaskService = {
             });
         } catch (error) {
             console.error(
-                `[TaskService.getTasks] Unexpected error fetching tasks for user ${userId}:`,
+                `[TaskService.getTasks] Unexpected error fetching tasks for user ${userIdToUse}:`,
                 error
             );
             if (
