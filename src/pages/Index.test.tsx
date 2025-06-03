@@ -10,6 +10,11 @@ import * as useTaskFilteringHook from '@/hooks/useTaskFiltering'; // Adjust path
 import { Task, TaskStatus, Person, Priority, DueDateType, EffortLevel } from '@/types'; // Import necessary types
 import { isToday, isPast } from 'date-fns';
 
+// Global afterEach for the entire test file
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 // Mock react-router-dom's useNavigate
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
