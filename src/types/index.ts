@@ -43,6 +43,7 @@ export enum TaskStatus {
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
   DEFERRED = 'DEFERRED',
+  SCHEDULED = 'SCHEDULED', // Added missing status
 }
 
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
