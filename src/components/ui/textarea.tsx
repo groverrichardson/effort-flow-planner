@@ -42,14 +42,22 @@ const Textarea = React.forwardRef<
             placeholder,
             showToolbar = true,
             autoFocus = false,
-            'data-testid': dataTestId,
+            'data-testid': dataTestId, // This will be for the main wrapper if needed by other tests
             'aria-label': ariaLabel,
             onTiptapKeyDown,
-            ...props
+            ...props // Contains the original data-testid if passed
         },
         ref
     ) => {
+        // Destructure to remove 'data-testid' from props, so it's not spread onto EditorContent
+        // The dataTestId variable (from destructuring the component's own props) is used for editorProps.attributes
+        const { 'data-testid': _forwardedDataTestId, ...restProps } = props;
         const editor = useEditor({
+            editorProps: {
+                attributes: {
+                    'data-testid': dataTestId ? `${dataTestId}-content` : 'tiptap-editor-content',
+                },
+            },
             extensions: [
                 StarterKit.configure({
                     bulletList: false,
@@ -167,7 +175,7 @@ const Textarea = React.forwardRef<
                     <EditorContent
                         editor={editor}
                         className="prose dark:prose-invert max-w-none px-0 prose-p:my-2"
-                        {...props}
+                        {...restProps}
                     />
                 </div>
             </div>

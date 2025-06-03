@@ -28,10 +28,12 @@ export default defineConfig(({ mode }) => ({
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/**/*.spec.tsx'], // Merged include patterns
     testTimeout: 10000,
     css: true, // Added from vitest.config.ts
-    // pool: 'forks', // Temporarily commented out for troubleshooting
-    // poolOptions: { // Temporarily commented out for troubleshooting
-    //   forks: {}
-    // },
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      }
+    },
 
     // server: { // Added from vitest.config.ts - Temporarily commented out for troubleshooting
     //   deps: {
