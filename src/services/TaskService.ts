@@ -577,7 +577,7 @@ export const TaskService = {
                 .from('tasks')
                 .select(`
                     *,
-                    task_recurrence_rules(*),
+                    task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
                     task_tags(tags(*)),
                     task_people(people(*))
                 `)
@@ -596,7 +596,7 @@ export const TaskService = {
                 .from('tasks')
                 .select(`
                     *,
-                    task_recurrence_rules(*),
+                    task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
                     task_tags(tags(*)),
                     task_people(people(*))
                 `)
@@ -1046,7 +1046,7 @@ export const TaskService = {
             .from('tasks')
             .select(`
                 *,
-                task_recurrence_rules(*),
+                task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
                 task_tags(tags(*)),
                 task_people(people(*))
             `)
@@ -1467,7 +1467,7 @@ export const TaskService = {
             .select(
                 `
                 *,
-                task_recurrence_rules!recurrenceRuleId (*),
+                task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
                 task_tags (tags (*)),
                 task_people (people (*))
                 `
@@ -1520,7 +1520,7 @@ export const TaskService = {
                 .from('tasks')
                 .select(`
                     *,
-                    task_recurrence_rules (*),
+                    task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
                     task_tags (tags (*)),
                     task_people (people (*))
                 `)
@@ -2000,7 +2000,7 @@ export const TaskService = {
                 .from('tasks')
                 .select(`
                     *,
-                    task_recurrence_rules(*),
+                    task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
                     task_tags!inner(tags(*)),
                     task_people!inner(people(*))
                 `)
