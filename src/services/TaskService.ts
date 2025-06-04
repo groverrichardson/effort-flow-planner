@@ -988,7 +988,11 @@ export const TaskService = {
             if (personId) { // Ensure personId is valid before linking
                 const { error: linkError } = await supabase
                     .from('task_people')
-                    .insert({ task_id: createdTaskData.id, person_id: personId });
+                    .insert({
+                        task_id: createdTaskData.id,
+                        person_id: personId,
+                        person_name: person.name, // Added person_name
+                    });
                 if (linkError) {
                     console.error('Error linking person to task:', linkError);
                 }
@@ -1242,6 +1246,7 @@ export const TaskService = {
                     task_id: string;
                     tag_id: string;
                     user_id: string;
+            person_name: string; // Added person_name
                 }[] = [];
                 for (const result of upsertedTagsResults) {
                     if (result.error || !result.data) {
@@ -1338,8 +1343,9 @@ export const TaskService = {
                     task_id: string;
                     person_id: string;
                     user_id: string;
+                    person_name: string; // Added person_name
                 }[] = [];
-                for (const result of upsertedPeopleResults) {
+                upsertedPeopleResults.forEach((result, index) => {
                     if (result.error || !result.data) {
                         console.error(
                             '[TaskService.updateTask] Error upserting person:',
@@ -1349,12 +1355,15 @@ export const TaskService = {
                             `Failed to update task people: Error upserting person. ${result.error?.message}`
                         );
                     }
+                    const originalPersonInput = people[index]; // Get the original input
+                    const personName = typeof originalPersonInput === 'string' ? originalPersonInput : originalPersonInput.name;
                     newPeopleLinks.push({
                         task_id: taskId,
                         person_id: (result.data as DbPerson).id,
                         user_id: user.id,
+                        person_name: personName // Added person_name from original input
                     });
-                }
+                });
 
                 if (newPeopleLinks.length > 0) {
                     const { error: insertTaskPeopleError } = await supabase
