@@ -71,51 +71,57 @@ export const calculateDailyCapacity = async (
 ): Promise<number> => {
   console.log(`[SchedulingService.calculateDailyCapacity] Calculating for user ${userId}`);
   const ninetyDaysAgo = formatISO(startOfDay(addDays(new Date(), -90)));
-  const today = formatISO(startOfDay(new Date()));
+  const today = formatISO(startOfDay(new Date())); // Represents the very start of today
 
-  const completedTasks = await taskService.getTasks({
-    userId,
-    status: TaskStatus.COMPLETED,
-    completedAfter: ninetyDaysAgo,
-    completedBefore: today,
-    isArchived: false,
-  });
+  try {
+    const completedTasks = await taskService.getTasks({
+      userId,
+      status: TaskStatus.COMPLETED,
+      completedAfter: ninetyDaysAgo, // Inclusive of start of 90th day ago
+      completedBefore: today,        // Exclusive of start of today (i.e., up to end of yesterday)
+      isArchived: false,
+    });
 
-  console.log(`[SchedulingService.calculateDailyCapacity] Found ${completedTasks.length} completed tasks in the last 90 days.`);
+    console.log(`[SchedulingService.calculateDailyCapacity] Found ${completedTasks.length} completed tasks in the last 90 days.`);
 
-  const relevantTasks = completedTasks.filter(task => 
-    task.completedDate && 
-    new Date(task.completedDate) >= new Date(ninetyDaysAgo) &&
-    new Date(task.completedDate) <= new Date(today)
-  );
+    // Filter for tasks strictly within the 90-day window [ninetyDaysAgo, today)
+    // Note: getTasks should already handle this filtering based on its parameters.
+    // This filter is an additional safeguard or clarification.
+    const relevantTasks = completedTasks.filter(task => 
+      task.completedDate && 
+      new Date(task.completedDate) >= new Date(ninetyDaysAgo) && // Completed on or after 90 days ago (inclusive of start of day)
+      new Date(task.completedDate) < new Date(today)             // Completed before today (exclusive of start of day)
+    );
 
-  if (relevantTasks.length === 0) {
-    console.log('[SchedulingService.calculateDailyCapacity] No relevant completed tasks in the last 90 days. Returning default capacity.');
-    return DEFAULT_DAILY_CAPACITY;
-  }
-
-  const totalEffortPoints = relevantTasks.reduce((sum, task) => {
-    return sum + getEffortPoints(task.effortLevel);
-  }, 0);
-  
-  let firstCompletionDate = new Date(today);
-  relevantTasks.forEach(task => {
-    if (task.completedDate) {
-        const completedDate = new Date(task.completedDate);
-        if (completedDate < firstCompletionDate) {
-            firstCompletionDate = completedDate;
-        }
+    if (relevantTasks.length === 0) {
+      console.log('[SchedulingService.calculateDailyCapacity] No relevant completed tasks in the last 90 days. Returning default capacity.');
+      return DEFAULT_DAILY_CAPACITY;
     }
-  });
 
-  const actualDurationDays = Math.max(1, differenceInDays(new Date(today), firstCompletionDate) + 1); 
-  const daysToConsider = Math.min(90, actualDurationDays);
+    const totalEffortPoints = relevantTasks.reduce((sum, task) => {
+      return sum + getEffortPoints(task.effortLevel);
+    }, 0);
+    
+    const uniqueCompletionDays = new Set<string>();
+    relevantTasks.forEach(task => {
+      if (task.completedDate) {
+        // Normalize to the start of the day to count unique days correctly
+        uniqueCompletionDays.add(formatISO(startOfDay(new Date(task.completedDate))));
+      }
+    });
+    // Ensure daysToConsider is at least 1 to prevent division by zero.
+    const daysToConsider = Math.max(1, uniqueCompletionDays.size);
 
-  const averageDailyCapacity = totalEffortPoints / daysToConsider;
-  const roundedCapacity = Math.max(1, Math.round(averageDailyCapacity)); 
+    const averageDailyCapacity = totalEffortPoints / daysToConsider;
+    // Ensure capacity is at least 1.
+    const roundedCapacity = Math.max(1, Math.round(averageDailyCapacity)); 
 
-  console.log(`[SchedulingService.calculateDailyCapacity] Total EP: ${totalEffortPoints}, Days considered: ${daysToConsider}, Avg Daily EP: ${averageDailyCapacity}, Rounded: ${roundedCapacity}`);
-  return roundedCapacity;
+    console.log(`[SchedulingService.calculateDailyCapacity] Total EP: ${totalEffortPoints}, Unique Days with Completions: ${daysToConsider}, Avg Daily EP: ${averageDailyCapacity}, Rounded: ${roundedCapacity}`);
+    return roundedCapacity;
+  } catch (error) {
+    console.error('[SchedulingService.calculateDailyCapacity] Error fetching or processing tasks:', error);
+    return DEFAULT_DAILY_CAPACITY; // Return default capacity on error
+  }
 };
 
 /**
