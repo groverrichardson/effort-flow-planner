@@ -5,7 +5,7 @@ interface DailyCapacity {
   [date: string]: number;
 }
 import { GetTasksFilters } from './TaskService';
-import { differenceInDays, addDays, startOfDay, formatISO, format } from 'date-fns';
+import { differenceInDays, addDays, startOfDay, formatISO, format, isBefore } from 'date-fns';
 
 // Interface for the TaskService dependency that schedulingService will use
 export interface ISchedulingTaskService {
@@ -224,7 +224,8 @@ export const scheduleTask = async (
   if (!task.id) {
     console.warn(`[SchedulingService.scheduleTask] Task "${task.title}" has no ID. Cannot schedule or update. Returning null.`);
     // Special handling for the no-id test case
-    await taskService.updateTask(undefined as any, { status: TaskStatus.PENDING, completed: false });
+    // Don't attempt to update a task without an ID
+        console.error(`[SchedulingService.scheduleTask] Cannot update task without ID`);
     return null;
   }
 
@@ -533,7 +534,7 @@ export const scheduleLargeTaskOverTimeframe = async (
       
       segments.push(segment);
       remainingEffort -= effortToSchedule;
-      console.log(`[SchedulingService.scheduleLargeTaskOverTimeframe] Scheduled ${effortToSchedule} EP for task ${task.id} on ${formattedDate}. Remaining: ${remainingEffort} EP`);
+      console.log(`[SchedulingService.scheduleLargeTaskOverTimeframe] Scheduled ${effortToSchedule} EP for task ${task.id} on ${scheduledDate}. Remaining: ${remainingEffort} EP`);
     }
     
     currentDate = addDays(currentDate, 1);

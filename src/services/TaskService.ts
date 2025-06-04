@@ -1246,7 +1246,7 @@ export const TaskService = {
                     task_id: string;
                     tag_id: string;
                     user_id: string;
-            person_name: string; // Added person_name
+
                 }[] = [];
                 for (const result of upsertedTagsResults) {
                     if (result.error || !result.data) {
@@ -1343,7 +1343,7 @@ export const TaskService = {
                     task_id: string;
                     person_id: string;
                     user_id: string;
-                    person_name: string; // Added person_name
+                    person_name: string;
                 }[] = [];
                 upsertedPeopleResults.forEach((result, index) => {
                     if (result.error || !result.data) {
