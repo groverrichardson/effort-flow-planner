@@ -1,4 +1,6 @@
 import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
 
 // Mock for hasPointerCapture, releasePointerCapture, and scrollIntoView for Radix UI components in JSDOM
 if (typeof window !== 'undefined') {
@@ -36,3 +38,23 @@ if (typeof window !== 'undefined') {
     };
   }
 }
+
+// Clean up after each test case
+afterEach(() => {
+  cleanup();
+});
+
+// Mock window.matchMedia for JSDOM
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }),
+});

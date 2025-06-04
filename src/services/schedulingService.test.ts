@@ -80,6 +80,7 @@ describe('SchedulingService', () => {
   beforeEach(() => {
     console.log('[TEST LOG] beforeEach in SchedulingService describe');
     vi.resetAllMocks();
+    vi.useFakeTimers(); // Added this line
     // Set a fixed system time for all tests in this describe block
     const initialMockDate = new Date(2024, 5, 1); // June 1, 2024
     vi.setSystemTime(initialMockDate);
@@ -92,6 +93,7 @@ describe('SchedulingService', () => {
 
   afterEach(() => {
     console.log('[TEST LOG] afterEach in SchedulingService describe');
+    vi.runOnlyPendingTimers(); // Ensure all pending fake timers are executed
     vi.useRealTimers(); // Restore real timers after each test
   });
 
@@ -119,12 +121,37 @@ describe('SchedulingService', () => {
 
   describe('calculateDailyCapacity', () => {
     console.log('[TEST LOG] --- calculateDailyCapacity describe block ---');
+    const MOCK_SYSTEM_TIME = '2024-06-01T10:00:00.000Z';
+
     beforeEach(() => {
-        mockTaskService.getTasks.mockReset();
+      // Fake timers are active from the outer describe block
+      vi.setSystemTime(new Date(MOCK_SYSTEM_TIME)); // Set a fixed system time for these tests
+      mockTaskService.getTasks.mockReset();
     });
 
+    afterEach(() => {
+      // Restore system time to the one set by the outer describe block
+      // This ensures other test suites within SchedulingService that rely on initialMockDate are not affected
+      const initialMockDateOuter = new Date(2024, 5, 1); // June 1, 2024
+      vi.setSystemTime(initialMockDateOuter);
+    });
+
+    const getExpectedFilters = () => {
+      const today = new Date(); // Will use MOCK_SYSTEM_TIME
+      const ninetyDaysAgo = startOfDay(addDays(today, -90));
+      const startOfToday = startOfDay(today);
+      return {
+        userId: MOCK_USER_ID,
+        isArchived: false,
+        status: TaskStatus.COMPLETED,
+        completedAfter: formatISO(ninetyDaysAgo),
+        completedBefore: formatISO(startOfToday),
+      };
+    };
+
     it('should return default capacity if no tasks completed in last 90 days', async () => {
-      mockTaskService.getTasks.mockResolvedValue([]);
+      const expectedFilters = getExpectedFilters();
+      mockTaskService.getTasks.mockResolvedValueOnce([]);
       const capacity = await calculateDailyCapacity(mockTaskService, MOCK_USER_ID);
       expect(capacity).toBe(DEFAULT_DAILY_CAPACITY_FROM_SERVICE);
       expect(mockTaskService.getTasks).toHaveBeenCalledWith({
@@ -137,70 +164,114 @@ describe('SchedulingService', () => {
     });
 
     it('should calculate average daily capacity based on completed tasks in last 90 days', async () => {
-      const ninetyDaysAgo = startOfDay(addDays(new Date(), -90));
-      const mockTasks: Task[] = [
-        createMockTask({ id: 'task1', effortLevel: EffortLevel.M, completed: true, completedDate: addDays(ninetyDaysAgo, 10).toISOString(), userId: MOCK_USER_ID }), // 4 EPs
-        createMockTask({ id: 'task2', effortLevel: EffortLevel.S, completed: true, completedDate: addDays(ninetyDaysAgo, 20).toISOString(), userId: MOCK_USER_ID }), // 2 EPs
-        createMockTask({ id: 'task3', effortLevel: EffortLevel.L, completed: true, completedDate: addDays(ninetyDaysAgo, 20).toISOString(), userId: MOCK_USER_ID }), // 8 EPs (same day as task2)
+      const today = new Date(); // Uses MOCK_SYSTEM_TIME
+      const task1Date = formatISO(startOfDay(addDays(today, -10))); // Example: 2024-05-22 if MOCK_SYSTEM_TIME is 2024-06-01
+      const task2Date = formatISO(startOfDay(addDays(today, -20))); // Example: 2024-05-12
+
+      const mockFilteredTasks: Task[] = [
+        createMockTask({ id: '1', effortLevel: EffortLevel.M, completedDate: task1Date, status: TaskStatus.COMPLETED, user_id: MOCK_USER_ID }), // 4 points (assuming M = 4 from getEffortPoints)
+        createMockTask({ id: '2', effortLevel: EffortLevel.S, completedDate: task2Date, status: TaskStatus.COMPLETED, user_id: MOCK_USER_ID }), // 2 points (assuming S = 2)
+        createMockTask({ id: '3', effortLevel: EffortLevel.L, completedDate: task2Date, status: TaskStatus.COMPLETED, user_id: MOCK_USER_ID }), // 8 points (assuming L = 8) (same day as task 2)
       ];
-      mockTaskService.getTasks.mockResolvedValue(mockTasks);
-      // Total EPs = 4 + 2 + 8 = 14
-      // Average over 90 days = 14 / 90 = 0.155...
-      // Math.round(0.155...) = 0. Expected to be default capacity if rounded to 0.
-      // The logic is `Math.round(averageDailyCapacity) || DEFAULT_DAILY_CAPACITY;`
-      // So if Math.round(14/90) is 0, it will return DEFAULT_DAILY_CAPACITY_FROM_SERVICE (8)
-      const testTotalEffortPoints = 14; // Represents the sum of EPs for tasks completed in the last 90 days
-      let expectedCapacity;
-      if (testTotalEffortPoints === 0) {
-        expectedCapacity = DEFAULT_DAILY_CAPACITY_FROM_SERVICE;
-      } else {
-        const avg = Math.round(testTotalEffortPoints / 90);
-        expectedCapacity = avg > 0 ? avg : 1; // If avg is 0 but total effort > 0, expect 1
-      }
-      // For testTotalEffortPoints = 14, avg = Math.round(14/90) = 0, so expectedCapacity = 1
+      // Task completed outside 90 days would be filtered out by getTasks with the new filters
+
+      const expectedFilters = getExpectedFilters();
+      mockTaskService.getTasks.mockResolvedValueOnce(mockFilteredTasks);
+
+      // Total EP = 4 (task1) + 2 (task2) + 8 (task3) = 14.
+      // Unique days with completed tasks = 2 (task1Date, task2Date).
+      // Average = 14 / 2 = 7.
       const capacity = await calculateDailyCapacity(mockTaskService, MOCK_USER_ID);
-      expect(capacity).toBe(expectedCapacity);
+      expect(capacity).toBe(7);
+      expect(mockTaskService.getTasks).toHaveBeenCalledWith(expectedFilters);
     });
 
-    it('should ignore tasks not completed', async () => {
-      const ninetyDaysAgo = startOfDay(addDays(new Date(), -90));
-      const mockTasks: Task[] = [
-        createMockTask({ id: 'task1', effortLevel: EffortLevel.M, completed: false, userId: MOCK_USER_ID }),
-        createMockTask({ id: 'task2', effortLevel: EffortLevel.S, completed: true, completedDate: addDays(ninetyDaysAgo, -10).toISOString(), userId: MOCK_USER_ID }), // too old
-      ];
-      mockTaskService.getTasks.mockResolvedValue(mockTasks);
+
+    it('should ignore tasks not completed (as getTasks filters by status: COMPLETED)', async () => {
+      // This test now relies on getTasks correctly filtering by COMPLETED status.
+      // If getTasks were to return non-completed tasks, calculateDailyCapacity would still process them if they had a completedDate.
+      // However, the new filter { status: TaskStatus.COMPLETED } means mockTaskService.getTasks should only be called with completed tasks.
+      const expectedFilters = getExpectedFilters();
+      mockTaskService.getTasks.mockResolvedValueOnce([]); // Simulating that getTasks found no COMPLETED tasks with these filters
+
       const capacity = await calculateDailyCapacity(mockTaskService, MOCK_USER_ID);
       expect(capacity).toBe(DEFAULT_DAILY_CAPACITY_FROM_SERVICE);
+      expect(mockTaskService.getTasks).toHaveBeenCalledWith(expectedFilters);
     });
 
-    it('should ignore tasks completed more than 90 days ago', async () => {
-      const mockTasks: Task[] = [
-        createMockTask({ id: 'task1', effortLevel: EffortLevel.M, completed: true, completedDate: addDays(new Date(), -100).toISOString(), userId: MOCK_USER_ID }),
-      ];
-      mockTaskService.getTasks.mockResolvedValue(mockTasks);
+    it('should ignore tasks completed more than 90 days ago (as getTasks filters by completedAfter)', async () => {
+      // This test relies on the completedAfter filter in getTasks.
+      const expectedFilters = getExpectedFilters();
+      mockTaskService.getTasks.mockResolvedValueOnce([]); // Simulating getTasks found no tasks within the 90-day window.
       const capacity = await calculateDailyCapacity(mockTaskService, MOCK_USER_ID);
       expect(capacity).toBe(DEFAULT_DAILY_CAPACITY_FROM_SERVICE);
+      expect(mockTaskService.getTasks).toHaveBeenCalledWith(expectedFilters);
     });
 
-    it('should ignore archived tasks (assuming getTasks handles this filter)', async () => {
-        // The calculateDailyCapacity calls getTasks(false), so this test relies on getTasks mock correctly filtering.
-        // If getTasks was to return archived tasks, the filter inside calculateDailyCapacity would still apply if is_archived was checked.
-        // Current implementation of calculateDailyCapacity doesn't explicitly check is_archived, relies on getTasks(false).
-        const ninetyDaysAgo = startOfDay(addDays(new Date(), -90));
-        const mockTasks: Task[] = [
-          createMockTask({ id: 'task1', effortLevel: EffortLevel.M, completed: true, completedDate: addDays(ninetyDaysAgo, 10).toISOString(), userId: MOCK_USER_ID, is_archived: true }),
-        ];
-        mockTaskService.getTasks.mockResolvedValue([]); // Simulating that getTasks(false) filters out the archived task
-        const capacity = await calculateDailyCapacity(mockTaskService, MOCK_USER_ID);
-        expect(capacity).toBe(DEFAULT_DAILY_CAPACITY_FROM_SERVICE);
-        expect(mockTaskService.getTasks).toHaveBeenCalledWith({
-          userId: MOCK_USER_ID,
-          isArchived: false,
-          status: TaskStatus.COMPLETED,
-          completedAfter: expect.any(String),
-          completedBefore: expect.any(String),
-        });
-      });
+
+    it('should ignore archived tasks (as getTasks filters by isArchived: false)', async () => {
+      // This test relies on the isArchived: false filter in getTasks.
+      const expectedFilters = getExpectedFilters();
+      mockTaskService.getTasks.mockResolvedValueOnce([]); // Simulating getTasks found no non-archived, completed tasks in the window.
+      const capacity = await calculateDailyCapacity(mockTaskService, MOCK_USER_ID);
+      expect(capacity).toBe(DEFAULT_DAILY_CAPACITY_FROM_SERVICE);
+      expect(mockTaskService.getTasks).toHaveBeenCalledWith(expectedFilters);
+    });
+
+    it('should return default capacity if an error occurs during task fetching', async () => {
+      const expectedFilters = getExpectedFilters();
+      mockTaskService.getTasks.mockRejectedValueOnce(new Error('DB Error'));
+      const capacity = await calculateDailyCapacity(mockTaskService, MOCK_USER_ID);
+      expect(capacity).toBe(DEFAULT_DAILY_CAPACITY_FROM_SERVICE);
+      expect(mockTaskService.getTasks).toHaveBeenCalledWith(expectedFilters);
+    });
+
+    it('should include tasks completed exactly 90 days ago (boundary condition)', async () => {
+      const today = new Date(); // Uses MOCK_SYSTEM_TIME
+      // completedDate should be exactly on the boundary of ninetyDaysAgo (inclusive for completedAfter)
+      const ninetyDaysAgoDate = formatISO(startOfDay(addDays(today, -90)));
+      const mockFilteredTasks: Task[] = [
+        createMockTask({ id: '1', effortLevel: EffortLevel.S, completedDate: ninetyDaysAgoDate, status: TaskStatus.COMPLETED, user_id: MOCK_USER_ID }), // 2 points
+      ];
+      const expectedFilters = getExpectedFilters();
+      mockTaskService.getTasks.mockResolvedValueOnce(mockFilteredTasks);
+      const capacity = await calculateDailyCapacity(mockTaskService, MOCK_USER_ID);
+      expect(capacity).toBe(2); // 2 points / 1 day
+      expect(mockTaskService.getTasks).toHaveBeenCalledWith(expectedFilters);
+    });
+
+    it('should NOT include tasks completed today (as filter is completedBefore startOfToday)', async () => {
+      const expectedFilters = getExpectedFilters(); // completedBefore is startOfToday, so today's tasks are excluded
+      mockTaskService.getTasks.mockResolvedValueOnce([]); // No tasks should be returned by getTasks if they were completed today
+      const capacity = await calculateDailyCapacity(mockTaskService, MOCK_USER_ID);
+      expect(capacity).toBe(DEFAULT_DAILY_CAPACITY_FROM_SERVICE);
+      expect(mockTaskService.getTasks).toHaveBeenCalledWith(expectedFilters);
+    });
+
+    it('should correctly calculate capacity with multiple tasks on multiple days', async () => {
+      const today = new Date(); // Uses MOCK_SYSTEM_TIME
+      const day1 = formatISO(startOfDay(addDays(today, -5)));
+      const day2 = formatISO(startOfDay(addDays(today, -15)));
+      const day3 = formatISO(startOfDay(addDays(today, -25)));
+      const mockFilteredTasks: Task[] = [
+        createMockTask({ id: '1', effortLevel: EffortLevel.M, completedDate: day1, status: TaskStatus.COMPLETED, user_id: MOCK_USER_ID }), // 4 points
+        createMockTask({ id: '2', effortLevel: EffortLevel.S, completedDate: day1, status: TaskStatus.COMPLETED, user_id: MOCK_USER_ID }), // 2 points
+        createMockTask({ id: '3', effortLevel: EffortLevel.L, completedDate: day2, status: TaskStatus.COMPLETED, user_id: MOCK_USER_ID }), // 8 points
+        createMockTask({ id: '4', effortLevel: EffortLevel.XS, completedDate: day3, status: TaskStatus.COMPLETED, user_id: MOCK_USER_ID }),// 1 point
+        createMockTask({ id: '5', effortLevel: EffortLevel.XL, completedDate: day3, status: TaskStatus.COMPLETED, user_id: MOCK_USER_ID }),// 16 points
+      ];
+
+      const expectedFilters = getExpectedFilters();
+      mockTaskService.getTasks.mockResolvedValueOnce(mockFilteredTasks);
+      // Day 1: 4+2 = 6
+      // Day 2: 8
+      // Day 3: 1+16 = 17
+      // Total EP = 6 + 8 + 17 = 31. Unique days = 3. Avg = 31/3 = 10.33 -> 10
+      const capacity = await calculateDailyCapacity(mockTaskService, MOCK_USER_ID);
+      expect(capacity).toBe(Math.round(31 / 3));
+      expect(mockTaskService.getTasks).toHaveBeenCalledWith(expectedFilters);
+    });
+
   });
 
   /* describe('getScheduledEffortForDay', () => {

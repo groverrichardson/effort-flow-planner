@@ -20,7 +20,7 @@ import React from 'react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom'; // useParams, useNavigate, useLocation are from the mock
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi, afterEach } from 'vitest';
 import { prettyDOM } from '@testing-library/dom';
 
 // Component Under Test (imported AFTER mocks)
@@ -593,4 +593,7 @@ describe('NoteEditorPage', () => {
     });
   }); // End of Cancel Button Navigation describe
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 }); // End of NoteEditorPage describe
