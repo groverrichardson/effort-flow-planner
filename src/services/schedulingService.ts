@@ -634,11 +634,12 @@ export const runSchedulingAlgorithm = async (
   const sortedTasksToSchedule = sortTasksForScheduling(tasksToSchedule);
 
   for (const task of sortedTasksToSchedule) {
-    if (task.status === TaskStatus.PENDING) {
-        console.log(`[SchedulingService.runSchedulingAlgorithm] Processing task ${task.id} (${task.title}) for scheduling as its status is PENDING.`);
+    // Process all tasks that are NOT COMPLETED and NOT archived
+    if (task.status !== TaskStatus.COMPLETED && !task.is_archived) {
+        console.log(`[SchedulingService.runSchedulingAlgorithm] Processing task ${task.id} (${task.title}) for scheduling as its status is ${task.status}.`);
         await scheduleTask(taskService, task, capacity, userId);
     } else {
-        console.log(`[SchedulingService.runSchedulingAlgorithm] Skipping task ${task.id} (${task.title}) as its status is ${task.status}.`);
+        console.log(`[SchedulingService.runSchedulingAlgorithm] Skipping task ${task.id} (${task.title}) as its status is ${task.status} or it is archived.`);
     }
   }
   console.log('[SchedulingService.runSchedulingAlgorithm] Finished.');
