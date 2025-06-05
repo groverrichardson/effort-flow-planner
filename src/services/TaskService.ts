@@ -1038,56 +1038,35 @@ export const TaskService = {
         }
     }
     
-    // After task creation, run the scheduling algorithm for all schedulable tasks
+    // Phase 1: Modify TaskService.createTask
+    // After a new task is created, fetch all schedulable tasks.
+    // Then, run the main scheduling algorithm (runSchedulingAlgorithm) with this complete list.
+    // Finally, re-fetch and return the newly created task.
     try {
-        // Get all schedulable tasks (not completed and not archived)
-        console.log(`[TaskService.createTask] Getting all schedulable tasks for user ${user.id}`);
-        const { data: allTasksData, error: allTasksError } = await supabase
-            .from('tasks')
-            .select(`
-                *,
-                task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
-                task_tags(tags(*)),
-                task_people(people(*))
-            `)
-            .eq('user_id', user.id)
-            .eq('is_archived', false)
-            .neq('status', TaskStatus.COMPLETED);
-        
-        if (allTasksError) {
-            console.error('[TaskService.createTask] Error fetching schedulable tasks:', allTasksError);
-            throw new Error(`Failed to fetch schedulable tasks: ${allTasksError.message}`);
-        }
-        
-        if (!allTasksData || allTasksData.length === 0) {
-            console.log('[TaskService.createTask] No schedulable tasks found');
-            return mapDbTaskToTask(createdTaskData, finalRecurrenceRule, createdTags, associatedPeople);
-        }
-        
-        // Map DB tasks to frontend Task objects
-        const schedulableTasks = allTasksData.map(dbTask => {
-            const recurrenceRule = dbTask.task_recurrence_rules ? 
-                mapDbRecurrenceRuleToRecurrenceRule(
-                    Array.isArray(dbTask.task_recurrence_rules) 
-                        ? dbTask.task_recurrence_rules[0] 
-                        : dbTask.task_recurrence_rules
-                ) : null;
-            const tags = dbTask.task_tags?.map((tt: any) => tt.tags).filter(Boolean) || [];
-            const people = dbTask.task_people?.map((tp: any) => tp.people).filter(Boolean) || [];
-            return mapDbTaskToTask(dbTask, recurrenceRule, tags, people);
-        });
-        
-        console.log(`[TaskService.createTask] Running scheduling algorithm on ${schedulableTasks.length} schedulable tasks`);
-        
-        // Run the scheduling algorithm on all tasks
-        await runSchedulingAlgorithm(schedulableTasks, user.id);
-        console.log(`[TaskService.createTask] Scheduling completed successfully`);
-    } catch (schedulingError) {
-        // Log the error but don't fail the task creation
-        console.error(`[TaskService.createTask] Error during scheduling after task creation:`, schedulingError);
-    }
+        console.log(`[TaskService.createTask] Phase 1: Attempting to run full scheduling algorithm for user ${user.id}`);
+        const schedulableTasks = await this.getAllSchedulableTasks(user.id);
 
-    return mapDbTaskToTask(createdTaskData, finalRecurrenceRule, createdTags, associatedPeople);
+        if (schedulableTasks && schedulableTasks.length > 0) {
+            console.log(`[TaskService.createTask] Phase 1: Found ${schedulableTasks.length} schedulable tasks. Running scheduling algorithm.`);
+            await runSchedulingAlgorithm(schedulableTasks, user.id);
+            console.log(`[TaskService.createTask] Phase 1: Scheduling algorithm completed.`);
+        } else {
+            console.log('[TaskService.createTask] Phase 1: No schedulable tasks found or an error occurred fetching them. Skipping full scheduling run.');
+        }
+
+        // Re-fetch the newly created task to get its updated state (e.g., target_deadline)
+        console.log(`[TaskService.createTask] Phase 1: Re-fetching created task with ID ${createdTaskData.id} to reflect any scheduling changes.`);
+        const updatedTask = await this.getTaskById(createdTaskData.id);
+        console.log('[TaskService.createTask] Phase 1: Successfully re-fetched task. Returning updated task.');
+        return updatedTask;
+
+    } catch (schedulingOrRefetchError) {
+        console.error(`[TaskService.createTask] Phase 1: Error during post-creation scheduling or task re-fetch:`, schedulingOrRefetchError);
+        // Fallback: return the task as it was mapped just after creation,
+        // to ensure task creation itself doesn't fail due to these subsequent steps.
+        console.warn(`[TaskService.createTask] Phase 1: Falling back to returning task data as mapped immediately after creation, before full scheduling/re-fetch attempt.`);
+        return mapDbTaskToTask(createdTaskData, finalRecurrenceRule, createdTags, associatedPeople);
+    }
     }, // End of createTask method
 
     async updateTask(
