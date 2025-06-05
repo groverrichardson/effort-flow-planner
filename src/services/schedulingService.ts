@@ -119,7 +119,7 @@ export const calculateDailyCapacity = async (
     console.log(`[SchedulingService.calculateDailyCapacity] Total EP: ${totalEffortPoints}, Unique Days with Completions: ${daysToConsider}, Avg Daily EP: ${averageDailyCapacity}, Rounded: ${roundedCapacity}`);
     return roundedCapacity;
   } catch (error) {
-    console.error('[SchedulingService.calculateDailyCapacity] Error fetching or processing tasks:', error);
+    console.error('[SchedulingService.calculateDailyCapacity] Error fetching or processing tasks. Message:', error.message, 'Stack:', error.stack, 'Full Error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return DEFAULT_DAILY_CAPACITY; // Return default capacity on error
   }
 };
