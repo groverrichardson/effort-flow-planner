@@ -84,7 +84,7 @@ const TaskListContent = ({
             )}
             {tasks.length > 0 ? (
                 <div 
-                    className="flex flex-col gap-2 overflow-y-auto" 
+                    className="flex flex-col gap-3 overflow-y-auto" 
                     id="task-groups-container"
                     style={{ 
                         willChange: 'transform',  /* Optimization for scroll performance */
@@ -92,11 +92,26 @@ const TaskListContent = ({
                     }}
                 >
                     {groupedTasks.map((group, index) => (
-                        <div key={group.id} className="task-group mb-4 relative" data-testid={`task-group-${group.id}`}>
+                        <div 
+                            key={group.id} 
+                            className={cn(
+                                "task-group mb-5 relative rounded-lg overflow-hidden",
+                                group.id === DateGroup.OVERDUE && "bg-red-50/25 dark:bg-red-900/10 shadow-sm border-l border-red-200 dark:border-red-800/30",
+                                group.id === DateGroup.TODAY && "bg-amber-50/25 dark:bg-amber-900/10 shadow-sm border-l border-amber-200 dark:border-amber-800/30",
+                                group.id !== DateGroup.OVERDUE && group.id !== DateGroup.TODAY && "bg-slate-50/25 dark:bg-slate-900/10"
+                            )} 
+                            data-testid={`task-group-${group.id}`}
+                        >
                             {/* Date group header */}
                             <button
                                 id={`task-group-header-${group.id}`}
-                                className="group-header w-full py-2 px-3 bg-slate-100/95 backdrop-blur-sm dark:bg-slate-800/95 font-semibold text-sm rounded-md mb-2 flex items-center border-l-4 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 sticky top-0 shadow-sm transition-all duration-200 ease-in-out"
+                                className={cn(
+                                    "group-header w-full py-2 px-3 font-semibold text-sm backdrop-blur-sm flex items-center focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 sticky top-0 shadow-sm transition-all duration-200 ease-in-out",
+                                    group.id === DateGroup.OVERDUE && "bg-red-100/95 dark:bg-red-900/90 border-l-4 border-red-400 dark:border-red-700 text-red-800 dark:text-red-200",
+                                    group.id === DateGroup.TODAY && "bg-amber-100/95 dark:bg-amber-900/90 border-l-4 border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-200",
+                                    group.id !== DateGroup.OVERDUE && group.id !== DateGroup.TODAY && "bg-slate-100/95 dark:bg-slate-800/95 border-l-4 border-slate-300 dark:border-slate-600",
+                                    !collapsedGroups[group.id] ? "rounded-t-md mb-2" : "rounded-md mb-0"
+                                )}
                                 style={{ 
                                     top: `${index * 2}px`,
                                     zIndex: `${100 - index}` /* Ensures proper stacking with first header on top */
@@ -112,10 +127,20 @@ const TaskListContent = ({
                                 ) : (
                                     <ChevronDown className="h-4 w-4 mr-2 text-slate-500 dark:text-slate-400 flex-shrink-0" />
                                 )}
-                                <span className="text-slate-700 dark:text-slate-200 flex-grow text-left">
+                                <span className={cn(
+                                    "flex-grow text-left",
+                                    group.id === DateGroup.OVERDUE ? "text-red-800 dark:text-red-300" : 
+                                    group.id === DateGroup.TODAY ? "text-amber-800 dark:text-amber-300" : 
+                                    "text-slate-700 dark:text-slate-200"
+                                )}>
                                     {(group.id as DateGroup)}
                                 </span>
-                                <span className="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-full">
+                                <span className={cn(
+                                    "text-xs px-2 py-1 rounded-full",
+                                    group.id === DateGroup.OVERDUE && "bg-red-200 dark:bg-red-800/50 text-red-800 dark:text-red-200",
+                                    group.id === DateGroup.TODAY && "bg-amber-200 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200",
+                                    group.id !== DateGroup.OVERDUE && group.id !== DateGroup.TODAY && "bg-slate-200 dark:bg-slate-700"
+                                )}>
                                     {group.tasks.length}
                                 </span>
                             </button>

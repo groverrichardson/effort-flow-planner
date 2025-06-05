@@ -1,10 +1,12 @@
-import { format, isToday, isPast } from 'date-fns';
+import { format, isToday, isPast, isYesterday } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Task, Priority, EffortLevel } from '@/types';
-import { Check } from 'lucide-react';
+import { Task, Priority, EffortLevel, DateGroup } from '@/types';
+import { Check, AlertCircle, Clock } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
+import { determineTaskDateGroup } from '@/utils/grouping/taskGrouping';
 
 interface TaskCardProps {
     task: Task;
@@ -61,18 +63,23 @@ const TaskCard = ({
 
             const isPastDue = dueDate < today;
             const isDueToday = isToday(dueDate);
+            const isYesterdayDate = isYesterday(dueDate);
 
             if (isPastDue) {
                 return (
-                    <span className="text-xs text-red-500">
-                        Past due: {format(task.dueDate, 'MMM d')}
+                    <span className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {isYesterdayDate ? 'Due yesterday' : `Past due: ${format(task.dueDate, 'MMM d')}`}
                     </span>
                 );
             }
 
             if (isDueToday) {
                 return (
-                    <span className="text-xs text-orange-500">Due today</span>
+                    <span className="text-xs text-orange-500 font-medium flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Due today
+                    </span>
                 );
             }
 
@@ -90,7 +97,15 @@ const TaskCard = ({
         <Card
             key={task.id}
             className="block overflow-hidden group border-0 shadow-none p-0 mb-2">
-            <CardContent className="p-4 bg-gray-100 dark:bg-slate-700 group-hover:bg-transparent dark:group-hover:bg-slate-600">
+            <CardContent 
+                className={cn(
+                    "p-4 relative dark:group-hover:bg-slate-600 transition-colors duration-200",
+                    determineTaskDateGroup(task) === DateGroup.OVERDUE ? 
+                        "bg-red-50 dark:bg-slate-700/90 group-hover:bg-red-100/50" : 
+                        "bg-gray-100 dark:bg-slate-700 group-hover:bg-transparent"
+                )}
+                id={`task-card-${task.id}`}
+            >
                 <div className="flex items-start gap-3">
                     {isBulkEditing && (
                         <Checkbox
