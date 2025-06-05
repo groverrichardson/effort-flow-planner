@@ -1,5 +1,5 @@
-import { startOfDay, endOfDay, isToday, isTomorrow, isThisWeek, isThisMonth, 
-  differenceInCalendarDays, addDays, format, isPast } from 'date-fns';
+import { startOfDay, isToday, isTomorrow, isThisWeek, isThisMonth, 
+  addDays, format, isPast, startOfWeek, addWeeks } from 'date-fns';
 import { Task, TaskStatus } from '../../types';
 
 /**
@@ -26,75 +26,64 @@ export interface TaskGroup {
 }
 
 /**
- * Determines which date group a task belongs to based on its targetDeadline or dueDate
- * Priority is given to targetDeadline if it exists
+ * Determines which date group a task belongs to based on its targetDeadline.
  * 
  * @param task The task to categorize
  * @returns The DateGroup enum value representing the task's group
  */
 export const determineTaskDateGroup = (task: Task): DateGroup => {
-  // Use targetDeadline if it exists, otherwise use dueDate
-  const taskDate = task.targetDeadline || task.dueDate;
+  const taskDateForGrouping = task.targetDeadline;
   
-  // If no date exists, return NO_DATE group
-  if (!taskDate) {
+  if (!taskDateForGrouping) {
     return DateGroup.NO_DATE;
   }
   
-  const today = new Date();
-  const taskDateObj = new Date(taskDate);
+  const today = startOfDay(new Date()); // Use startOfDay for consistent comparisons
+  const taskDateObj = startOfDay(new Date(taskDateForGrouping!)); // Ensure we compare day-to-day
   
-  // Check if the task is overdue (past due date and not completed)
-  if (isPast(taskDateObj) && 
-      taskDateObj < startOfDay(today) && 
-      task.status !== TaskStatus.COMPLETED) {
+  if (task.status !== TaskStatus.COMPLETED && isPast(taskDateObj) && taskDateObj < today) {
     return DateGroup.OVERDUE;
   }
   
-  // Today
   if (isToday(taskDateObj)) {
     return DateGroup.TODAY;
   }
   
-  // Tomorrow
   if (isTomorrow(taskDateObj)) {
     return DateGroup.TOMORROW;
   }
   
-  // This week (excludes today and tomorrow which are already handled)
-  if (isThisWeek(taskDateObj, { weekStartsOn: 1 }) && 
-      !isToday(taskDateObj) && 
-      !isTomorrow(taskDateObj)) {
+  // isThisWeek checks if the date is within the current week (Mon-Sun by default with weekStartsOn:1)
+  // and it's not Today or Tomorrow (already handled)
+  if (isThisWeek(taskDateObj, { weekStartsOn: 1 })) {
     return DateGroup.THIS_WEEK;
   }
   
-  // Next week
-  const nextWeekStart = addDays(today, 7 - today.getDay());
-  const nextWeekEnd = addDays(nextWeekStart, 7);
-  if (taskDateObj >= nextWeekStart && taskDateObj < nextWeekEnd) {
+  // Next week (Mon-Sun of the following week)
+  const startOfNextCalendarWeek = startOfWeek(addWeeks(today, 1), { weekStartsOn: 1 });
+  const endOfNextCalendarWeek = addDays(startOfNextCalendarWeek, 6);
+
+  if (taskDateObj >= startOfNextCalendarWeek && taskDateObj <= endOfNextCalendarWeek) {
     return DateGroup.NEXT_WEEK;
   }
   
-  // This month (excludes this week and next week)
-  if (isThisMonth(taskDateObj) && 
-      !isThisWeek(taskDateObj) && 
-      !(taskDateObj >= nextWeekStart && taskDateObj < nextWeekEnd)) {
+  // This month (if it hasn't fallen into Overdue, Today, Tomorrow, This Week, or Next Week)
+  if (isThisMonth(taskDateObj)) {
     return DateGroup.THIS_MONTH;
   }
   
-  // Future (anything beyond this month)
+  // If none of the above, it's in the future (beyond this month)
   return DateGroup.FUTURE;
 };
 
 /**
- * Groups an array of tasks by their date categories
+ * Groups tasks by their date categories.
  * 
  * @param tasks Array of tasks to group
- * @returns An array of TaskGroup objects, each containing tasks that belong to the same date group
+ * @returns Array of TaskGroup objects, sorted and with empty groups filtered out
  */
 export const groupTasksByDate = (tasks: Task[]): TaskGroup[] => {
-  // Initialize groups
-  const groupMap: Record<string, TaskGroup> = {
+  const groupMap: Record<DateGroup, TaskGroup> = {
     [DateGroup.OVERDUE]: { id: DateGroup.OVERDUE, title: DateGroup.OVERDUE, tasks: [] },
     [DateGroup.TODAY]: { id: DateGroup.TODAY, title: DateGroup.TODAY, tasks: [] },
     [DateGroup.TOMORROW]: { id: DateGroup.TOMORROW, title: DateGroup.TOMORROW, tasks: [] },
@@ -105,17 +94,19 @@ export const groupTasksByDate = (tasks: Task[]): TaskGroup[] => {
     [DateGroup.NO_DATE]: { id: DateGroup.NO_DATE, title: DateGroup.NO_DATE, tasks: [] },
   };
   
-  // Assign tasks to appropriate groups
   tasks.forEach((task) => {
-    const group = determineTaskDateGroup(task);
-    groupMap[group].tasks.push(task);
+    if (hasValidDateFormat(task)) { // Only group tasks with valid dates or no dates
+      const group = determineTaskDateGroup(task);
+      groupMap[group].tasks.push(task);
+    } else {
+      // Optionally handle tasks with invalid date formats, e.g., add to a specific group or log
+      console.warn(`Task with ID ${task.id} has an invalid date format and was not grouped.`);
+    }
   });
   
-  // Convert to array and filter out empty groups
   return Object.values(groupMap)
     .filter((group) => group.tasks.length > 0)
     .sort((a, b) => {
-      // Custom sort order for groups
       const groupOrder = [
         DateGroup.OVERDUE,
         DateGroup.TODAY,
@@ -126,51 +117,54 @@ export const groupTasksByDate = (tasks: Task[]): TaskGroup[] => {
         DateGroup.FUTURE,
         DateGroup.NO_DATE
       ];
-      
       return groupOrder.indexOf(a.id as DateGroup) - groupOrder.indexOf(b.id as DateGroup);
     });
 };
 
 /**
- * Gets a formatted date string for display
+ * Gets a formatted date string for display.
  * 
  * @param date The date to format
- * @returns A formatted date string (e.g., "Jun 5, 2025")
+ * @returns A formatted date string (e.g., "Jun 5, 2025") or empty string for null date
  */
-export const getFormattedDate = (date: Date | null): string => {
+export const getFormattedDate = (date: Date | string | null): string => {
   if (!date) return '';
-  return format(new Date(date), 'MMM d, yyyy');
+  try {
+    return format(new Date(date), 'MMM d, yyyy');
+  } catch (e) {
+    return 'Invalid Date';
+  }
 };
 
 /**
- * Formats the group title with additional information
+ * Formats the group title with additional information like task count.
  * 
- * @param group The date group
+ * @param group The date group enum value
  * @param tasks The tasks in the group
- * @returns A formatted title with count (e.g., "Today (5)")
+ * @returns A formatted title string (e.g., "Today (5)")
  */
 export const formatGroupTitle = (group: DateGroup, tasks: Task[]): string => {
   return `${group} (${tasks.length})`;
 };
 
 /**
- * Determines if task dates are properly formatted for comparison
+ * Determines if task dates (targetDeadline or dueDate) are in a valid format that can be parsed by new Date().
  * 
  * @param task The task to check
- * @returns Boolean indicating if the task has properly formatted dates
+ * @returns Boolean indicating if the task has properly formatted dates or no dates.
  */
 export const hasValidDateFormat = (task: Task): boolean => {
-  if (!task.dueDate && !task.targetDeadline) return true; // No date is valid
-  
-  try {
-    if (task.dueDate) {
-      new Date(task.dueDate).toISOString();
+  const checkDateValidity = (date: string | Date | null | undefined): boolean => {
+    if (date === null || date === undefined) return true; // No date is valid
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return false; // Invalid date parsed
+      // Optional: Check if it's a reasonable date, e.g., not year 0001, but usually isNaN is enough for basic check
+      return true;
+    } catch (e) {
+      return false;
     }
-    if (task.targetDeadline) {
-      new Date(task.targetDeadline).toISOString();
-    }
-    return true;
-  } catch (e) {
-    return false;
-  }
+  };
+
+  return checkDateValidity(task.targetDeadline) && checkDateValidity(task.dueDate);
 };
