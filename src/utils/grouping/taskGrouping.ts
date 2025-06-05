@@ -1,8 +1,6 @@
 import { startOfDay, endOfDay, isToday, isTomorrow, isThisWeek, isThisMonth, 
   differenceInCalendarDays, addDays, format, isPast } from 'date-fns';
-import { Tables } from '../../types/supabase';
-
-type Task = Tables<'tasks'>;
+import { Task, TaskStatus } from '../../types';
 
 /**
  * Defines the possible date groups for tasks
@@ -28,15 +26,15 @@ export interface TaskGroup {
 }
 
 /**
- * Determines which date group a task belongs to based on its due_date or target_deadline
- * Priority is given to due_date if it exists
+ * Determines which date group a task belongs to based on its dueDate or targetDeadline
+ * Priority is given to dueDate if it exists
  * 
  * @param task The task to categorize
  * @returns The DateGroup enum value representing the task's group
  */
 export const determineTaskDateGroup = (task: Task): DateGroup => {
-  // Use due_date if it exists, otherwise use target_deadline
-  const taskDate = task.due_date || task.target_deadline;
+  // Use dueDate if it exists, otherwise use targetDeadline
+  const taskDate = task.dueDate || task.targetDeadline;
   
   // If no date exists, return NO_DATE group
   if (!taskDate) {
@@ -49,7 +47,7 @@ export const determineTaskDateGroup = (task: Task): DateGroup => {
   // Check if the task is overdue (past due date and not completed)
   if (isPast(taskDateObj) && 
       taskDateObj < startOfDay(today) && 
-      task.status !== 'COMPLETED') {
+      task.status !== TaskStatus.COMPLETED) {
     return DateGroup.OVERDUE;
   }
   
@@ -139,7 +137,7 @@ export const groupTasksByDate = (tasks: Task[]): TaskGroup[] => {
  * @param date The date to format
  * @returns A formatted date string (e.g., "Jun 5, 2025")
  */
-export const getFormattedDate = (date: string | Date): string => {
+export const getFormattedDate = (date: Date | null): string => {
   if (!date) return '';
   return format(new Date(date), 'MMM d, yyyy');
 };
@@ -162,14 +160,14 @@ export const formatGroupTitle = (group: DateGroup, tasks: Task[]): string => {
  * @returns Boolean indicating if the task has properly formatted dates
  */
 export const hasValidDateFormat = (task: Task): boolean => {
-  if (!task.due_date && !task.target_deadline) return true; // No date is valid
+  if (!task.dueDate && !task.targetDeadline) return true; // No date is valid
   
   try {
-    if (task.due_date) {
-      new Date(task.due_date).toISOString();
+    if (task.dueDate) {
+      new Date(task.dueDate).toISOString();
     }
-    if (task.target_deadline) {
-      new Date(task.target_deadline).toISOString();
+    if (task.targetDeadline) {
+      new Date(task.targetDeadline).toISOString();
     }
     return true;
   } catch (e) {

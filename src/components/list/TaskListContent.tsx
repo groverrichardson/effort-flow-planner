@@ -4,6 +4,8 @@ import TaskListEmpty from '../empty/TaskListEmpty';
 import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import BulkActionToolbar from '../toolbars/BulkActionToolbar';
+import { DateGroup, groupTasksByDate, TaskGroup, formatGroupTitle } from '@/utils/grouping/taskGrouping';
+import { useMemo } from 'react';
 
 interface TaskListContentProps {
     tasks: Task[];
@@ -46,6 +48,11 @@ const TaskListContent = ({
         });
     };
 
+    // Group tasks by date
+    const groupedTasks = useMemo(() => {
+        return groupTasksByDate(tasks);
+    }, [tasks]);
+
     return (
         <div className={cn("space-y-2", className)}>
             {isBulkEditing && onMarkSelectedComplete && onArchiveSelected && onDeleteSelectedPermanently && (
@@ -57,18 +64,33 @@ const TaskListContent = ({
                 />
             )}
             {tasks.length > 0 ? (
-                <div className="flex flex-col gap-0">
-                    {tasks.map((task) => (
-                        <TaskCard
-                            key={task.id}
-                            task={task}
-                            viewingCompleted={viewingCompleted}
-                            onClick={onTaskClick}
-                            onComplete={handleComplete}
-                            isBulkEditing={isBulkEditing}
-                            isSelected={selectedTaskIds?.includes(task.id)}
-                            onToggleSelectTask={onToggleSelectTask}
-                        />
+                <div className="flex flex-col gap-2">
+                    {groupedTasks.map((group) => (
+                        <div key={group.id} className="task-group">
+                            {/* Date group header */}
+                            <div 
+                                id={`task-group-header-${group.id}`}
+                                className="group-header py-2 px-1 bg-slate-50 dark:bg-slate-900 font-medium text-sm rounded-md mb-1"
+                            >
+                                {formatGroupTitle(group.id as DateGroup, group.tasks)}
+                            </div>
+                            
+                            {/* Tasks in this group */}
+                            <div className="group-tasks flex flex-col gap-0">
+                                {group.tasks.map((task) => (
+                                    <TaskCard
+                                        key={task.id}
+                                        task={task}
+                                        viewingCompleted={viewingCompleted}
+                                        onClick={onTaskClick}
+                                        onComplete={handleComplete}
+                                        isBulkEditing={isBulkEditing}
+                                        isSelected={selectedTaskIds?.includes(task.id)}
+                                        onToggleSelectTask={onToggleSelectTask}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     ))}
                 </div>
             ) : (

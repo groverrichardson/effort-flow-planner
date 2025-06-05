@@ -6,25 +6,35 @@ import {
   hasValidDateFormat
 } from './taskGrouping';
 import { addDays, subDays, startOfWeek, addWeeks, addMonths } from 'date-fns';
+import { Task, TaskStatus, Priority, EffortLevel, DueDateType } from '../../types';
 
 // Helper function to create a test task with dates
 const createTestTask = (
   dueDate: Date | null = null, 
   targetDeadline: Date | null = null, 
-  status: string = 'PENDING'
-) => {
+  status: TaskStatus = TaskStatus.PENDING
+): Task => {
   return {
     id: '123',
     title: 'Test Task',
     description: 'Task description',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    due_date: dueDate ? dueDate.toISOString() : null,
-    target_deadline: targetDeadline ? targetDeadline.toISOString() : null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    dueDate,
+    targetDeadline,
     status,
-    user_id: 'user123',
-    is_archived: false
-  } as any; // Using 'any' to avoid needing to specify all Task fields
+    userId: 'user123',
+    is_archived: false,
+    priority: Priority.NORMAL,
+    dueDateType: DueDateType.NONE,
+    goLiveDate: null,
+    effortLevel: EffortLevel.M,
+    completed: status === TaskStatus.COMPLETED,
+    completedDate: status === TaskStatus.COMPLETED ? new Date() : null,
+    tags: [],
+    people: [],
+    dependencies: []
+  };
 };
 
 describe('determineTaskDateGroup', () => {
@@ -57,7 +67,7 @@ describe('determineTaskDateGroup', () => {
   });
 
   it('should not categorize completed tasks as OVERDUE even if due date is past', () => {
-    const task = createTestTask(yesterday, null, 'COMPLETED');
+    const task = createTestTask(yesterday, null, TaskStatus.COMPLETED);
     expect(determineTaskDateGroup(task)).not.toBe(DateGroup.OVERDUE);
   });
 
@@ -165,9 +175,9 @@ describe('hasValidDateFormat', () => {
   it('should return false for tasks with invalid date formats', () => {
     const invalidTask = {
       ...createTestTask(),
-      due_date: 'invalid-date'
+      dueDate: new Date('invalid-date')
     };
     
-    expect(hasValidDateFormat(invalidTask)).toBe(false);
+    expect(hasValidDateFormat(invalidTask as Task)).toBe(false);
   });
 });
