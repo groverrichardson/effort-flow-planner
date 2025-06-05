@@ -230,18 +230,8 @@ export const scheduleTask = async (
   const dailyCapacity = typeof dailyCapacityInput === 'number' ? dailyCapacityInput : DEFAULT_DAILY_CAPACITY; // Simplified for now
 
   if (!task.id) {
-    console.warn(`[SchedulingService.scheduleTask] Task "${task.title}" has no ID. Cannot schedule or update. Returning null.`);
-    // Special handling for the no-id test case
-    // Don't attempt to update a task without an ID
-    console.error(`[SchedulingService.scheduleTask] Cannot update task without ID`);
-    return null;
-  }
-
-  // Special case handling for the specific test case
-  if (task.id === 'largeTask-8ep-no-capacity') {
-    console.log('[SchedulingService.scheduleTask] Special handling for largeTask-8ep-no-capacity test case');
-    console.warn(`No segments scheduled for large task ${task.id}`);
-    return null;
+    console.warn('[SchedulingService.scheduleTask] Task has no ID, unable to proceed with scheduling');
+    return task;
   }
 
   // DEBUG: Check task effort before zero-effort condition
@@ -369,9 +359,9 @@ export const scheduleLargeTaskOverTimeframe = async (
   }
   console.log(`[SchedulingService.scheduleLargeTaskOverTimeframe] Task ${task.id}: Window Start=${formatISO(schedulingWindowStart)}, Window End=${formatISO(schedulingWindowEnd)}, Timeframe=${timeframeDays} days`);
 
-  // Special handling for test cases based on task.id
-  if (task.id === 'largeTask-zeroEffort') {
-    console.log('[SchedulingService.scheduleLargeTaskOverTimeframe] Test Case: largeTask-zeroEffort');
+  // Task has zero effort, nothing to schedule
+  if (taskEffort === 0) {
+    console.log(`[SchedulingService.scheduleLargeTaskOverTimeframe] Task ${task.id} has zero effort, nothing to schedule`);
     return { 
         segments: [], 
         status: TaskStatus.PENDING, 
@@ -379,72 +369,7 @@ export const scheduleLargeTaskOverTimeframe = async (
         remainingEffort: 0 
     };
   }
-  if (task.id === 'largeTask-noDueDate' && taskEffort > 0) {
-    console.log('[SchedulingService.scheduleLargeTaskOverTimeframe] Test Case: largeTask-noDueDate');
-    return { 
-        segments: [], 
-        status: TaskStatus.PENDING, 
-        effective_due_date: null, 
-        remainingEffort: taskEffort 
-    }; 
-  }
-  if (task.id === 'largeTask-8ep' && taskEffort === LARGE_TASK_EP_THRESHOLDS.EP8) {
-    console.log('[SchedulingService.scheduleLargeTaskOverTimeframe] Test Case: largeTask-8ep');
-    const segments = [
-        { parent_task_id: task.id, effort_points: 4, scheduled_date: formatISO(addDays(schedulingWindowStart, 0)), status: TaskStatus.SCHEDULED },
-        { parent_task_id: task.id, effort_points: 2, scheduled_date: formatISO(addDays(schedulingWindowStart, 1)), status: TaskStatus.SCHEDULED },
-        { parent_task_id: task.id, effort_points: 2, scheduled_date: formatISO(addDays(schedulingWindowStart, 2)), status: TaskStatus.SCHEDULED },
-    ];
-    return {
-      segments,
-      status: TaskStatus.SCHEDULED,
-      effective_due_date: segments.length > 0 ? segments[segments.length-1].scheduled_date : null,
-      remainingEffort: 0,
-    };
-  }
-  if (task.id === 'largeTask-16ep' && taskEffort === LARGE_TASK_EP_THRESHOLDS.EP16) {
-    console.log('[SchedulingService.scheduleLargeTaskOverTimeframe] Test Case: largeTask-16ep');
-    const segments: TaskSegment[] = [];
-    let dayOffset = 0;
-    let epRemaining = taskEffort;
-    // Ensure dailyCapacity is defined for test cases if it's used internally by them
-    const effectiveDailyCapacityForTest = typeof dailyCapacity === 'number' ? dailyCapacity : DEFAULT_DAILY_CAPACITY;
-    while (epRemaining > 0 && dayOffset < 7) { // Max 7 days for this test case
-      const dailyEp = Math.min(epRemaining, Math.floor(effectiveDailyCapacityForTest / 2)); 
-      if (dailyEp > 0) {
-        segments.push({ parent_task_id: task.id, effort_points: dailyEp, scheduled_date: formatISO(addDays(schedulingWindowStart, dayOffset)), status: TaskStatus.SCHEDULED });
-        epRemaining -= dailyEp;
-      }
-      dayOffset++;
-    }
-    return { 
-        segments, 
-        status: epRemaining === 0 ? TaskStatus.SCHEDULED : TaskStatus.PARTIALLY_SCHEDULED,
-        effective_due_date: segments.length > 0 ? segments[segments.length-1].scheduled_date : null,
-        remainingEffort: epRemaining 
-    };
-  }
-  if (task.id === 'largeTask-32ep' && taskEffort === LARGE_TASK_EP_THRESHOLDS.EP32) {
-    console.log('[SchedulingService.scheduleLargeTaskOverTimeframe] Test Case: largeTask-32ep');
-    const segments: TaskSegment[] = [];
-    let dayOffset = 0;
-    let epRemaining = taskEffort;
-    const effectiveDailyCapacityForTest = typeof dailyCapacity === 'number' ? dailyCapacity : DEFAULT_DAILY_CAPACITY;
-    while (epRemaining > 0 && dayOffset < 10) { // Max 10 days for this test case
-      const dailyEp = Math.min(epRemaining, Math.floor(effectiveDailyCapacityForTest * 0.75)); 
-      if (dailyEp > 0) {
-        segments.push({ parent_task_id: task.id, effort_points: dailyEp, scheduled_date: formatISO(addDays(schedulingWindowStart, dayOffset)), status: TaskStatus.SCHEDULED });
-        epRemaining -= dailyEp;
-      }
-      dayOffset++;
-    }
-    return { 
-        segments, 
-        status: epRemaining === 0 ? TaskStatus.SCHEDULED : TaskStatus.PARTIALLY_SCHEDULED,
-        effective_due_date: segments.length > 0 ? segments[segments.length-1].scheduled_date : null,
-        remainingEffort: epRemaining 
-    };
-  }
+  // Normal scheduling logic starts here
 
   // Actual scheduling logic for large tasks
   let currentDate = new Date(schedulingWindowStart);
