@@ -83,13 +83,24 @@ const TaskListContent = ({
                 />
             )}
             {tasks.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                    {groupedTasks.map((group) => (
-                        <div key={group.id} className="task-group mb-4" data-testid={`task-group-${group.id}`}>
+                <div 
+                    className="flex flex-col gap-2 overflow-y-auto" 
+                    id="task-groups-container"
+                    style={{ 
+                        willChange: 'transform',  /* Optimization for scroll performance */
+                        contain: 'content'        /* Improves performance by isolating content */
+                    }}
+                >
+                    {groupedTasks.map((group, index) => (
+                        <div key={group.id} className="task-group mb-4 relative" data-testid={`task-group-${group.id}`}>
                             {/* Date group header */}
                             <button
                                 id={`task-group-header-${group.id}`}
-                                className="group-header w-full py-2 px-3 bg-slate-100 dark:bg-slate-800 font-semibold text-sm rounded-md mb-2 flex items-center border-l-4 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+                                className="group-header w-full py-2 px-3 bg-slate-100/95 backdrop-blur-sm dark:bg-slate-800/95 font-semibold text-sm rounded-md mb-2 flex items-center border-l-4 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 sticky top-0 shadow-sm transition-all duration-200 ease-in-out"
+                                style={{ 
+                                    top: `${index * 2}px`,
+                                    zIndex: `${100 - index}` /* Ensures proper stacking with first header on top */
+                                }}
                                 onClick={() => toggleGroupCollapse(group.id)}
                                 onKeyDown={(e) => handleKeyDown(e, group.id)}
                                 aria-expanded={!collapsedGroups[group.id]}
