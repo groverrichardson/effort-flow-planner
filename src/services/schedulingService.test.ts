@@ -190,6 +190,7 @@ describe('SchedulingService', () => {
         scheduled_start_date: null,
         scheduled_completion_date: null,
         targetDeadline: null,
+        dueDate: null, // Account for backward compatibility field
         completed: false,
       };
       expect(mockTaskService.updateTask).toHaveBeenCalledWith(taskToSchedule.id, expectedPayload);
@@ -314,8 +315,8 @@ describe('SchedulingService', () => {
         status: TaskStatus.SCHEDULED,
         scheduled_start_date: expectedScheduledDateString,
         scheduled_completion_date: expectedScheduledDateString, // Service sets this
-        targetDeadline: expectedScheduledDateString, // Payload should contain ISO string
-        targetDeadline: null, // Assuming taskToSchedule.targetDeadline was null
+        targetDeadline: expectedScheduledDateString, // This is now being set from the scheduled completion date
+        dueDate: null, // For backward compatibility
         completed: false,
         segments: [{
           parent_task_id: 'task-fits',
