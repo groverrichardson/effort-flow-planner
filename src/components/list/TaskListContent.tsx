@@ -66,17 +66,27 @@ const TaskListContent = ({
             {tasks.length > 0 ? (
                 <div className="flex flex-col gap-2">
                     {groupedTasks.map((group) => (
-                        <div key={group.id} className="task-group">
+                        <div key={group.id} className="task-group mb-4" data-testid={`task-group-${group.id}`}>
                             {/* Date group header */}
-                            <div 
+                            <h2 
                                 id={`task-group-header-${group.id}`}
-                                className="group-header py-2 px-1 bg-slate-50 dark:bg-slate-900 font-medium text-sm rounded-md mb-1"
+                                className="group-header py-2 px-3 bg-slate-100 dark:bg-slate-800 font-semibold text-sm rounded-md mb-2 flex justify-between items-center border-l-4 border-slate-300 dark:border-slate-600"
+                                aria-label={`${group.id} group with ${group.tasks.length} tasks`}
                             >
-                                {formatGroupTitle(group.id as DateGroup, group.tasks)}
-                            </div>
+                                <span className="text-slate-700 dark:text-slate-200">
+                                    {(group.id as DateGroup)}
+                                </span>
+                                <span className="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-full">
+                                    {group.tasks.length}
+                                </span>
+                            </h2>
                             
                             {/* Tasks in this group */}
-                            <div className="group-tasks flex flex-col gap-0">
+                            <div 
+                                className="group-tasks flex flex-col gap-0"
+                                role="region" 
+                                aria-labelledby={`task-group-header-${group.id}`}
+                            >
                                 {group.tasks.map((task) => (
                                     <TaskCard
                                         key={task.id}
