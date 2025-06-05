@@ -1,6 +1,7 @@
-import { supabase } from '@/integrations/supabase/client';
 import { formatISO } from 'date-fns';
-import type { Database } from '@/types/supabase'; // Added import
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/types/supabase';
+import { calculateDailyCapacity, scheduleTask, runSchedulingAlgorithm } from './schedulingService';
 import {
     Task,
     Tag,
@@ -177,6 +178,30 @@ const mapDbTaskToTask = (
 };
 
 export const TaskService = {
+  /**
+   * Gets all tasks that are not completed or archived (i.e., schedulable)
+   * @param userId The user ID
+   * @returns Promise with array of tasks
+   */
+  async getAllSchedulableTasks(userId: string): Promise<Task[]> {
+    console.log(`[TaskService.getAllSchedulableTasks] Getting all schedulable tasks for user ${userId}`);
+    if (!userId) {
+      const errorMsg = 'User ID is required to get schedulable tasks';
+      console.error(`[TaskService.getAllSchedulableTasks] ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+
+    try {
+      return await this.getTasks({
+        userId,
+        isArchived: false,
+        status: undefined // This will get ALL statuses except COMPLETED due to the filter below
+      }).then(tasks => tasks.filter(task => task.status !== TaskStatus.COMPLETED));
+    } catch (error) {
+      console.error(`[TaskService.getAllSchedulableTasks] Error getting schedulable tasks:`, error);
+      throw new Error(`Failed to get schedulable tasks: ${(error as Error).message}`);
+    }
+  },
     // Method to get the current user ID, can be expanded or moved as needed
     async getCurrentUserId(): Promise<string | null> {
         const {
@@ -552,7 +577,7 @@ export const TaskService = {
                 .from('tasks')
                 .select(`
                     *,
-                    task_recurrence_rules(*),
+                    task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
                     task_tags(tags(*)),
                     task_people(people(*))
                 `)
@@ -571,7 +596,7 @@ export const TaskService = {
                 .from('tasks')
                 .select(`
                     *,
-                    task_recurrence_rules(*),
+                    task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
                     task_tags(tags(*)),
                     task_people(people(*))
                 `)
@@ -1012,9 +1037,36 @@ export const TaskService = {
             finalRecurrenceRule = mapDbRecurrenceRuleToRecurrenceRule(ruleData);
         }
     }
+    
+    // Phase 1: Modify TaskService.createTask
+    // After a new task is created, fetch all schedulable tasks.
+    // Then, run the main scheduling algorithm (runSchedulingAlgorithm) with this complete list.
+    // Finally, re-fetch and return the newly created task.
+    try {
+        console.log(`[TaskService.createTask] Phase 1: Attempting to run full scheduling algorithm for user ${user.id}`);
+        const schedulableTasks = await this.getAllSchedulableTasks(user.id);
 
+        if (schedulableTasks && schedulableTasks.length > 0) {
+            console.log(`[TaskService.createTask] Phase 1: Found ${schedulableTasks.length} schedulable tasks. Running scheduling algorithm.`);
+            await runSchedulingAlgorithm(schedulableTasks, user.id);
+            console.log(`[TaskService.createTask] Phase 1: Scheduling algorithm completed.`);
+        } else {
+            console.log('[TaskService.createTask] Phase 1: No schedulable tasks found or an error occurred fetching them. Skipping full scheduling run.');
+        }
 
-    return mapDbTaskToTask(createdTaskData, finalRecurrenceRule, createdTags, associatedPeople);
+        // Re-fetch the newly created task to get its updated state (e.g., target_deadline)
+        console.log(`[TaskService.createTask] Phase 1: Re-fetching created task with ID ${createdTaskData.id} to reflect any scheduling changes.`);
+        const updatedTask = await this.getTaskById(createdTaskData.id);
+        console.log('[TaskService.createTask] Phase 1: Successfully re-fetched task. Returning updated task.');
+        return updatedTask;
+
+    } catch (schedulingOrRefetchError) {
+        console.error(`[TaskService.createTask] Phase 1: Error during post-creation scheduling or task re-fetch:`, schedulingOrRefetchError);
+        // Fallback: return the task as it was mapped just after creation,
+        // to ensure task creation itself doesn't fail due to these subsequent steps.
+        console.warn(`[TaskService.createTask] Phase 1: Falling back to returning task data as mapped immediately after creation, before full scheduling/re-fetch attempt.`);
+        return mapDbTaskToTask(createdTaskData, finalRecurrenceRule, createdTags, associatedPeople);
+    }
     }, // End of createTask method
 
     async updateTask(
@@ -1394,7 +1446,7 @@ export const TaskService = {
             .select(
                 `
                 *,
-                task_recurrence_rules!recurrenceRuleId (*),
+                task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
                 task_tags (tags (*)),
                 task_people (people (*))
                 `
@@ -1436,70 +1488,110 @@ export const TaskService = {
                 .filter(Boolean) || [];
 
         console.log(
-            `[TaskService.updateTask] Successfully updated and fetched task ${taskId}.`
+            '[TaskService.updateTask] Task details retrieved for mapping:',
+            JSON.stringify({ recurrenceRule: fetchedRecurrenceRule, tags: fetchedTags.length, people: fetchedPeople.length })
         );
-        return mapDbTaskToTask(
-            finalTaskData,
-            fetchedRecurrenceRule,
-            fetchedTags,
-            fetchedPeople
-        );
-    }, // End of updateTask method
+
+        // Run scheduling algorithm on all schedulable tasks
+        try {
+            console.log('[TaskService.updateTask] Fetching all schedulable tasks for scheduling algorithm');
+            const { data: schedulableTasks, error: fetchError } = await supabase
+                .from('tasks')
+                .select(`
+                    *,
+                    task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
+                    task_tags (tags (*)),
+                    task_people (people (*))
+                `)
+                .eq('user_id', user.id)
+                .eq('is_archived', false)
+                .not('completed_date', 'is', null)
+                .not('status', 'eq', 'completed');
+
+            if (fetchError) {
+                console.error('[TaskService.updateTask] Error fetching schedulable tasks:', fetchError);
+            } else if (schedulableTasks) {
+                console.log(`[TaskService.updateTask] Found ${schedulableTasks.length} schedulable tasks for scheduling algorithm`);
+                
+                // Map DB tasks to frontend Task objects for the scheduling algorithm
+                const frontendTasks = schedulableTasks.map((dbTask) => {
+                    const recurrenceRule = dbTask.task_recurrence_rules
+                        ? mapDbRecurrenceRuleToRecurrenceRule(
+                            Array.isArray(dbTask.task_recurrence_rules)
+                                ? dbTask.task_recurrence_rules[0]
+                                : dbTask.task_recurrence_rules
+                        )
+                        : null;
+                    const tags =
+                        dbTask.task_tags
+                            ?.map((tt: any) => tt.tags as Tag)
+                            .filter(Boolean) || [];
+                    const people =
+                        dbTask.task_people
+                            ?.map((tp: any) => tp.people as Person)
+                            .filter(Boolean) || [];
+
+                    return mapDbTaskToTask(dbTask, recurrenceRule, tags, people);
+                });
+
+                // Run scheduling algorithm
+                try {
+                    console.log('[TaskService.updateTask] Running scheduling algorithm');
+                    await runSchedulingAlgorithm(frontendTasks);
+                    console.log('[TaskService.updateTask] Scheduling algorithm completed successfully');
+                } catch (schedulingError) {
+                    console.error('[TaskService.updateTask] Error running scheduling algorithm:', schedulingError);
+                    // Don't throw here, allow the task update to succeed even if scheduling fails
+                }
+            }
+        } catch (error) {
+            console.error('[TaskService.updateTask] Error in scheduling process:', error);
+            // Don't throw here, allow the task update to succeed even if scheduling process fails
+        }
+
+        return mapDbTaskToTask(finalTaskData, fetchedRecurrenceRule, fetchedTags, fetchedPeople);
+    },
 
     async getTaskById(taskId: string): Promise<Task> {
-        const { data: user, error: userError } = await supabase.auth.getUser();
-        if (userError || !user?.user) {
-            console.error(
-                '[TaskService.getTaskById] User not found or error fetching user:',
-                userError
-            );
+        console.log(`[TaskService.getTaskById] Called for task ID: ${taskId}`);
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+            console.error('[TaskService.getTaskById] User not authenticated:', userError);
             throw new Error('User not authenticated');
         }
-        // const userId = user.user.id; // Not explicitly used if p_task_id is globally unique and RLS handles access
 
-        console.log(`[TaskService.getTaskById] Fetching task ${taskId}`);
         try {
-            const { data: rpcData, error: rpcError } = await supabase.rpc(
-                'get_task_with_relations',
-                {
-                    p_task_id: taskId,
-                }
-            );
+            const { data: rpcData, error: rpcError } = await supabase
+                .from('tasks')
+                .select(`
+                    *,
+                    task_recurrence_rules (*),
+                    task_tags (tags (*)),
+                    task_people (people (*))
+                `)
+                .eq('id', taskId)
+                .eq('user_id', user.id)
+                .single();
 
             if (rpcError) {
-                console.error(
-                    `[TaskService.getTaskById] RPC error fetching task ${taskId}:`,
-                    rpcError
-                );
-                throw new Error(
-                    `Failed to fetch task ${taskId}: ${rpcError.message}`
-                );
+                console.error(`[TaskService.getTaskById] Error fetching task ${taskId}:`, rpcError);
+                throw new Error(`Failed to fetch task: ${rpcError.message}`);
             }
 
-            if (!rpcData) {
-                console.warn(
-                    `[TaskService.getTaskById] No task found with ID ${taskId} via RPC.`
-                );
-                throw new Error('Task not found');
-            }
-
-            const dbTask = Array.isArray(rpcData)
-                ? (rpcData[0] as DbTask)
-                : (rpcData as DbTask);
+            const dbTask = rpcData as DbTask;
 
             if (!dbTask) {
-                console.warn(
-                    `[TaskService.getTaskById] No task data after RPC call for ID ${taskId}.`
-                );
+                console.warn(`[TaskService.getTaskById] No task data after RPC call for ID ${taskId}.`);
                 throw new Error('Task not found');
             }
 
             const recurrenceRule = dbTask.task_recurrence_rules
                 ? mapDbRecurrenceRuleToRecurrenceRule(
-                      Array.isArray(dbTask.task_recurrence_rules)
-                          ? dbTask.task_recurrence_rules[0]
-                          : dbTask.task_recurrence_rules
-                  )
+                    Array.isArray(dbTask.task_recurrence_rules)
+                        ? dbTask.task_recurrence_rules[0]
+                        : dbTask.task_recurrence_rules
+                )
                 : null;
             const tags =
                 dbTask.task_tags
@@ -1564,6 +1656,52 @@ export const TaskService = {
                 );
             }
 
+            // After deleting task, run scheduling algorithm on all remaining tasks
+            try {
+                console.log('[TaskService.deleteTask] Running scheduling algorithm after task deletion');
+                
+                // Get all non-archived, non-completed tasks for scheduling
+                const { data: schedulableTasks } = await supabase
+                    .from('tasks')
+                    .select(
+                        `
+                        *,
+                        task_recurrence_rules (*),
+                        task_tags (tags (*)),
+                        task_people (people (*))
+                        `
+                    )
+                    .eq('user_id', userId)
+                    .eq('is_archived', false)
+                    .neq('status', TaskStatus.COMPLETED);
+
+                if (schedulableTasks && schedulableTasks.length > 0) {
+                    console.log(`[TaskService.deleteTask] Found ${schedulableTasks.length} schedulable tasks`);
+                    
+                    // Map the DB tasks to the front-end Task type for the scheduling algorithm
+                    const tasksForScheduling = schedulableTasks.map((dbTask) => {
+                        const taskRules = dbTask.task_recurrence_rules || [];
+                        const taskTags = dbTask.task_tags ? dbTask.task_tags.map(t => t.tags) : [];
+                        const taskPeople = dbTask.task_people ? dbTask.task_people.map(p => p.people) : [];
+                        return mapDbTaskToTask(dbTask, taskRules[0] || null, taskTags, taskPeople);
+                    });
+
+                    // Run the scheduling algorithm
+                    try {
+                        await runSchedulingAlgorithm(tasksForScheduling);
+                        console.log('[TaskService.deleteTask] Scheduling algorithm completed successfully');
+                    } catch (schedulingError) {
+                        console.error('[TaskService.deleteTask] Error running scheduling algorithm:', schedulingError);
+                        // Don't throw here, we still want to complete the delete operation
+                    }
+                } else {
+                    console.log('[TaskService.deleteTask] No schedulable tasks found, skipping scheduling');
+                }
+            } catch (schedulingQueryError) {
+                console.error('[TaskService.deleteTask] Error fetching tasks for scheduling:', schedulingQueryError);
+                // Don't throw here, we still want to complete the delete operation
+            }
+
             console.log(
                 `[TaskService.deleteTask] Task ${taskId} and its relations deleted successfully for user ${userId}.`
             );
@@ -1605,39 +1743,27 @@ export const TaskService = {
         console.log(
             `[TaskService.archiveTask] User ${userId} authenticated. Proceeding to archive task ${taskId}.`
         );
-
+        
         try {
             const { data: updatedTaskData, error: updateError } = await supabase
                 .from('tasks')
-                .update({
-                    is_archived: true,
-                    updated_at: formatISO(new Date()),
-                })
+                .update({ is_archived: true })
                 .eq('id', taskId)
                 .eq('user_id', userId)
                 .select(
                     `
-          *,
-          task_recurrence_rules (*),
-          task_tags (tags (*)),
-          task_people (people (*))
-        `
+                    *,
+                    task_recurrence_rules (*),
+                    task_tags (tags (*)),
+                    task_people (people (*))
+                    `
                 )
-                .single<DbTask>();
+                .single();
 
-            if (updateError) {
+            if (updateError || !updatedTaskData) {
                 console.error(
                     `[TaskService.archiveTask] Error archiving task ${taskId}:`,
                     updateError
-                );
-                throw new Error(
-                    `Failed to archive task ${taskId}: ${updateError.message}`
-                );
-            }
-
-            if (!updatedTaskData) {
-                console.warn(
-                    `[TaskService.archiveTask] Task ${taskId} not found or not updated.`
                 );
                 throw new Error('Task not found or failed to archive');
             }
@@ -1661,6 +1787,53 @@ export const TaskService = {
             console.log(
                 `[TaskService.archiveTask] Task ${taskId} archived successfully.`
             );
+            
+            // After archiving task, run scheduling algorithm on all non-archived tasks
+            try {
+                console.log('[TaskService.archiveTask] Running scheduling algorithm after task archive');
+                
+                // Get all non-archived, non-completed tasks for scheduling
+                const { data: schedulableTasks } = await supabase
+                    .from('tasks')
+                    .select(
+                        `
+                        *,
+                        task_recurrence_rules (*),
+                        task_tags (tags (*)),
+                        task_people (people (*))
+                        `
+                    )
+                    .eq('user_id', userId)
+                    .eq('is_archived', false)
+                    .neq('status', TaskStatus.COMPLETED);
+
+                if (schedulableTasks && schedulableTasks.length > 0) {
+                    console.log(`[TaskService.archiveTask] Found ${schedulableTasks.length} schedulable tasks`);
+                    
+                    // Map the DB tasks to the front-end Task type for the scheduling algorithm
+                    const tasksForScheduling = schedulableTasks.map((dbTask) => {
+                        const taskRules = dbTask.task_recurrence_rules || [];
+                        const taskTags = dbTask.task_tags ? dbTask.task_tags.map(t => t.tags) : [];
+                        const taskPeople = dbTask.task_people ? dbTask.task_people.map(p => p.people) : [];
+                        return mapDbTaskToTask(dbTask, taskRules[0] || null, taskTags, taskPeople);
+                    });
+
+                    // Run the scheduling algorithm
+                    try {
+                        await runSchedulingAlgorithm(tasksForScheduling);
+                        console.log('[TaskService.archiveTask] Scheduling algorithm completed successfully');
+                    } catch (schedulingError) {
+                        console.error('[TaskService.archiveTask] Error running scheduling algorithm:', schedulingError);
+                        // Don't throw here, we still want to return the archived task
+                    }
+                } else {
+                    console.log('[TaskService.archiveTask] No schedulable tasks found, skipping scheduling');
+                }
+            } catch (schedulingQueryError) {
+                console.error('[TaskService.archiveTask] Error fetching tasks for scheduling:', schedulingQueryError);
+                // Don't throw here, we still want to return the archived task
+            }
+            
             return mapDbTaskToTask(
                 updatedTaskData,
                 recurrenceRule,
@@ -1806,7 +1979,7 @@ export const TaskService = {
                 .from('tasks')
                 .select(`
                     *,
-                    task_recurrence_rules(*),
+                    task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
                     task_tags!inner(tags(*)),
                     task_people!inner(people(*))
                 `)

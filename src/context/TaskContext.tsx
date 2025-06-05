@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { Task, Tag, Person, Priority, EffortLevel, RecurrenceRule, TaskStatus } from '@/types';
-import { TaskService } from '@/services/TaskService';
+import TaskService from '@/services/TaskService';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
 
