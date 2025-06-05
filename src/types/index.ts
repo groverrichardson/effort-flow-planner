@@ -44,6 +44,7 @@ export enum TaskStatus {
   CANCELLED = 'CANCELLED',
   DEFERRED = 'DEFERRED',
   SCHEDULED = 'SCHEDULED', // Added missing status
+  PARTIALLY_SCHEDULED = 'PARTIALLY_SCHEDULED', // ADDED
 }
 
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -98,7 +99,6 @@ export interface Task {
   recurrenceRule?: RecurrenceRule; // Full recurrence rule object, if fetched
   isRecurringInstance?: boolean; // True if this task is an instance of a recurring series
   originalRecurringTaskId?: string; // If it's an instance, ID of the "template" task
-  is_archived: boolean; // Whether the task is archived
   userId: string; // Identifier of the user who owns the task
 }
 
@@ -126,6 +126,7 @@ export interface TaskCore {
   originalRecurringTaskId?: string | null;
   scheduled_start_date?: Date | string | null;
   segments?: TaskSegment[]; // <-- ADDED
+  scheduled_completion_date?: Date | string | null; // ADDED
   recurrenceRule?: RecurrenceRule | Omit<RecurrenceRule, 'id' | 'taskId' | 'userId' | 'createdAt' | 'updatedAt'> | null;
 }
 
