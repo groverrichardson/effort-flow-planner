@@ -1,12 +1,12 @@
-import { Task, Priority } from '@/types';
+import { useState, useMemo, KeyboardEvent } from 'react';
+import { Task } from '@/types';
 import TaskCard from '../cards/TaskCard';
-import TaskListEmpty from '../empty/TaskListEmpty';
-import { toast } from '@/components/ui/use-toast';
-import { cn } from '@/lib/utils';
 import BulkActionToolbar from '../toolbars/BulkActionToolbar';
-import { DateGroup, groupTasksByDate, TaskGroup } from '@/utils/grouping/taskGrouping';
-import { useMemo, useState, KeyboardEvent } from 'react';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import TaskListEmpty from '../empty/TaskListEmpty';
+import { cn } from '@/lib/utils';
+import { groupTasksByDate, DateGroup, TaskGroup } from '@/utils/grouping/taskGrouping';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 interface TaskListContentProps {
     tasks: Task[];
