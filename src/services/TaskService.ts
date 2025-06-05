@@ -237,18 +237,18 @@ export const TaskService = {
         return count || 0;
     },
 
-    async calculateNextDueDate(
-        currentDueDate: Date,
+    async calculateNextScheduledDate(
+        currentScheduledDate: Date,
         rule: RecurrenceRule,
         originalTaskId: string
     ): Promise<Date | null> {
         console.log(
-            '[TaskService.calculateNextDueDate] Calculating next due date for task:',
+        '[TaskService.calculateNextScheduledDate] Calculating next scheduled date for task:',
             originalTaskId,
             'with rule:',
             rule
         );
-        if (!currentDueDate || !rule) return null;
+        if (!currentScheduledDate || !rule) return null;
 
         if (
             rule.endConditionType === 'afterOccurrences' &&
@@ -257,7 +257,7 @@ export const TaskService = {
         ) {
             const occurrences = await this.getOccurrenceCount(originalTaskId);
             console.log(
-                '[TaskService.calculateNextDueDate] Occurrences:',
+                '[TaskService.calculateNextScheduledDate] Occurrences:',
                 occurrences
             );
             if (occurrences >= rule.count) {
@@ -265,7 +265,7 @@ export const TaskService = {
             }
         }
 
-        let nextDate = new Date(currentDueDate);
+        let nextDate = new Date(currentScheduledDate);
         const interval = rule.interval > 0 ? rule.interval : 1;
 
         switch (rule.frequency) {
@@ -280,7 +280,7 @@ export const TaskService = {
                     while (attempts < 7 * interval + 7) {
                         candidateDate = addDays(candidateDate, 1);
                         if (rule.daysOfWeek.includes(getDay(candidateDate))) {
-                            if (candidateDate > currentDueDate) {
+                            if (candidateDate > currentScheduledDate) {
                                 nextDate = candidateDate;
                                 break;
                             }
@@ -294,7 +294,7 @@ export const TaskService = {
                 break;
             case 'monthly': {
                 let monthCandidate = addMonths(
-                    new Date(currentDueDate),
+                new Date(currentScheduledDate),
                     interval
                 );
                 if (rule.dayOfMonth) {
@@ -317,7 +317,7 @@ export const TaskService = {
                 } else {
                     nextDate = monthCandidate;
                 }
-                if (nextDate <= currentDueDate) {
+                if (nextDate <= currentScheduledDate) {
                     monthCandidate = addMonths(nextDate, interval);
                     if (rule.dayOfMonth) {
                         if (rule.dayOfMonth > 0) {
@@ -345,7 +345,7 @@ export const TaskService = {
             }
             case 'yearly': {
                 let yearCandidate = addYears(
-                    new Date(currentDueDate),
+                new Date(currentScheduledDate),
                     interval
                 );
                 if (rule.monthOfYear && rule.dayOfMonth) {
@@ -367,7 +367,7 @@ export const TaskService = {
                 } else {
                     nextDate = yearCandidate;
                 }
-                if (nextDate <= currentDueDate) {
+                if (nextDate <= currentScheduledDate) {
                     yearCandidate = addYears(nextDate, interval);
                     if (rule.monthOfYear && rule.dayOfMonth) {
                         const targetMonth = rule.monthOfYear - 1;

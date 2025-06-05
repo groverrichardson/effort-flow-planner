@@ -75,9 +75,10 @@ export const createInitialColumnMap = (headers: string[], hasHeaders: boolean): 
       if (lowerHeader === 'title') initialMap[header] = 'title';
       else if (lowerHeader === 'description') initialMap[header] = 'description';
       else if (lowerHeader === 'priority') initialMap[header] = 'priority';
-      else if (lowerHeader === 'duedate' || lowerHeader === 'due date') initialMap[header] = 'dueDate';
+      else if (lowerHeader === 'duedate' || lowerHeader === 'due date' || lowerHeader === 'scheduleddate' || lowerHeader === 'scheduled date') initialMap[header] = 'targetDeadline';
       else if (lowerHeader === 'people' || lowerHeader === 'person') initialMap[header] = 'people';
       else if (lowerHeader === 'tags' || lowerHeader === 'tag') initialMap[header] = 'tags';
+      else if (lowerHeader === 'due date type' || lowerHeader === 'duedatetype' || lowerHeader === 'scheduled date type' || lowerHeader === 'scheduleddatetype') initialMap[header] = 'scheduledDateType';
       else initialMap[header] = 'ignore';
     });
   } else {

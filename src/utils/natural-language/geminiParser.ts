@@ -12,7 +12,7 @@ export interface GeminiResponse {
   people: string[];
   tags: string[];
   priority: string | null;
-  dueDate: string | null;
+  scheduledDate: string | null;
   effort: string | null;
   originalDatePhrase: string | null;
   taskTitle: string | null; 
@@ -59,7 +59,7 @@ export async function enhanceWithGemini(input: string, isLiveTyping: boolean = f
           people: parsedRawResponse.people || data.people || [],
           tags: parsedRawResponse.tags || data.tags || [],
           priority: parsedRawResponse.priority || data.priority || null,
-          dueDate: parsedRawResponse.dueDate || data.dueDate || null,
+          scheduledDate: parsedRawResponse.scheduledDate || data.scheduledDate || data.targetDeadline || data.dueDate || null,
           effort: parsedRawResponse.effort || data.effort || null,
           originalDatePhrase: parsedRawResponse.originalDatePhrase || null,
           taskTitle: parsedRawResponse.taskTitle || null,
@@ -74,7 +74,7 @@ export async function enhanceWithGemini(input: string, isLiveTyping: boolean = f
           people: data.people || [],
           tags: data.tags || [],
           priority: data.priority || null,
-          dueDate: data.dueDate || null,
+          scheduledDate: data.scheduledDate || data.targetDeadline || data.dueDate || null,
           effort: data.effort || null,
           originalDatePhrase: null,
           taskTitle: null,
@@ -113,7 +113,7 @@ export const parseWithGemini = async (input: string, isLiveTyping: boolean = fal
     
     if (enhancedData) {
       console.log('Enhanced data from Gemini (raw object):', enhancedData);
-      console.log('>>> DIAGNOSTIC: Gemini raw dueDate string:', enhancedData.dueDate);
+      console.log('>>> DIAGNOSTIC: Gemini raw scheduledDate string:', enhancedData.scheduledDate);
       console.log('>>> PARSER CHECK: enhancedData.taskTitle:', enhancedData.taskTitle);
       console.log('>>> PARSER CHECK: enhancedData.originalDatePhrase:', enhancedData.originalDatePhrase);
 
@@ -181,10 +181,10 @@ export const parseWithGemini = async (input: string, isLiveTyping: boolean = fal
         }
       }
       
-      // Process due date
-      const dueDate = parseDateFromString(enhancedData.dueDate);
-      if (dueDate) {
-        taskData.dueDate = dueDate;
+      // Process scheduled date
+      const scheduledDateValue = parseDateFromString(enhancedData.scheduledDate);
+      if (scheduledDateValue) {
+        taskData.targetDeadline = scheduledDateValue;
         
         // Remove originalDatePhrase from title IF Gemini's title wasn't used and originalDatePhrase exists
         if (!geminiCleanedTitleUsed && enhancedData.originalDatePhrase) {

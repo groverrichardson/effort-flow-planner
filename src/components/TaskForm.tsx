@@ -63,7 +63,7 @@ const defaultTask: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
     status: 'PENDING' as TaskStatus, // Added to fix lint error
     priority: 'normal' as Priority,
     dueDate: null,
-    dueDateType: 'by' as DueDateType,
+    scheduledDateType: 'by' as DueDateType,
     targetDeadline: null,
     goLiveDate: null,
     effortLevel: 1 as EffortLevel,
@@ -375,9 +375,9 @@ const TaskForm = ({ task, onSubmit, onCancel, onArchive, onDelete, onOpenCreateN
         }));
     };
 
-    const handleDueDateTypeChange = (value: string) => {
+    const handleScheduledDateTypeChange = (value: string) => {
         // @ts-ignore
-        setFormData((prev) => ({ ...prev, dueDateType: value as DueDateType }));
+        setFormData((prev) => ({ ...prev, scheduledDateType: value as DueDateType }));
     };
 
     const handleDateChange = (
@@ -751,25 +751,25 @@ return (
                 </div>
             </div>
 
-            {/* Due Date with By/On selector */}
+            {/* Scheduled Date with By/On selector (Note: 'By/On' might need review for 'Scheduled Date') */}
             <div>
                 <label className="block text-xs font-medium mb-1">
-                    Due Date
+                    Scheduled Date
                 </label>
                 <div className="flex items-end gap-1">
                     <div className="flex-1">
                         <DatePickerField
                             label=""
-                            value={formData.dueDate}
+                            value={formData.targetDeadline}
                             onChange={(date) =>
-                                handleDateChange(date, 'dueDate')
+                                handleDateChange(date, 'targetDeadline')
                             }
                         />
                     </div>
                     <div className="w-16">
                         <Select
-                            value={formData.dueDateType}
-                            onValueChange={handleDueDateTypeChange}>
+                            value={formData.scheduledDateType}
+                            onValueChange={handleScheduledDateTypeChange}>
                             <SelectTrigger className="h-10 text-xs w-16">
                                 <SelectValue />
                             </SelectTrigger>

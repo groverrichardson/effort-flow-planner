@@ -13,7 +13,7 @@ import { FilterResetButton } from './FilterResetButton';
 import TagFilterItems from './TagFilterItems';
 import { PeopleFilterItems } from './PeopleFilterItems';
 import { PriorityFilterItems } from './PriorityFilterItems';
-import { DueDateFilterItems } from './DueDateFilterItems';
+import { ScheduledDateFilterItems } from './ScheduledDateFilterItems';
 import { GoLiveFilterItem } from './GoLiveFilterItem';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Priority, Tag, Person } from '@/types';
@@ -134,9 +134,9 @@ export const FilterDropdownMenu: React.FC<FilterDropdownMenuProps> = ({
               onTogglePriority={handleTogglePriority}
             />
 
-            <DueDateFilterItems
-              filterByDueDate={filterByDueDate}
-              onSetFilterByDueDate={handleSetFilterByDueDate}
+            <ScheduledDateFilterItems
+              filterByScheduledDate={filterByDueDate}
+              onSetFilterByScheduledDate={handleSetFilterByDueDate}
             />
 
             <GoLiveFilterItem

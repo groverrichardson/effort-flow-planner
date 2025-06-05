@@ -163,12 +163,20 @@ describe('CSVUtils', () => {
 
   describe('createInitialColumnMap', () => {
     it('should correctly map known headers and ignore others when hasHeaders is true', () => {
-      const headers = ['Title', 'description', 'DUE DATE', 'People', 'tags', 'Unknown Column'];
+      const headers = [
+        'Title', 'description', 
+        'DUE DATE', 'scheduled date', // Test variations for scheduled date
+        'DUE DATE TYPE', 'scheduleddatetype', // Test variations for scheduled date type
+        'People', 'tags', 'Unknown Column'
+      ];
       const result = createInitialColumnMap(headers, true);
       expect(result).toEqual({
         'Title': 'title',
         'description': 'description',
-        'DUE DATE': 'dueDate',
+        'DUE DATE': 'targetDeadline',
+        'scheduled date': 'targetDeadline',
+        'DUE DATE TYPE': 'scheduledDateType',
+        'scheduleddatetype': 'scheduledDateType',
         'People': 'people',
         'tags': 'tags',
         'Unknown Column': 'ignore',

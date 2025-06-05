@@ -90,8 +90,8 @@ export async function parseWithTraditional(input: string): Promise<ParsedTaskDet
   // Extract date related information
   const today = new Date();
   
-  // Due date patterns
-  const dueDatePatterns = [
+  // Scheduled date patterns
+  const scheduledDatePatterns = [
     { regex: /due today/gi, date: today },
     { regex: /due tomorrow/gi, date: addDays(today, 1) },
     { regex: /due next week/gi, date: addDays(today, 7) },
@@ -101,10 +101,10 @@ export async function parseWithTraditional(input: string): Promise<ParsedTaskDet
     { regex: /next month/gi, date: addMonths(today, 1) }
   ];
   
-  for (const pattern of dueDatePatterns) {
+  for (const pattern of scheduledDatePatterns) {
     if (pattern.regex.test(lowerInput)) {
       title = title.replace(pattern.regex, '');
-      taskData.dueDate = pattern.date;
+      taskData.targetDeadline = pattern.date;
     }
   }
   
@@ -144,7 +144,7 @@ export async function parseWithTraditional(input: string): Promise<ParsedTaskDet
         if (daysToAdd === 0 && !thisRegex.test(lowerInput)) daysToAdd = 7;
       }
       
-      taskData.dueDate = addDays(today, daysToAdd);
+      taskData.targetDeadline = addDays(today, daysToAdd);
     }
   }
   
@@ -192,7 +192,7 @@ export async function parseWithTraditional(input: string): Promise<ParsedTaskDet
           
           if (isValid(parsedDate)) {
             title = title.replace(match, '');
-            taskData.dueDate = parsedDate;
+            taskData.targetDeadline = parsedDate;
             break;
           }
         } catch (e) {

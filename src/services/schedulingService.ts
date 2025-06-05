@@ -248,7 +248,7 @@ export const scheduleTask = async (
       scheduled_start_date: null,
       targetDeadline: null,
       scheduled_completion_date: null,
-      dueDate: task.dueDate ? formatISO(startOfDay(new Date(task.dueDate))) : null,
+      dueDate: task.targetDeadline ? formatISO(startOfDay(new Date(task.targetDeadline))) : (task.dueDate ? formatISO(startOfDay(new Date(task.dueDate))) : null),
       completed: false,
     };
     // DEBUG: Log payload for zero-effort task
@@ -350,8 +350,8 @@ export const scheduleLargeTaskOverTimeframe = async (
   if (taskEffort <= LARGE_TASK_EP_THRESHOLDS.EP8) timeframeDays = LARGE_TASK_TIMEFRAMES_DAYS[LARGE_TASK_EP_THRESHOLDS.EP8];
   else if (taskEffort <= LARGE_TASK_EP_THRESHOLDS.EP16) timeframeDays = LARGE_TASK_TIMEFRAMES_DAYS[LARGE_TASK_EP_THRESHOLDS.EP16];
 
-  if (task.dueDate && isBefore(schedulingWindowStart, new Date(task.dueDate))) {
-    schedulingWindowEnd = startOfDay(new Date(task.dueDate));
+  if (task.targetDeadline && isBefore(schedulingWindowStart, new Date(task.targetDeadline))) {
+    schedulingWindowEnd = startOfDay(new Date(task.targetDeadline));
     const daysUntilDue = differenceInDays(schedulingWindowEnd, schedulingWindowStart);
     timeframeDays = Math.max(1, Math.min(timeframeDays, daysUntilDue + 1));
   } else {
@@ -365,7 +365,7 @@ export const scheduleLargeTaskOverTimeframe = async (
     return { 
         segments: [], 
         status: TaskStatus.PENDING, 
-        effective_due_date: task.dueDate ? formatISO(startOfDay(new Date(task.dueDate))) : null, 
+        effective_scheduled_date: task.targetDeadline ? formatISO(startOfDay(new Date(task.targetDeadline))) : (task.dueDate ? formatISO(startOfDay(new Date(task.dueDate))) : null), 
         remainingEffort: 0 
     };
   }
@@ -406,7 +406,7 @@ export const scheduleLargeTaskOverTimeframe = async (
     return {
       segments: [],
       status: TaskStatus.PENDING, // If no segments, task is PENDING
-      effective_due_date: task.dueDate ? formatISO(startOfDay(new Date(task.dueDate))) : null,
+      effective_scheduled_date: task.targetDeadline ? formatISO(startOfDay(new Date(task.targetDeadline))) : (task.dueDate ? formatISO(startOfDay(new Date(task.dueDate))) : null),
       remainingEffort: taskEffort,
     };
   }
@@ -418,45 +418,32 @@ export const scheduleLargeTaskOverTimeframe = async (
   return {
     segments,
     status: finalStatus,
-    effective_due_date: lastSegmentDate, // The date of the last segment becomes the effective due date
+    effective_scheduled_date: lastSegmentDate, // The date of the last segment becomes the effective scheduled date
     remainingEffort,
   };
 };
 
 /**
- * Sorts tasks for scheduling based on due date, target deadline, priority, and creation date.
+ * Sorts tasks for scheduling based on scheduled date (targetDeadline), then due date (if still used), priority, and creation date.
  * @param tasks An array of tasks to sort.
  * @returns A new array of sorted tasks.
  */
 export const sortTasksForScheduling = (tasks: Task[]): Task[] => {
   return [...tasks].sort((a, b) => {
-    // 1. Due Date (ascending, non-nulls first)
+    // 1. Scheduled Date (targetDeadline) (ascending, non-nulls first)
+    if (a.targetDeadline && !b.targetDeadline) return -1;
+    if (!a.targetDeadline && b.targetDeadline) return 1;
+    if (a.targetDeadline && b.targetDeadline) {
+      const diffTarget = new Date(a.targetDeadline).getTime() - new Date(b.targetDeadline).getTime();
+      if (diffTarget !== 0) return diffTarget;
+    }
+
+    // 2. Due Date (ascending, non-nulls first) - as a secondary sort if targetDeadlines are same or both null
     if (a.dueDate && !b.dueDate) return -1;
     if (!a.dueDate && b.dueDate) return 1;
     if (a.dueDate && b.dueDate) {
-      const diff = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-      if (diff !== 0) return diff;
-    }
-
-    // If both have no due dates, handle special ordering for no-due-date tasks
-    if (!a.dueDate && !b.dueDate) {
-      // 2. For no-due-date tasks: Target Deadline (earlier first, non-nulls first)
-      if (a.targetDeadline && !b.targetDeadline) return -1;
-      if (!a.targetDeadline && b.targetDeadline) return 1;
-      if (a.targetDeadline && b.targetDeadline) {
-        const diff = new Date(a.targetDeadline).getTime() - new Date(b.targetDeadline).getTime();
-        if (diff !== 0) return diff;
-      }
-    } else {
-      // For tasks with same due dates: Target Deadline (earlier first)
-      if (a.targetDeadline && b.targetDeadline) {
-        const diff = new Date(a.targetDeadline).getTime() - new Date(b.targetDeadline).getTime();
-        if (diff !== 0) return diff;
-      } else if (a.targetDeadline && !b.targetDeadline) {
-        return -1;
-      } else if (!a.targetDeadline && b.targetDeadline) {
-        return 1;
-      }
+      const diffDue = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      if (diffDue !== 0) return diffDue;
     }
 
     // 3. Priority (HIGH > NORMAL > LOW > LOWEST)

@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PriorityFilterItems } from './PriorityFilterItems';
 import { TagFilterItems } from './TagFilterItems';
 import { PeopleFilterItems } from './PeopleFilterItems';
-import { DueDateFilterItems } from './DueDateFilterItems';
+import { ScheduledDateFilterItems } from './ScheduledDateFilterItems';
 import { GoLiveFilterItem } from './GoLiveFilterItem';
 
 // Mobile filters component for sidebar/hamburger menu
@@ -151,9 +151,9 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
       <div className="space-y-1">
         <div className="text-xs font-medium">Dates</div>
         <div className="space-y-1">
-          <DueDateFilterItems
-            filterByDueDate={filterByDueDate}
-            onSetFilterByDueDate={onSetFilterByDueDate}
+          <ScheduledDateFilterItems
+            filterByScheduledDate={filterByDueDate}
+            onSetFilterByScheduledDate={onSetFilterByDueDate}
             size="sm"
             className="w-full"
           />

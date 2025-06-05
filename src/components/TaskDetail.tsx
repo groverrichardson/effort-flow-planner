@@ -116,15 +116,10 @@ const TaskDetail = ({ task, onClose, onEdit, onDelete }: TaskDetailProps) => {
 
         {(task.dueDate || task.targetDeadline || task.goLiveDate) && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {task.dueDate && (
-              <div>
-                <h3 className="text-sm font-medium">Due Date</h3>
-                <p>{new Date(task.dueDate).toLocaleDateString()}</p>
-              </div>
-            )}
+
             {task.targetDeadline && (
               <div>
-                <h3 className="text-sm font-medium">Target Deadline</h3>
+                <h3 className="text-sm font-medium">Scheduled Date</h3>
                 <p>{new Date(task.targetDeadline).toLocaleDateString()}</p>
               </div>
             )}

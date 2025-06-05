@@ -11,7 +11,7 @@ import {
 } from './schedulingService';
 
 import type { Task, TaskSegment, TaskUpdatePayload, Tag, Person } from '../types';
-import { TaskStatus, Priority, EffortLevel, DueDateType } from '../types'; // <-- Add Priority, DueDateType
+import { TaskStatus, Priority, EffortLevel } from '../types'; // <-- Add Priority, DueDateType (DueDateType removed as it's replaced by string literals for scheduledDateType)
 import { addDays, formatISO, startOfDay, startOfToday, parseISO, format, isSameDay } from 'date-fns';
 
 // Create a mock TaskService implementation using the interface
@@ -38,9 +38,8 @@ const createMockTask = (overrides: Partial<Task> & { id: string }): Task => {
     // No direct 'effort' property on Task, only 'effortLevel'
     effortLevel: defaultEffortLevel,
     segments: [] as TaskSegment[],
-    dueDate: null,
-    dueDateType: DueDateType.NONE, // Added missing property
     targetDeadline: null,
+    scheduledDateType: 'none', // Replaces dueDateType
     originalScheduledDate: null as Date | null, // Added missing property (it IS on Task interface)
     goLiveDate: null,
     completed: false, // Added missing property
@@ -134,9 +133,8 @@ describe('SchedulingService', () => {
           // Add other minimal required fields for Task type
           description: '',
           priority: Priority.NORMAL,
-          dueDate: null,
-          dueDateType: DueDateType.NONE,
           targetDeadline: null,
+          scheduledDateType: 'none',
           originalScheduledDate: null,
           goLiveDate: null,
           completed: false,
@@ -160,7 +158,6 @@ describe('SchedulingService', () => {
       const taskToScheduleData = {
         id: 'task-zero-effort',
         effortLevel: EffortLevel.NONE, // Corrected from ZERO
-        dueDate: null,
         targetDeadline: null,
       };
       const taskToSchedule = createMockTask(taskToScheduleData);
@@ -176,12 +173,12 @@ describe('SchedulingService', () => {
       expect(result?.segments).toEqual([]);
       expect(result?.originalScheduledDate).toBeNull();
       expect(result?.targetDeadline).toBeNull();
-      // dueDate should be preserved if it was set on the input taskToSchedule
-      // createMockTask ensures taskToSchedule.dueDate is Date | null
-      if (taskToSchedule.dueDate) {
-        expect(result?.dueDate).toEqual(taskToSchedule.dueDate);
+      // targetDeadline should be preserved if it was set on the input taskToSchedule
+      // createMockTask ensures taskToSchedule.targetDeadline is Date | null
+      if (taskToSchedule.targetDeadline) {
+        expect(result?.targetDeadline).toEqual(taskToSchedule.targetDeadline);
       } else {
-        expect(result?.dueDate).toBeNull();
+        expect(result?.targetDeadline).toBeNull();
       }
       expect(result?.completed).toBe(false);
 
@@ -192,7 +189,6 @@ describe('SchedulingService', () => {
         segments: [],
         scheduled_start_date: null,
         scheduled_completion_date: null,
-        dueDate: null,
         targetDeadline: null,
         completed: false,
       };
@@ -274,9 +270,9 @@ describe('SchedulingService', () => {
             ? (typeof updates.scheduled_start_date === 'string' ? parseISO(updates.scheduled_start_date) : updates.scheduled_start_date)
             : null;
         }
-        if (updates.dueDate !== undefined) {
-          updatedProps.dueDate = updates.dueDate
-            ? (typeof updates.dueDate === 'string' ? parseISO(updates.dueDate) : updates.dueDate)
+        if (updates.targetDeadline !== undefined) {
+          updatedProps.targetDeadline = updates.targetDeadline
+            ? (typeof updates.targetDeadline === 'string' ? parseISO(updates.targetDeadline) : updates.targetDeadline)
             : null;
         }
         if (updates.targetDeadline !== undefined) {
@@ -299,7 +295,7 @@ describe('SchedulingService', () => {
       const taskToSchedule = createMockTask({ 
         id: 'task-fits', 
         effortLevel: EffortLevel.M, // 4 EPs
-        dueDate: null, // Explicitly null for this test if not set
+        targetDeadline: null, // Explicitly null for this test if not set
         targetDeadline: null // Explicitly null initially
       }); 
       const specificTestDate = startOfDay(new Date('2024-06-10T00:00:00.000Z'));
@@ -319,7 +315,7 @@ describe('SchedulingService', () => {
         scheduled_start_date: expectedScheduledDateString,
         scheduled_completion_date: expectedScheduledDateString, // Service sets this
         targetDeadline: expectedScheduledDateString, // Payload should contain ISO string
-        dueDate: null, // Assuming taskToSchedule.dueDate was null
+        targetDeadline: null, // Assuming taskToSchedule.targetDeadline was null
         completed: false,
         segments: [{
           parent_task_id: 'task-fits',
@@ -360,9 +356,8 @@ describe('SchedulingService', () => {
       originalRecurringTaskId: null,
       segments: [],
       // estimatedDurationMinutes: 60, // Removed, not in Task interface
-      dueDateType: DueDateType.NONE,
+      scheduledDateType: 'none',
       priority: Priority.NORMAL,
-      dueDate: null,
       targetDeadline: null,
       goLiveDate: null,
     };
@@ -370,8 +365,8 @@ describe('SchedulingService', () => {
     type CreateTaskSortOverrides = {
       priority?: Priority;
       effortLevel?: EffortLevel;
-      dueDate?: string | Date | null;
       targetDeadline?: string | Date | null;
+      scheduledDateType?: string;
       createdAt?: string | Date | null;
       updatedAt?: string | Date | null; // Allow overriding updatedAt for specific tests
     };
@@ -445,19 +440,19 @@ describe('SchedulingService', () => {
     expect(sortTasksForScheduling([])).toEqual([]);
   });
 
-  it('should correctly sort tasks primarily by dueDate (ascending, non-nulls first)', () => {
-    const task1 = createTaskForSort('1', { dueDate: '2024-01-05T00:00:00.000Z' });
-    const task2 = createTaskForSort('2', { dueDate: '2024-01-01T00:00:00.000Z' });
-    const task3 = createTaskForSort('3', { dueDate: null });
-    const task4 = createTaskForSort('4', { dueDate: '2024-01-03T00:00:00.000Z' });
+  it('should correctly sort tasks primarily by targetDeadline (ascending, non-nulls first)', () => {
+    const task1 = createTaskForSort('1', { targetDeadline: '2024-01-05T00:00:00.000Z' });
+    const task2 = createTaskForSort('2', { targetDeadline: '2024-01-01T00:00:00.000Z' });
+    const task3 = createTaskForSort('3', { targetDeadline: null });
+    const task4 = createTaskForSort('4', { targetDeadline: '2024-01-03T00:00:00.000Z' });
     const tasks = [task1, task2, task3, task4];
     const sorted = sortTasksForScheduling(tasks);
     expect(sorted.map(t => t.id)).toEqual(['2', '4', '1', '3']);
   });
 
-  it('should sort by targetDeadline (ascending, nulls first) if dueDates are equal or null', () => {
-    const task1 = createTaskForSort('1', { dueDate: '2024-01-01T00:00:00.000Z', targetDeadline: '2024-01-10T00:00:00.000Z' });
-    const task2 = createTaskForSort('2', { dueDate: '2024-01-01T00:00:00.000Z', targetDeadline: '2024-01-05T00:00:00.000Z' });
+  it('should sort by targetDeadline (ascending, nulls first)', () => {
+    const task1 = createTaskForSort('1', { targetDeadline: '2024-01-10T00:00:00.000Z' });
+    const task2 = createTaskForSort('2', { targetDeadline: '2024-01-05T00:00:00.000Z' });
     const task3 = createTaskForSort('3', { dueDate: '2024-01-01T00:00:00.000Z', targetDeadline: null });
     const task4 = createTaskForSort('4', { dueDate: null, targetDeadline: '2024-01-08T00:00:00.000Z' });
     const task5 = createTaskForSort('5', { dueDate: null, targetDeadline: null });
@@ -494,26 +489,26 @@ describe('SchedulingService', () => {
 
   it('should handle a mix of all sorting criteria correctly', () => {
     const tasks = [
-      createTaskForSort('T1-LateDue-HighPrio', { dueDate: '2024-01-10T00:00:00.000Z', priority: Priority.HIGH, createdAt: '2023-12-01T00:00:00.000Z' }),
-      createTaskForSort('T2-EarlyDue-LowPrio', { dueDate: '2024-01-05T00:00:00.000Z', priority: Priority.LOW, createdAt: '2023-12-02T00:00:00.000Z' }),
-      createTaskForSort('T3-NoDue-HighPrio',   { dueDate: null, priority: Priority.HIGH, createdAt: '2023-12-03T00:00:00.000Z' }),
-      createTaskForSort('T4-EarlyDue-HighPrio-Older', { dueDate: '2024-01-05T00:00:00.000Z', priority: Priority.HIGH, createdAt: '2023-11-01T00:00:00.000Z' }),
-      createTaskForSort('T5-NoDue-NormalPrio', { dueDate: null, priority: Priority.NORMAL, createdAt: '2023-12-04T00:00:00.000Z' }),
-      createTaskForSort('T6-LateDue-HighPrio-Newer', { dueDate: '2024-01-10T00:00:00.000Z', priority: Priority.HIGH, createdAt: '2023-12-05T00:00:00.000Z' }),
-      createTaskForSort('T7-NoDue-NoTarget-HighPrio', { dueDate: null, targetDeadline: null, priority: Priority.HIGH, createdAt: '2023-12-01T00:00:00.000Z' }),
-      createTaskForSort('T8-NoDue-EarlyTarget-NormalPrio', { dueDate: null, targetDeadline: '2024-01-02T00:00:00.000Z', priority: Priority.NORMAL, createdAt: '2023-12-02T00:00:00.000Z' }),
+      createTaskForSort('T1-LateDue-HighPrio', { targetDeadline: '2024-01-10T00:00:00.000Z', priority: Priority.HIGH, createdAt: '2023-12-01T00:00:00.000Z' }),
+      createTaskForSort('T2-EarlyDue-LowPrio', { targetDeadline: '2024-01-05T00:00:00.000Z', priority: Priority.LOW, createdAt: '2023-12-02T00:00:00.000Z' }),
+      createTaskForSort('T3-NoDue-HighPrio',   { targetDeadline: null, priority: Priority.HIGH, createdAt: '2023-12-03T00:00:00.000Z' }),
+      createTaskForSort('T4-EarlyDue-HighPrio-Older', { targetDeadline: '2024-01-05T00:00:00.000Z', priority: Priority.HIGH, createdAt: '2023-11-01T00:00:00.000Z' }),
+      createTaskForSort('T5-NoDue-NormalPrio', { targetDeadline: null, priority: Priority.NORMAL, createdAt: '2023-12-04T00:00:00.000Z' }),
+      createTaskForSort('T6-LateDue-HighPrio-Newer', { targetDeadline: '2024-01-10T00:00:00.000Z', priority: Priority.HIGH, createdAt: '2023-12-05T00:00:00.000Z' }),
+      createTaskForSort('T7-NoDue-NoTarget-HighPrio', { targetDeadline: null, priority: Priority.HIGH, createdAt: '2023-12-01T00:00:00.000Z' }),
+      createTaskForSort('T8-NoDue-EarlyTarget-NormalPrio', { targetDeadline: '2024-01-02T00:00:00.000Z', priority: Priority.NORMAL, createdAt: '2023-12-02T00:00:00.000Z' }),
     ];
     const sorted = sortTasksForScheduling(tasks);
     // Expected Order (manual trace based on rules):
-    // 1. No due date group (T3, T5, T7, T8) - sorted by target deadline, then priority, then createdAt
-    //    T7 (null, null, HIGH, 2023-12-01)
-    //    T3 (null, null, HIGH, 2023-12-03) (assuming targetDeadline is null if not specified)
-    //    T8 (null, 2024-01-02, NORMAL, 2023-12-02)
-    //    T5 (null, null, NORMAL, 2023-12-04)
-    // 2. Due date 2024-01-05 group (T2, T4) - sorted by priority, then createdAt
+    // 1. No scheduled date group (T3, T5, T7, T8) - sorted by target deadline, then priority, then createdAt
+    //    T7 (null, HIGH, 2023-12-01)
+    //    T3 (null, HIGH, 2023-12-03)
+    //    T8 (2024-01-02, NORMAL, 2023-12-02)
+    //    T5 (null, NORMAL, 2023-12-04)
+    // 2. Scheduled date 2024-01-05 group (T2, T4) - sorted by priority, then createdAt
     //    T4 (2024-01-05, HIGH, 2023-11-01)
     //    T2 (2024-01-05, LOW, 2023-12-02)
-    // 3. Due date 2024-01-10 group (T1, T6) - sorted by priority, then createdAt
+    // 3. Scheduled date 2024-01-10 group (T1, T6) - sorted by priority, then createdAt
     //    T1 (2024-01-10, HIGH, 2023-12-01)
     //    T6 (2024-01-10, HIGH, 2023-12-05)
     expect(sorted.map(t => t.id)).toEqual([

@@ -3,34 +3,34 @@ import React, { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
-interface DueDateFilterItemsProps {
-  filterByDueDate: string;
-  onSetFilterByDueDate: (value: string) => void;
+interface ScheduledDateFilterItemsProps {
+  filterByScheduledDate: string;
+  onSetFilterByScheduledDate: (value: string) => void;
   size?: "sm" | "default"; 
   className?: string;
   fullWidth?: boolean;
 }
 
-export const DueDateFilterItems: React.FC<DueDateFilterItemsProps> = ({
-  filterByDueDate,
-  onSetFilterByDueDate,
+export const ScheduledDateFilterItems: React.FC<ScheduledDateFilterItemsProps> = ({
+  filterByScheduledDate,
+  onSetFilterByScheduledDate,
   size,
   className,
   fullWidth
 }) => {
-  if (!onSetFilterByDueDate) return null;
+  if (!onSetFilterByScheduledDate) return null;
 
-  const handleSetAll = useCallback(() => onSetFilterByDueDate('all'), [onSetFilterByDueDate]);
-  const handleSetToday = useCallback(() => onSetFilterByDueDate('today'), [onSetFilterByDueDate]);
-  const handleSetWeek = useCallback(() => onSetFilterByDueDate('week'), [onSetFilterByDueDate]);
-  const handleSetOverdue = useCallback(() => onSetFilterByDueDate('overdue'), [onSetFilterByDueDate]);
+  const handleSetAll = useCallback(() => onSetFilterByScheduledDate('all'), [onSetFilterByScheduledDate]);
+  const handleSetToday = useCallback(() => onSetFilterByScheduledDate('today'), [onSetFilterByScheduledDate]);
+  const handleSetWeek = useCallback(() => onSetFilterByScheduledDate('week'), [onSetFilterByScheduledDate]);
+  const handleSetOverdue = useCallback(() => onSetFilterByScheduledDate('overdue'), [onSetFilterByScheduledDate]);
   
   // If we're rendering the component as buttons (for mobile)
   if (size) {
     return (
       <div className={className}>
         <Button
-          variant={filterByDueDate === 'all' ? "default" : "outline"}
+          variant={filterByScheduledDate === 'all' ? "default" : "outline"}
           size={size}
           onClick={handleSetAll}
           className={fullWidth ? "w-full justify-between" : ""}
@@ -38,23 +38,23 @@ export const DueDateFilterItems: React.FC<DueDateFilterItemsProps> = ({
           All Dates
         </Button>
         <Button
-          variant={filterByDueDate === 'today' ? "default" : "outline"}
+          variant={filterByScheduledDate === 'today' ? "default" : "outline"}
           size={size}
           onClick={handleSetToday}
           className={fullWidth ? "w-full justify-between mt-1" : ""}
         >
-          Due Today
+          Scheduled Today
         </Button>
         <Button
-          variant={filterByDueDate === 'week' ? "default" : "outline"}
+          variant={filterByScheduledDate === 'week' ? "default" : "outline"}
           size={size}
           onClick={handleSetWeek}
           className={fullWidth ? "w-full justify-between mt-1" : ""}
         >
-          Due This Week
+          Scheduled This Week
         </Button>
         <Button
-          variant={filterByDueDate === 'overdue' ? "default" : "outline"}
+          variant={filterByScheduledDate === 'overdue' ? "default" : "outline"}
           size={size}
           onClick={handleSetOverdue}
           className={fullWidth ? "w-full justify-between mt-1" : ""}
@@ -69,29 +69,29 @@ export const DueDateFilterItems: React.FC<DueDateFilterItemsProps> = ({
   return (
     <>
       <DropdownMenuSeparator />
-      <DropdownMenuLabel>Due Date</DropdownMenuLabel>
+      <DropdownMenuLabel>Scheduled Date</DropdownMenuLabel>
       <DropdownMenuSeparator />
       
       <DropdownMenuCheckboxItem
-        checked={filterByDueDate === 'all'}
+        checked={filterByScheduledDate === 'all'}
         onCheckedChange={handleSetAll}
       >
         All Dates
       </DropdownMenuCheckboxItem>
       <DropdownMenuCheckboxItem
-        checked={filterByDueDate === 'today'}
+        checked={filterByScheduledDate === 'today'}
         onCheckedChange={handleSetToday}
       >
         Due Today
       </DropdownMenuCheckboxItem>
       <DropdownMenuCheckboxItem
-        checked={filterByDueDate === 'week'}
+        checked={filterByScheduledDate === 'week'}
         onCheckedChange={handleSetWeek}
       >
         Due This Week
       </DropdownMenuCheckboxItem>
       <DropdownMenuCheckboxItem
-        checked={filterByDueDate === 'overdue'}
+        checked={filterByScheduledDate === 'overdue'}
         onCheckedChange={handleSetOverdue}
       >
         Overdue
@@ -100,4 +100,4 @@ export const DueDateFilterItems: React.FC<DueDateFilterItemsProps> = ({
   );
 };
 
-export default DueDateFilterItems;
+export default ScheduledDateFilterItems;

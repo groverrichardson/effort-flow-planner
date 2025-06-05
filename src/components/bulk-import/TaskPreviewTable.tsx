@@ -36,7 +36,7 @@ export const TaskPreviewTable = ({ tasks }: TaskPreviewTableProps) => {
             <TableHead className="w-[40px]">Status</TableHead>
             <TableHead>Title</TableHead>
             <TableHead>Priority</TableHead>
-            <TableHead>Due Date</TableHead>
+            <TableHead>Scheduled Date</TableHead>
             <TableHead>People</TableHead>
             <TableHead>Tags</TableHead>
           </TableRow>
@@ -47,7 +47,7 @@ export const TaskPreviewTable = ({ tasks }: TaskPreviewTableProps) => {
               <TableCell>{getTaskStatusIcon(task.status)}</TableCell>
               <TableCell className="font-medium">{task.title}</TableCell>
               <TableCell>{task.priority || 'Normal'}</TableCell>
-              <TableCell>{task.dueDate || '-'}</TableCell>
+              <TableCell>{task.targetDeadline || '-'}</TableCell>
               <TableCell>{task.personNames?.join(', ') || '-'}</TableCell>
               <TableCell>{task.tagNames?.join(', ') || '-'}</TableCell>
             </TableRow>
