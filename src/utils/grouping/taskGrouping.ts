@@ -26,15 +26,15 @@ export interface TaskGroup {
 }
 
 /**
- * Determines which date group a task belongs to based on its dueDate or targetDeadline
- * Priority is given to dueDate if it exists
+ * Determines which date group a task belongs to based on its targetDeadline or dueDate
+ * Priority is given to targetDeadline if it exists
  * 
  * @param task The task to categorize
  * @returns The DateGroup enum value representing the task's group
  */
 export const determineTaskDateGroup = (task: Task): DateGroup => {
-  // Use dueDate if it exists, otherwise use targetDeadline
-  const taskDate = task.dueDate || task.targetDeadline;
+  // Use targetDeadline if it exists, otherwise use dueDate
+  const taskDate = task.targetDeadline || task.dueDate;
   
   // If no date exists, return NO_DATE group
   if (!taskDate) {

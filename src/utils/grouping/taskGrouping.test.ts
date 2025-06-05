@@ -56,6 +56,11 @@ describe('determineTaskDateGroup', () => {
     expect(determineTaskDateGroup(task)).toBe(DateGroup.TODAY);
   });
 
+  it('should prioritize target_deadline over due_date', () => {
+    const task = createTestTask(tomorrow, today);
+    expect(determineTaskDateGroup(task)).toBe(DateGroup.TODAY); // Target deadline is today
+  });
+
   it('should categorize a task due tomorrow as TOMORROW', () => {
     const task = createTestTask(tomorrow, null);
     expect(determineTaskDateGroup(task)).toBe(DateGroup.TOMORROW);
@@ -96,9 +101,9 @@ describe('determineTaskDateGroup', () => {
     expect(determineTaskDateGroup(task)).toBe(DateGroup.TODAY);
   });
 
-  it('should prioritize due_date over target_deadline', () => {
-    const task = createTestTask(tomorrow, today);
-    expect(determineTaskDateGroup(task)).toBe(DateGroup.TOMORROW); // Due date is tomorrow
+  it('should prefer targetDeadline over dueDate for categorization', () => {
+    const task = createTestTask(today, tomorrow); // Due date is today, target deadline is tomorrow
+    expect(determineTaskDateGroup(task)).toBe(DateGroup.TOMORROW);
   });
 });
 
