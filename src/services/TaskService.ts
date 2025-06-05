@@ -1048,7 +1048,7 @@ export const TaskService = {
 
         if (schedulableTasks && schedulableTasks.length > 0) {
             console.log(`[TaskService.createTask] Phase 1: Found ${schedulableTasks.length} schedulable tasks. Running scheduling algorithm.`);
-            await runSchedulingAlgorithm(schedulableTasks, user.id);
+            await runSchedulingAlgorithm(this, schedulableTasks, user.id);
             console.log(`[TaskService.createTask] Phase 1: Scheduling algorithm completed.`);
         } else {
             console.log('[TaskService.createTask] Phase 1: No schedulable tasks found or an error occurred fetching them. Skipping full scheduling run.');
@@ -1505,8 +1505,8 @@ export const TaskService = {
                 `)
                 .eq('user_id', user.id)
                 .eq('is_archived', false)
-                .not('completed_date', 'is', null)
-                .not('status', 'eq', 'completed');
+                .is('completed_date', null)
+                .neq('status', TaskStatus.COMPLETED);
 
             if (fetchError) {
                 console.error('[TaskService.updateTask] Error fetching schedulable tasks:', fetchError);
@@ -1537,7 +1537,7 @@ export const TaskService = {
                 // Run scheduling algorithm
                 try {
                     console.log('[TaskService.updateTask] Running scheduling algorithm');
-                    await runSchedulingAlgorithm(frontendTasks);
+                    await runSchedulingAlgorithm(this, frontendTasks, user.id);
                     console.log('[TaskService.updateTask] Scheduling algorithm completed successfully');
                 } catch (schedulingError) {
                     console.error('[TaskService.updateTask] Error running scheduling algorithm:', schedulingError);
@@ -1688,7 +1688,7 @@ export const TaskService = {
 
                     // Run the scheduling algorithm
                     try {
-                        await runSchedulingAlgorithm(tasksForScheduling);
+                        await runSchedulingAlgorithm(this, tasksForScheduling, userId);
                         console.log('[TaskService.deleteTask] Scheduling algorithm completed successfully');
                     } catch (schedulingError) {
                         console.error('[TaskService.deleteTask] Error running scheduling algorithm:', schedulingError);
@@ -1820,7 +1820,7 @@ export const TaskService = {
 
                     // Run the scheduling algorithm
                     try {
-                        await runSchedulingAlgorithm(tasksForScheduling);
+                        await runSchedulingAlgorithm(this, tasksForScheduling, userId);
                         console.log('[TaskService.archiveTask] Scheduling algorithm completed successfully');
                     } catch (schedulingError) {
                         console.error('[TaskService.archiveTask] Error running scheduling algorithm:', schedulingError);
