@@ -82,7 +82,9 @@ export interface Task {
   priority: Priority;
   dueDate: Date | null;
   dueDateType: DueDateType;
+  /** @deprecated Use scheduledDate instead */
   targetDeadline: Date | null;
+  scheduledDate: Date | null;
   goLiveDate: Date | null;
   effortLevel: EffortLevel;
   completed: boolean;
@@ -110,7 +112,9 @@ export interface TaskCore {
   priority?: Priority;
   dueDate?: Date | string | null; // Allow string for API flexibility, convert to Date in service
   dueDateType?: DueDateType;
+  /** @deprecated Use scheduledDate instead */
   targetDeadline?: Date | string | null;
+  scheduledDate?: Date | string | null;
   goLiveDate?: Date | string | null;
   effortLevel?: EffortLevel;
   completed: boolean;
@@ -138,7 +142,9 @@ export interface TaskCreationPayload extends TaskCore {
   priority: Priority;
   dueDate: Date | null;
   dueDateType: DueDateType;
+  /** @deprecated Use scheduledDate instead */
   targetDeadline: Date | null;
+  scheduledDate: Date | null;
   goLiveDate: Date | null;
   effortLevel: EffortLevel;
   completedDate: Date | null;

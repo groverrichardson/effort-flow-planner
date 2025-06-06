@@ -85,7 +85,74 @@ export type Database = {
           updated_at?: string
           username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurrence_rules: {
+        Row: {
+          created_at: string
+          day_of_month: number | null
+          days_of_week: number[] | null
+          end_condition_type: string | null
+          end_date: string | null
+          frequency: string
+          id: string
+          interval: number | null
+          month_of_year: number | null
+          occurrences: number | null
+          repeat_only_on_completion: boolean | null
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_month?: number | null
+          days_of_week?: number[] | null
+          end_condition_type?: string | null
+          end_date?: string | null
+          frequency: string
+          id?: string
+          interval?: number | null
+          month_of_year?: number | null
+          occurrences?: number | null
+          repeat_only_on_completion?: boolean | null
+          task_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_month?: number | null
+          days_of_week?: number[] | null
+          end_condition_type?: string | null
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          interval?: number | null
+          month_of_year?: number | null
+          occurrences?: number | null
+          repeat_only_on_completion?: boolean | null
+          task_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurrence_rules_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tags: {
         Row: {
@@ -111,30 +178,72 @@ export type Database = {
         }
         Relationships: []
       }
+      task_dependencies: {
+        Row: {
+          created_at: string
+          dependent_task_id: string
+          id: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dependent_task_id: string
+          id?: string
+          task_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dependent_task_id?: string
+          id?: string
+          task_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_dependencies_dependent_task_id_fkey"
+            columns: ["dependent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_dependencies_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_people: {
         Row: {
           created_at: string
           id: string
           person_id: string
-          person_name: string
           task_id: string
-          user_id: string | null
+          updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           person_id: string
-          person_name: string
           task_id: string
-          user_id?: string | null
+          updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           person_id?: string
-          person_name?: string
           task_id?: string
-          user_id?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -153,58 +262,50 @@ export type Database = {
           },
         ]
       }
-      task_recurrence_rules: {
+      task_segments: {
         Row: {
-          bymonthday: number | null
-          bysetpos: number | null
-          byweekday: string[] | null
-          count: number | null
-          created_at: string | null
-          dtstart: string | null
-          frequency: string | null
+          created_at: string
+          effort_points: number
           id: string
-          interval: number | null
-          task_id: string
-          until_date: string | null
-          updated_at: string | null
+          parent_task_id: string
+          scheduled_date: string
+          status: Database["public"]["Enums"]["task_status_enum"]
+          updated_at: string
           user_id: string
         }
         Insert: {
-          bymonthday?: number | null
-          bysetpos?: number | null
-          byweekday?: string[] | null
-          count?: number | null
-          created_at?: string | null
-          dtstart?: string | null
-          frequency?: string | null
+          created_at?: string
+          effort_points: number
           id?: string
-          interval?: number | null
-          task_id: string
-          until_date?: string | null
-          updated_at?: string | null
+          parent_task_id: string
+          scheduled_date: string
+          status: Database["public"]["Enums"]["task_status_enum"]
+          updated_at?: string
           user_id: string
         }
         Update: {
-          bymonthday?: number | null
-          bysetpos?: number | null
-          byweekday?: string[] | null
-          count?: number | null
-          created_at?: string | null
-          dtstart?: string | null
-          frequency?: string | null
+          created_at?: string
+          effort_points?: number
           id?: string
-          interval?: number | null
-          task_id?: string
-          until_date?: string | null
-          updated_at?: string | null
+          parent_task_id?: string
+          scheduled_date?: string
+          status?: Database["public"]["Enums"]["task_status_enum"]
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "fk_task"
-            columns: ["task_id"]
+            foreignKeyName: "task_segments_parent_task_id_fkey"
+            columns: ["parent_task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_segments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -214,22 +315,25 @@ export type Database = {
           created_at: string
           id: string
           tag_id: string
-          tag_name: string
           task_id: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           tag_id: string
-          tag_name: string
           task_id: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           tag_id?: string
-          tag_name?: string
           task_id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -253,22 +357,22 @@ export type Database = {
           completed: boolean
           completed_date: string | null
           created_at: string
-          dependencies: string[]
           description: string | null
           due_date: string | null
-          due_date_type: string
-          dueDateType: string | null
-          effort_level: number
+          due_date_type: string | null
+          effort_level: number | null
           go_live_date: string | null
           id: string
           is_archived: boolean | null
           is_recurring_instance: boolean | null
+          original_recurring_task_id: string | null
           original_scheduled_date: string | null
-          originalRecurringTaskId: string | null
-          originalScheduledDate: string | null
-          priority: string
-          recurrenceRuleId: string | null
-          status: string | null
+          priority: string | null
+          recurrence_rule_id: string | null
+          scheduled_completion_date: string | null
+          scheduled_date: string | null
+          scheduled_start_date: string | null
+          status: Database["public"]["Enums"]["task_status_enum"]
           target_deadline: string | null
           title: string
           updated_at: string
@@ -278,22 +382,22 @@ export type Database = {
           completed?: boolean
           completed_date?: string | null
           created_at?: string
-          dependencies?: string[]
           description?: string | null
           due_date?: string | null
-          due_date_type?: string
-          dueDateType?: string | null
-          effort_level: number
+          due_date_type?: string | null
+          effort_level?: number | null
           go_live_date?: string | null
           id?: string
           is_archived?: boolean | null
           is_recurring_instance?: boolean | null
+          original_recurring_task_id?: string | null
           original_scheduled_date?: string | null
-          originalRecurringTaskId?: string | null
-          originalScheduledDate?: string | null
-          priority: string
-          recurrenceRuleId?: string | null
-          status?: string | null
+          priority?: string | null
+          recurrence_rule_id?: string | null
+          scheduled_completion_date?: string | null
+          scheduled_date?: string | null
+          scheduled_start_date?: string | null
+          status?: Database["public"]["Enums"]["task_status_enum"]
           target_deadline?: string | null
           title: string
           updated_at?: string
@@ -303,22 +407,22 @@ export type Database = {
           completed?: boolean
           completed_date?: string | null
           created_at?: string
-          dependencies?: string[]
           description?: string | null
           due_date?: string | null
-          due_date_type?: string
-          dueDateType?: string | null
-          effort_level?: number
+          due_date_type?: string | null
+          effort_level?: number | null
           go_live_date?: string | null
           id?: string
           is_archived?: boolean | null
           is_recurring_instance?: boolean | null
+          original_recurring_task_id?: string | null
           original_scheduled_date?: string | null
-          originalRecurringTaskId?: string | null
-          originalScheduledDate?: string | null
-          priority?: string
-          recurrenceRuleId?: string | null
-          status?: string | null
+          priority?: string | null
+          recurrence_rule_id?: string | null
+          scheduled_completion_date?: string | null
+          scheduled_date?: string | null
+          scheduled_start_date?: string | null
+          status?: Database["public"]["Enums"]["task_status_enum"]
           target_deadline?: string | null
           title?: string
           updated_at?: string
@@ -326,10 +430,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "tasks_recurrenceRuleId_fkey"
-            columns: ["recurrenceRuleId"]
+            foreignKeyName: "tasks_recurrence_rule_id_fkey"
+            columns: ["recurrence_rule_id"]
+            isOneToOne: true
+            referencedRelation: "recurrence_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "task_recurrence_rules"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -339,13 +450,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_tasks_with_relations_for_user: {
-        Args: { p_user_id: string; p_include_archived: boolean }
-        Returns: Json[]
-      }
+      [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      priority_enum: "high" | "normal" | "low" | "lowest"
+      task_status_enum:
+        | "PENDING"
+        | "IN_PROGRESS"
+        | "COMPLETED"
+        | "CANCELLED"
+        | "DEFERRED"
+        | "SCHEDULED"
+        | "PARTIALLY_SCHEDULED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -353,29 +469,29 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type PublicSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+  PublicTableNameOrOptions extends
+    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
     | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends PublicTableNameOrOptions extends {
     schema: keyof Database
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+        Database[PublicTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
+      PublicSchema["Views"])
+    ? (PublicSchema["Tables"] &
+        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -383,22 +499,22 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+  PublicTableNameOrOptions extends
+    | keyof PublicSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends PublicTableNameOrOptions extends {
     schema: keyof Database
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -406,22 +522,22 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+  PublicTableNameOrOptions extends
+    | keyof PublicSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends PublicTableNameOrOptions extends {
     schema: keyof Database
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
