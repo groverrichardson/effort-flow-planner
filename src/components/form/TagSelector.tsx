@@ -25,7 +25,7 @@ const TagSelector = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
 
-  const filteredTags = availableTags.filter(g => 
+  const filteredTags = (availableTags || []).filter(g => 
     g.name.toLowerCase().includes(tagSearch.toLowerCase()) && 
     !selectedTags.some(sg => sg.id === g.id)
   );

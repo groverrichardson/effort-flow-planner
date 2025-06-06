@@ -34,12 +34,11 @@ export default defineConfig(({ mode }) => ({
         singleThread: true,
       }
     },
-
-    // server: { // Added from vitest.config.ts - Temporarily commented out for troubleshooting
-    //   deps: {
-    //     inline: [/^(?!.*vitest).*$/],
-    //   },
-    // },
+    server: { // Added from vitest.config.ts
+      deps: {
+        inline: ['@/store/noteStore'],
+      },
+    },
     // you might want to disable it, if you don't want to run UI tests
     // environmentMatchGlobs: [
     //   ['**/*.test.tsx', 'jsdom'],

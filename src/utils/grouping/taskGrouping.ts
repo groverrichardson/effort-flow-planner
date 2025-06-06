@@ -32,7 +32,7 @@ export interface TaskGroup {
  * @returns The DateGroup enum value representing the task's group
  */
 export const determineTaskDateGroup = (task: Task): DateGroup => {
-  const taskDateForGrouping = task.targetDeadline;
+  const taskDateForGrouping = task.scheduledDate || task.targetDeadline;
   
   if (!taskDateForGrouping) {
     return DateGroup.NO_DATE;
@@ -166,5 +166,5 @@ export const hasValidDateFormat = (task: Task): boolean => {
     }
   };
 
-  return checkDateValidity(task.targetDeadline) && checkDateValidity(task.dueDate);
+  return checkDateValidity(task.targetDeadline) && checkDateValidity(task.dueDate) && checkDateValidity(task.scheduledDate);
 };

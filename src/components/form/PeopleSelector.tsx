@@ -40,10 +40,10 @@ const PeopleSelector = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
 
-  const filteredPeople = availablePeople.filter(p => 
+  const filteredPeople = availablePeople?.filter(p => 
     p.name.toLowerCase().includes(personSearch.toLowerCase()) && 
     !selectedPeople.some(sp => sp.id === p.id)
-  );
+  ) || [];
 
   const handleAddNewPerson = () => {
     if (personSearch.trim()) {

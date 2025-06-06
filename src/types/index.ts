@@ -47,7 +47,13 @@ export enum TaskStatus {
   PARTIALLY_SCHEDULED = 'PARTIALLY_SCHEDULED', // ADDED
 }
 
-export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
+export enum RecurrenceFrequency {
+  NEVER = 'never',
+  DAILY = 'daily',
+  WEEKLY = 'weekly',
+  MONTHLY = 'monthly',
+  YEARLY = 'yearly',
+}
 
 export interface RecurrenceRule {
   id: string; // Unique ID for the recurrence rule

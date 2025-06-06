@@ -1,8 +1,8 @@
-import { format, isToday, isPast, isYesterday } from 'date-fns';
+import { format, isToday } from 'date-fns'; // isPast, isYesterday might be unused now
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Task, Priority, EffortLevel } from '@/types';
+import { Task, Priority, EffortLevel, TaskStatus } from '@/types'; // Added TaskStatus
 import { Check, AlertCircle, Clock } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
@@ -56,77 +56,105 @@ const TaskCard = ({
     };
 
     const renderDateInfo = (task: Task) => {
-        if (task.dueDate) {
-            const dueDate = new Date(task.dueDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const isPastDue = dueDate < today;
-            const isDueToday = isToday(dueDate);
-            const isYesterdayDate = isYesterday(dueDate);
-
-            if (isPastDue) {
-                return (
-                    <span className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
-                        {isYesterdayDate ? 'Due yesterday' : `Past due: ${format(task.dueDate, 'MMM d')}`}
-                    </span>
-                );
-            }
-
-            if (isDueToday) {
-                return (
-                    <span className="text-xs text-orange-500 font-medium flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Due today
-                    </span>
-                );
-            }
-
-            return (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Due: {format(task.dueDate, 'MMM d')}
-                </span>
-            );
+        // If task is completed, don't show scheduled/due date info.
+        if (task.status === TaskStatus.COMPLETED) {
+            return null;
         }
 
-        return null;
+        const displayableDateSource = task.scheduledDate || task.targetDeadline;
+
+        // If no scheduledDate or targetDeadline, don't show date info.
+        if (!displayableDateSource) {
+            return null;
+        }
+
+        const displayDate = new Date(displayableDateSource);
+        // determineTaskDateGroup uses scheduledDate first, then targetDeadline
+        const taskGroup = determineTaskDateGroup(task); 
+
+        let dateText = '';
+        let dateColorClass = 'text-gray-500'; // Default color
+        let IconComponent = Clock; // Default icon
+
+        switch (taskGroup) {
+            case DateGroup.OVERDUE:
+                dateText = `Scheduled: ${format(displayDate, 'MMM d')}`;
+                dateColorClass = 'text-red-500 font-semibold';
+                IconComponent = AlertCircle;
+                break;
+            case DateGroup.TODAY:
+                dateText = 'Scheduled: Today';
+                dateColorClass = 'text-orange-500 font-semibold';
+                break;
+            case DateGroup.TOMORROW:
+                dateText = 'Scheduled: Tomorrow';
+                dateColorClass = 'text-blue-500';
+                break;
+            case DateGroup.THIS_WEEK:
+            case DateGroup.NEXT_WEEK:
+            case DateGroup.THIS_MONTH:
+            case DateGroup.FUTURE:
+                dateText = `Scheduled: ${format(displayDate, 'MMM d')}`;
+                break;
+            case DateGroup.NO_DATE: 
+            default:
+                return null; // Don't render anything for these cases
+        }
+
+        return (
+            <span className={`flex items-center text-xs ${dateColorClass}`}>
+                <IconComponent className="mr-1 h-3 w-3" />
+                {dateText}
+            </span>
+        );
     };
+
+    // Determine if the task is completed to show the green checkmark
+    const isTaskCompleted = task.status === TaskStatus.COMPLETED;
 
     return (
         <Card
-            key={task.id}
-            className="block overflow-hidden group border-0 shadow-none p-0 mb-2">
-            <CardContent 
-                className={cn(
-                    "p-4 relative dark:group-hover:bg-slate-600 transition-colors duration-200",
-                    determineTaskDateGroup(task) === DateGroup.OVERDUE ? 
-                        "bg-red-50 dark:bg-slate-700/90 group-hover:bg-red-100/50" : 
-                        "bg-gray-100 dark:bg-slate-700 group-hover:bg-transparent"
-                )}
-                id={`task-card-${task.id}`}
-            >
+            className={cn(
+                'task-card group relative mb-2 rounded-lg shadow-sm transition-all duration-200 ease-in-out hover:shadow-md',
+                {
+                    'opacity-60 completed-task-card': viewingCompleted,
+                    'border-2 border-blue-500 selected-task-card': isSelected,
+                    'cursor-default': isBulkEditing, // Prevent hover effects if bulk editing
+                }
+            )}
+            data-testid={`task-card-${task.id}`}>
+            <CardContent className="p-3">
                 <div className="flex items-start gap-3">
-                    {isBulkEditing && (
+                    {isBulkEditing ? (
                         <Checkbox
+                            id={`bulk-select-${task.id}`}
                             checked={isSelected}
                             onCheckedChange={() =>
-                                onToggleSelectTask?.(task.id)
+                                onToggleSelectTask && onToggleSelectTask(task.id)
                             }
-                            className="mt-1 mr-3"
+                            className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            aria-label={`Select task ${task.title}`}
                         />
-                    )}
-                    {!isBulkEditing && !viewingCompleted && (
-                        <Checkbox
-                            checked={task.completed}
-                            onCheckedChange={() => onComplete(task)}
-                            className="mt-1 invisible group-hover:visible"
-                        />
-                    )}
-                    {!isBulkEditing && viewingCompleted && (
-                        <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center mt-1">
+                    ) : isTaskCompleted ? (
+                        <div
+                            data-testid={`completed-indicator-${task.id}`}
+                            className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center mt-1">
                             <Check className="h-3 w-3 text-white" />
                         </div>
+                    ) : (
+                        <Checkbox
+                            id={`complete-${task.id}`}
+                            checked={false} // Always unchecked for non-completed tasks
+                            onCheckedChange={() => {
+                                onComplete(task);
+                                toast({
+                                    title: 'Task Completed!',
+                                    description: `"${task.title}" marked as complete.`,
+                                });
+                            }}
+                            className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            aria-label={`Complete task ${task.title}`}
+                        />
                     )}
                     <div
                         className={`flex-1 ${

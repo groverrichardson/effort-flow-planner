@@ -19,7 +19,7 @@ const DependencySelector = ({
 }: DependencySelectorProps) => {
     const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredTasks = availableTasks.filter((task) =>
+    const filteredTasks = (availableTasks || []).filter((task) =>
         task.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -43,7 +43,7 @@ const DependencySelector = ({
             {selectedDependencies.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-2">
                     {selectedDependencies.map((depId) => {
-                        const task = availableTasks.find((t) => t.id === depId);
+                        const task = (availableTasks || []).find((t) => t.id === depId);
                         return task ? (
                             <Badge
                                 key={depId}

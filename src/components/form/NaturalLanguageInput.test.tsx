@@ -40,70 +40,52 @@ import useSuggestions from './token/useSuggestions'; // Import for mocking
 // Mock TaskContext more simply
 vi.mock('@/context/TaskContext', () => ({
   useTaskContext: vi.fn(() => ({
-    tasks: [], // Ensure 'tasks' is present
-    tags: [{ id: 'tag1', name: 'Work', color: '#FF0000' }],
-    people: [{ id: 'person1', name: 'Alice' }],
-    recurrenceRules: [],
-    addTask: vi.fn(),
-    updateTask: vi.fn(),
-    deleteTask: vi.fn(),
-    completeTask: vi.fn(),
-    addTag: vi.fn(),
-    updateTag: vi.fn(),
-    deleteTag: vi.fn(),
-    addPerson: vi.fn(),
-    updatePerson: vi.fn(),
-    deletePerson: vi.fn(),
-    getTodaysCompletedTasks: vi.fn(() => []),
-    loading: false,
-    getRecurrenceRuleById: vi.fn(),
+    tags: [{ id: 'tag1', name: 'Work', color: '#ff0000' }, { id: 'tag2', name: 'Personal', color: '#00ff00' }],
+    people: [{ id: 'person1', name: 'Alice' }, { id: 'person2', name: 'Bob' }],
+    // Add other necessary mock values from TaskContext if NaturalLanguageInput uses them
   })),
 }));
 
-// Mock custom hooks
+// Mock useGeminiHighlighting
 vi.mock('./token/useGeminiHighlighting', () => ({
   default: vi.fn(() => ({
     isGeminiProcessing: false,
-    geminiEntities: { people: [], tags: [] }, // Corrected structure
+    geminiEntities: [],
   })),
 }));
 
-const mockApplySuggestion = vi.fn();
-const mockCloseSuggestions = vi.fn();
-const mockCheckForSuggestions = vi.fn();
-
-// State for useSuggestions mock
-let currentMockPopoverOpen = false;
-const mockCloseSuggestionsFn = vi.fn(() => {
-  currentMockPopoverOpen = false;
+// Mock useSuggestions
+let currentMockPopoverOpen = false; // Controllable state for the mock
+const mockSetPopoverOpenFn = vi.fn((isOpen: boolean) => {
+  currentMockPopoverOpen = isOpen;
 });
-const mockSetPopoverOpenFn = vi.fn((val: boolean) => {
-  currentMockPopoverOpen = val;
-});
-const mockCheckForSuggestionsFn = vi.fn((text: string) => {
-  if (text.includes('@') || text.includes('#')) { // Basic trigger for tests
-    currentMockPopoverOpen = true;
+const mockCheckForSuggestionsFn = vi.fn((text: string, cursorPosition: number) => {
+  // Simulate opening suggestions if text contains '@'
+  if (text.includes('@')) {
+    mockSetPopoverOpenFn(true); // Use the mocked setter
   }
 });
-
 const mockApplySuggestionFn = vi.fn();
+const mockCloseSuggestionsFn = vi.fn(() => {
+  mockSetPopoverOpenFn(false); // Use the mocked setter
+});
 const mockSelectNextSuggestionFn = vi.fn();
 const mockSelectPreviousSuggestionFn = vi.fn();
 
-// Mock for useSuggestions - This is the primary mock setup
 vi.mock('./token/useSuggestions', () => ({
   default: vi.fn(() => ({
-    suggestions: { type: 'person', items: [{ id: '1', name: 'Alice' }, { id: '2', name: 'Alicia' }] }, // Example suggestions
-    popoverOpen: currentMockPopoverOpen, // Uses the stateful variable
-    applySuggestion: mockApplySuggestionFn, // Stateful mock function
-    closeSuggestions: mockCloseSuggestionsFn, // Stateful mock function
-    checkForSuggestions: mockCheckForSuggestionsFn, // Stateful mock function
-    selectedSuggestionIndex: 0, // Default selected index
-    setSuggestions: vi.fn(), // Mocked setter
-    setPopoverOpen: mockSetPopoverOpenFn, // Stateful mock setter
-    setSelectedSuggestionIndex: vi.fn(), // Mocked setter
-    selectNextSuggestion: mockSelectNextSuggestionFn, // Stateful mock function
-    selectPreviousSuggestion: mockSelectPreviousSuggestionFn, // Stateful mock function
+    suggestions: { // Mock structure based on SuggestionDropdown's expectation
+      type: 'people', // Example type
+      items: currentMockPopoverOpen ? [{ id: 'person1', name: 'Alice' }, { id: 'person2', name: 'Alicia' }] : [],
+    },
+    popoverOpen: currentMockPopoverOpen,
+    selectedIndex: 0,
+    checkForSuggestions: mockCheckForSuggestionsFn,
+    applySuggestion: mockApplySuggestionFn,
+    closeSuggestions: mockCloseSuggestionsFn,
+    selectNextSuggestion: mockSelectNextSuggestionFn,
+    selectPreviousSuggestion: mockSelectPreviousSuggestionFn,
+    // Mock handleKeyDown if it's part of the hook's return and used by the component
     handleKeyDown: vi.fn().mockImplementation((event: React.KeyboardEvent<Element>) => { // Added Element type for event target
       if (event.key === 'Escape') {
         mockCloseSuggestionsFn();
@@ -365,8 +347,8 @@ describe('NaturalLanguageInput Component', () => {
         onSubmit={mockOnSubmit}
       />
     );
-
     const editor = screen.getByTestId('tiptap-editor');
+
     // Simulate typing that should trigger suggestions. 
     // mockCheckForSuggestionsFn is set up to make currentMockPopoverOpen true if text includes '@'
     await act(async () => {
@@ -389,21 +371,20 @@ describe('NaturalLanguageInput Component', () => {
 
     // Simulate pressing Escape to close the dropdown
     // The handleKeyDown in the useSuggestions mock calls mockCloseSuggestionsFn
-    await user.keyboard('{Escape}'); // Use userEvent for more robust key simulation
+    await act(async () => { await user.keyboard('{Escape}'); }); // Use userEvent for more robust key simulation
 
     expect(mockCloseSuggestionsFn).toHaveBeenCalled();
     // mockCloseSuggestionsFn sets currentMockPopoverOpen to false
     expect(currentMockPopoverOpen).toBe(false);
-
-    // Force a re-render to ensure the component picks up the new popoverOpen state from the hook
+    
+    // Force a re-render to ensure the SuggestionDropdown gets the updated popoverOpen=false prop
     rerender(
       <NaturalLanguageInput
-        value={editor.textContent || "Hello @A"} // Use current editor content or a stable value
+        value="Hello @A" 
         onChange={mockOnChange}
         onSubmit={mockOnSubmit}
       />
     );
-
 
     // The dropdown should now be hidden.
     await waitFor(() => {

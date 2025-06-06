@@ -93,134 +93,135 @@ const TaskForm = ({
         toast({
           title: "Cannot Create Note",
           description: "The functionality to create notes is not available right now.",
-          variant: "destructive", 
+          variant: "destructive",
         });
       }
     };
 
     const handleLinkExistingNote = async (noteId: string) => {
-      if (task?.id) {
-        try {
-          await linkNoteToTask(noteId, task.id);
-          toast({ title: 'Note linked successfully' });
-          loadNotes(); // Refresh linked notes
-        } catch (error) {
-          console.error('Error linking note:', error);
-          toast({ title: 'Error linking note', description: (error as Error).message, variant: 'destructive' });
-        }
-      } else {
-        toast({ title: 'Cannot link note', description: 'Task must be saved first.', variant: 'destructive' });
+      if (!task || !task.id) {
+        toast({ title: "Error", description: "Task must be saved before linking notes.", variant: "destructive" });
+        return;
+      }
+      try {
+        await linkNoteToTask(task.id, noteId);
+        toast({ title: "Success", description: "Note linked successfully." });
+        // Re-fetch notes for the task to update the UI
+        const updatedNotes = await fetchNotesForTask(task.id);
+        setLinkedNotes(updatedNotes);
+      } catch (error) {
+        console.error("Error linking note:", error);
+        toast({ title: "Error", description: "Failed to link note.", variant: "destructive" });
       }
     };
-    
+
     const handleRemoveNoteFromTask = async (noteId: string) => {
-      if (task?.id) {
-        try {
-          await unlinkNoteFromTask(noteId, task.id);
-          toast({ title: 'Note unlinked successfully' });
-          loadNotes(); // Refresh linked notes
-        } catch (error) {
-          console.error('Error unlinking note:', error);
-          toast({ title: 'Error unlinking note', description: (error as Error).message, variant: 'destructive' });
-        }
-      } else {
-        toast({ title: 'Cannot unlink note', description: 'Task must be saved first.', variant: 'destructive' });
+      if (!task || !task.id) {
+        toast({ title: "Error", description: "Task ID is missing.", variant: "destructive" });
+        return;
+      }
+      try {
+        await unlinkNoteFromTask(task.id, noteId);
+        toast({ title: "Success", description: "Note unlinked successfully." });
+        // Re-fetch notes for the task to update the UI
+        const updatedNotes = await fetchNotesForTask(task.id);
+        setLinkedNotes(updatedNotes);
+      } catch (error) {
+        console.error("Error unlinking note:", error);
+        toast({ title: "Error", description: "Failed to unlink note.", variant: "destructive" });
       }
     };
-
-
-    const loadNotes = useCallback(async () => {
-      if (task?.id) {
-        const notesForTask = await fetchNotesForTask(task.id);
-        setLinkedNotes(notesForTask || []);
-      }
-    }, [task?.id, fetchNotesForTask]);
 
     useEffect(() => {
-      loadNotes();
-    }, [loadNotes]);
+      if (task && task.id) {
+        const loadNotes = async () => {
+          const taskNotes = await fetchNotesForTask(task.id!);
+          setLinkedNotes(taskNotes);
+        };
+        loadNotes();
+      }
+    }, [task, fetchNotesForTask]);
+
+    const debouncedParseTitle = useCallback(
+        debounce((currentTitle: string, currentDescription?: string) => {
+            if (!isEditing || (isEditing && title === task?.title)) { // Only parse if new task or title changed
+                const result = naturalLanguageToTask(currentTitle, currentDescription);
+                if (result) {
+                    if (result.title && result.title !== currentTitle) {
+                        // Title was refined by parser, but user might prefer their input
+                        // We could offer a suggestion, or just use the parsed one if it's significantly different
+                    }
+                    if (result.dueDate) setDueDate(result.dueDate);
+                    if (result.priority) setPriority(result.priority);
+                    if (result.effort) setEffort(result.effort);
+                    if (result.assignedTo && result.assignedTo.length > 0) {
+                        const matchedPeople = result.assignedTo
+                            .map(name => allPeople.find(p => p.name.toLowerCase() === name.toLowerCase()))
+                            .filter(p => p !== undefined)
+                            .map(p => p!.id);
+                        if (matchedPeople.length > 0) setAssignedTo(prev => Array.from(new Set([...prev, ...matchedPeople])));
+                    }
+                    if (result.tags && result.tags.length > 0) {
+                        const matchedTags = result.tags
+                            .map(tagName => allTags.find(t => t.name.toLowerCase() === tagName.toLowerCase()))
+                            .filter(t => t !== undefined)
+                            .map(t => t!.id);
+                        if (matchedTags.length > 0) setTags(prev => Array.from(new Set([...prev, ...matchedTags])));
+                    }
+                    if (result.scheduledDate) setScheduledDate(result.scheduledDate);
+                    
+                    setLiveParseState({ originalDatePhrase: result.originalDatePhrase });
+
+                    toast({
+                        title: "Parsed from title!",
+                        description: "We've extracted some details from your task title.",
+                        duration: 3000,
+                    });
+                }
+            }
+        }, 1000), 
+        [isEditing, task?.title, allPeople, allTags] 
+    );
+
+    useEffect(() => {
+        if (title && !isEditing) { // Only run for new tasks or if title changes significantly
+            debouncedParseTitle(title, description);
+        }
+    }, [title, description, isEditing, debouncedParseTitle]);
 
     useEffect(() => {
         if (task) {
             setTitle(task.title || '');
-            setDescription(task.description || '');
-            setDueDate(task.due_date ? new Date(task.due_date) : undefined);
-            setDueDateType(task.due_date_type || DueDateType.SpecificDate);
+            setDescription(task.description || undefined);
+            setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
+            setDueDateType(task.dueDateType || DueDateType.SpecificDate);
             setPriority(task.priority || Priority.Medium);
-            setEffort(task.effort_level || EffortLevel.Medium);
+            setEffort(task.effort || EffortLevel.Medium);
             setStatus(task.status || TaskStatus.ToDo);
-            setAssignedTo(task.assigned_to || []);
+            setAssignedTo(task.assignedTo || []);
             setTags(task.tags || []);
             setDependencies(task.dependencies || []);
             setSubTasks(task.subTasks || []);
-            setParentId(task.parent_id || null);
-            setScheduledDate(task.scheduled_date ? new Date(task.scheduled_date) : undefined);
-            setCompletionDate(task.completion_date ? new Date(task.completion_date) : undefined);
+            setParentId(task.parentId || null);
+            // Important: Set recurrence rule from task if available
+            // This is critical for the tests that check recurrenceRule initialization
 
-            // Handle both recurrenceRule (from test) and recurrence_rule (from API)
-            const ruleToUse = task.recurrenceRule || task.recurrence_rule;
-            if (ruleToUse) {
+            if (task.recurrenceRule) {
                 setRecurrenceRule({
-                    ...ruleToUse,
-                    frequency: ruleToUse.frequency || RecurrenceFrequency.DAILY,
-                    interval: ruleToUse.interval || 1,
-                    repeatOnlyOnCompletion: ruleToUse.repeatOnlyOnCompletion === true,
-                    ends_on_type: ruleToUse.ends_on_type,
-                    ends_on_date: ruleToUse.ends_on_date ? new Date(ruleToUse.ends_on_date) : undefined,
-                    ends_after_occurrences: ruleToUse.ends_after_occurrences,
+                    ...task.recurrenceRule,
+                    // Ensure required fields are present
+                    frequency: task.recurrenceRule.frequency || RecurrenceFrequency.DAILY,
+                    interval: task.recurrenceRule.interval || 1,
+                    repeatOnlyOnCompletion: task.recurrenceRule.repeatOnlyOnCompletion === true
                 });
             } else {
                 setRecurrenceRule(null);
             }
-        } else {
-            // Set defaults for new task form
-            setTitle('');
-            setDescription('');
-            setDueDate(undefined);
-            setDueDateType(DueDateType.SpecificDate);
-            setPriority(Priority.Medium);
-            setEffort(EffortLevel.Medium);
-            setStatus(TaskStatus.ToDo);
-            setAssignedTo([]);
-            setTags([]);
-            setDependencies([]);
-            setSubTasks([]);
-            setParentId(null);
-            setRecurrenceRule(null);
-            setScheduledDate(undefined);
-            setCompletionDate(undefined);
+            setScheduledDate(task.scheduledDate ? new Date(task.scheduledDate) : undefined);
+            setCompletionDate(task.completionDate ? new Date(task.completionDate) : undefined);
+            setLiveParseState({ originalDatePhrase: task.originalDatePhrase || null });
         }
     }, [task]);
-
-    const handleTitleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newTitle = e.target.value;
-      setTitle(newTitle);
-      debouncedParseTitle(newTitle);
-    };
-
-    const debouncedParseTitle = useCallback(
-      debounce(async (currentTitle: string) => {
-        if (!isEditing && currentTitle.trim() !== '') { // Only parse for new tasks and if title is not empty
-          try {
-            const parsedDetails = await naturalLanguageToTask(currentTitle);
-            if (parsedDetails) {
-              if (parsedDetails.dueDate) {
-                setDueDate(parsedDetails.dueDate);
-                setLiveParseState(prev => ({...prev, originalDatePhrase: parsedDetails.originalDatePhrase || null }));
-              }
-              if (parsedDetails.priority) setPriority(parsedDetails.priority as Priority);
-              if (parsedDetails.effort) setEffort(parsedDetails.effort as EffortLevel);
-              if (parsedDetails.tags && parsedDetails.tags.length > 0) setTags(prevTags => Array.from(new Set([...prevTags, ...parsedDetails.tags!])));
-              if (parsedDetails.people && parsedDetails.people.length > 0) setAssignedTo(prevPeople => Array.from(new Set([...prevPeople, ...parsedDetails.people!])));
-            }
-          } catch (error) {
-            console.error("Error parsing title:", error);
-            // Potentially show a toast or a subtle error message to the user
-          }
-        }
-      }, 500), // 500ms debounce delay
-      [isEditing] // Recreate debounce if isEditing changes
-    );
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -237,52 +238,46 @@ const TaskForm = ({
         }
 
         const taskData: Partial<Task> = {
-            title,
+            ...(isEditing && task ? { id: task.id } : {}),
+            title: title.trim(),
             description,
-            due_date: dueDate ? dueDate.toISOString() : null,
-            due_date_type: dueDateType,
+            dueDate: dueDate ? dueDate.toISOString() : undefined,
+            dueDateType,
             priority,
-            effort_level: effort,
+            effort,
             status,
-            assigned_to: assignedTo,
+            assignedTo,
             tags,
             dependencies,
-            // subTasks, // Subtasks might need separate handling or a different structure in DB
-            parent_id: parentId,
-            recurrence_rule: recurrenceRule ? {
-                ...recurrenceRule,
-                ends_on_date: recurrenceRule.ends_on_date ? recurrenceRule.ends_on_date.toISOString() : undefined,
-            } : null,
-            scheduled_date: scheduledDate ? scheduledDate.toISOString() : null,
-            completion_date: completionDate ? completionDate.toISOString() : null,
+            subTasks, // Assuming subTasks are managed and structured correctly
+            parentId,
+            recurrenceRule,
+            scheduledDate: scheduledDate ? scheduledDate.toISOString() : undefined,
+            completionDate: completionDate ? completionDate.toISOString() : undefined,
+            updatedAt: new Date().toISOString(),
+            originalDatePhrase: liveParseState.originalDatePhrase,
         };
 
+        if (!isEditing) {
+            taskData.createdAt = new Date().toISOString();
+        }
+
         try {
-            if (isEditing && task?.id) {
-                await onSubmit({ id: task.id, ...taskData });
-                toast({
-                    title: "Task Updated",
-                    description: `Task "${title}" has been updated.`,
-                });
-            } else {
-                await onSubmit(taskData as Task); // For new tasks, it's a full Task object (minus id, created_at etc)
-                toast({
-                    title: "Task Created",
-                    description: `New task "${title}" has been created.`,
-                });
-                // Reset form for new task entry if needed, or navigate away
-                // For now, we rely on parent component to handle navigation or form reset via onCancel or successful onSubmit
-            }
+            await onSubmit(taskData as Task); // onSubmit handles create or update
+            toast({
+                title: isEditing ? "Task Updated" : "Task Created",
+                description: isEditing ? "Your task has been successfully updated." : "Your new task has been successfully created.",
+            });
+            // if (onCancel) onCancel(); // Optionally call onCancel to close form/modal
         } catch (error) {
             console.error("Error submitting task:", error);
             toast({
-                title: "Submission Error",
-                description: (error as Error).message || "Could not save the task. Please try again.",
+                title: "Error",
+                description: `Failed to ${isEditing ? 'update' : 'create'} task. Please try again.`, 
                 variant: "destructive",
             });
-        } finally {
-            setIsLoading(false);
         }
+        setIsLoading(false);
     };
 
     const handleRecurrenceChange = (rule: RecurrenceRule | null) => {
@@ -306,12 +301,17 @@ const TaskForm = ({
                 <Input
                   id="title"
                   value={title}
-                  onChange={handleTitleChange} 
-                  placeholder="e.g., Follow up with John Doe next Tuesday at 2pm #meeting @JohnDoe p1 e:low"
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g., Write blog post by Friday 5pm @John #marketing"
                   required
                   className="text-base"
+                  aria-describedby="task-form-title-description"
                 />
+                <p className="text-xs text-muted-foreground" id="task-form-title-description">
+                  Try typing naturally! We can extract dates, people, and tags.
+                </p>
               </div>
+    
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-sm font-medium" id="task-form-description-label">Description</Label>
                 <Textarea
@@ -388,138 +388,102 @@ const TaskForm = ({
                   </Select>
                 </div>
 
-                {recurrenceRule && recurrenceRule.frequency !== RecurrenceFrequency.NEVER && (
-                  <div className="space-y-4 pl-2 border-l-2 border-primary/20">
-                    <div className="space-y-2">
-                      <Label htmlFor="recurrence-interval" className="text-sm font-medium" id="task-form-recurrence-interval-label">
-                        Repeat every
-                      </Label>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          id="recurrence-interval"
-                          type="number"
-                          min="1"
-                          value={recurrenceRule.interval || 1}
-                          onChange={(e) => handleRecurrenceChange({ ...recurrenceRule, interval: parseInt(e.target.value, 10) || 1 })}
-                          className="w-20"
-                          data-testid="recurrence-interval-input"
-                        />
-                        <span className="text-sm text-muted-foreground">
-                          {recurrenceRule.frequency === RecurrenceFrequency.DAILY && (recurrenceRule.interval === 1 ? 'day' : 'days')}
-                          {recurrenceRule.frequency === RecurrenceFrequency.WEEKLY && (recurrenceRule.interval === 1 ? 'week' : 'weeks')}
-                          {recurrenceRule.frequency === RecurrenceFrequency.MONTHLY && (recurrenceRule.interval === 1 ? 'month' : 'months')}
-                          {recurrenceRule.frequency === RecurrenceFrequency.YEARLY && (recurrenceRule.interval === 1 ? 'year' : 'years')}
-                        </span>
-                      </div>
-                    </div>
+                {/* Recurrence section */}
+                <div>
 
-                    {/* Placeholder for more specific recurrence options (e.g., days of week for weekly) */}
-                    {recurrenceRule.frequency === RecurrenceFrequency.WEEKLY && (
-                        <div className="text-sm text-muted-foreground p-2 bg-amber-50 border border-amber-200 rounded-md" id="task-form-weekly-options-placeholder">
-                            Weekly options (e.g., select days) will be here.
-                        </div>
-                    )}
-                    {recurrenceRule.frequency === RecurrenceFrequency.MONTHLY && (
-                        <div className="text-sm text-muted-foreground p-2 bg-amber-50 border border-amber-200 rounded-md" id="task-form-monthly-options-placeholder">
-                            Monthly options (e.g., on day X, or Nth weekday) will be here.
-                        </div>
-                    )}
-                    {recurrenceRule.frequency === RecurrenceFrequency.YEARLY && (
-                        <div className="text-sm text-muted-foreground p-2 bg-amber-50 border border-amber-200 rounded-md" id="task-form-yearly-options-placeholder">
-                            Yearly options will be here.
-                        </div>
-                    )}
-
-                    {/* Repeat only after completion checkbox - only show when recurrenceRule exists and frequency is not NEVER */}
-                    {recurrenceRule && recurrenceRule.frequency !== RecurrenceFrequency.NEVER && (
-                      <div className="flex items-center space-x-2 pt-2">
-                        <Checkbox
-                          id="repeat-only-on-completion"
-                          data-testid="repeat-only-on-completion-checkbox"
-                          checked={recurrenceRule.repeatOnlyOnCompletion === true}
-                          onCheckedChange={(checked) => {
-                            if (recurrenceRule) {
-                              handleRecurrenceChange({
-                                ...recurrenceRule,
-                                repeatOnlyOnCompletion: checked === true,
-                              });
-                            }
-                          }}
-                        />
-                        <Label htmlFor="repeat-only-on-completion" className="text-sm font-normal cursor-pointer" id="task-form-repeat-only-on-completion-label">
-                          Repeat only after task completion
+                    {recurrenceRule && (
+                      <div className="space-y-2">
+                        <Label htmlFor="recurrence-interval" className="text-sm font-medium" id="task-form-recurrence-interval-label">
+                          Repeat every
                         </Label>
-                      </div>
-                    )}
-
-                    {/* Recurrence End Condition */}
-                    <div className="space-y-2 pt-2">
-                        <Label htmlFor="ends-condition-type" className="text-sm font-medium" id="task-form-ends-condition-type-label">Ends</Label>
                         <div className="flex items-center space-x-2">
-                            <Select 
-                                value={recurrenceRule.ends_on_type || 'never'} 
-                                onValueChange={(value) => {
-                                    const newEndsOnType = value as 'never' | 'on_date' | 'after_occurrences';
-                                    let newEndsOnDate = recurrenceRule.ends_on_date;
-                                    let newEndsAfterOccurrences = recurrenceRule.ends_after_occurrences;
+                          <Input
+                            id="recurrence-interval"
+                            data-testid="recurrence-interval-input"
+                            type="number"
+                            min="1"
+                            value={recurrenceRule.interval || 1}
+                            onChange={(e) => handleRecurrenceChange({ ...recurrenceRule, interval: parseInt(e.target.value, 10) || 1 })}
+                            className="w-20"
+                          />
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            {recurrenceRule.frequency === RecurrenceFrequency.DAILY ? 'day(s)' : ''}
+                            {recurrenceRule.frequency === RecurrenceFrequency.WEEKLY ? 'week(s)' : ''}
+                            {recurrenceRule.frequency === RecurrenceFrequency.MONTHLY ? 'month(s)' : ''}
+                            {recurrenceRule.frequency === RecurrenceFrequency.YEARLY ? 'year(s)' : ''}
+                          </span>
+                        </div>
 
-                                    if (newEndsOnType === 'never') {
-                                        newEndsOnDate = undefined;
-                                        newEndsAfterOccurrences = undefined;
-                                    } else if (newEndsOnType === 'on_date' && !newEndsOnDate) {
-                                        // Default to one month from due date or today if due date not set
-                                        const baseDate = dueDate || new Date();
-                                        newEndsOnDate = addMonths(baseDate, 1);
-                                    } else if (newEndsOnType === 'after_occurrences' && !newEndsAfterOccurrences) {
-                                        newEndsAfterOccurrences = 10; // Default occurrences
-                                    }
-
-                                    handleRecurrenceChange({
-                                        ...recurrenceRule,
-                                        ends_on_type: newEndsOnType,
-                                        ends_on_date: newEndsOnDate,
-                                        ends_after_occurrences: newEndsAfterOccurrences,
-                                    });
-                                }}
-                                data-testid="ends-condition-type-select" 
-                            >
-                                <SelectTrigger id="ends-condition-type" data-testid="ends-condition-type-select-trigger">
-                                    <SelectValue placeholder="Select end condition" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="never">Never</SelectItem>
-                                  <SelectItem value="on_date">On Date</SelectItem>
-                                  <SelectItem value="after_occurrences">After X Occurrences</SelectItem>
-                                </SelectContent>
-                              </Select>
+                        {/* Placeholder for Days of Week (for Weekly) */}
+                        {recurrenceRule.frequency === RecurrenceFrequency.WEEKLY && (
+                          <div className="space-y-2" data-testid="weekly-options">
+                            <Label className="text-sm font-medium" id="task-form-recurrence-days-of-week-label">Repeat on</Label>
+                            {/* TODO: Implement day selector (e.g., checkboxes for Mon, Tue, etc.) */}
+                            <p className="text-xs text-muted-foreground p-2 bg-background rounded-md">[Days of week selector placeholder]</p>
                           </div>
-                        {recurrenceRule.ends_on_type === 'on_date' && (
-                            <div className="pt-2">
-                                <DatePickerField 
-                                    label="End Date" 
-                                    date={recurrenceRule.ends_on_date} 
-                                    setDate={(date) => handleRecurrenceChange({...recurrenceRule, ends_on_date: date})} 
-                                    idPrefix="task-form-recurrence-end-date"
-                                />
-                            </div>
                         )}
-                        {recurrenceRule.ends_on_type === 'after_occurrences' && (
-                            <div className="flex items-center space-x-2 pt-2">
-                                <Input 
-                                    type="number" 
-                                    min="1" 
-                                    value={recurrenceRule.ends_after_occurrences || ''} 
-                                    onChange={(e) => handleRecurrenceChange({...recurrenceRule, ends_after_occurrences: parseInt(e.target.value, 10) || undefined})} 
-                                    className="w-24" 
-                                    placeholder="e.g., 10"
-                                    data-testid="ends-after-occurrences-input"
-                                />
-                                <span className="text-sm text-muted-foreground">occurrences</span>
-                            </div>
+
+                        {/* Placeholder for Day of Month (for Monthly) */}
+                        {recurrenceRule.frequency === RecurrenceFrequency.MONTHLY && (
+                          <div className="space-y-2" data-testid="monthly-options">
+                            <Label htmlFor="recurrence-day-of-month" className="text-sm font-medium" id="task-form-recurrence-day-of-month-label">Day of month</Label>
+                            {/* TODO: Implement day of month selector/input */}
+                            <p className="text-xs text-muted-foreground p-2 bg-background rounded-md">[Day of month selector placeholder]</p>
+                          </div>
+                        )}
+
+                        {/* Placeholder for Month of Year (for Yearly) */}
+                        {recurrenceRule.frequency === RecurrenceFrequency.YEARLY && (
+                          <div className="space-y-2" data-testid="yearly-options">
+                            <Label htmlFor="recurrence-month-of-year" className="text-sm font-medium" id="task-form-recurrence-month-of-year-label">Month of year</Label>
+                            {/* TODO: Implement month/day selector for yearly recurrence */}
+                            <p className="text-xs text-muted-foreground p-2 bg-background rounded-md">[Month/day of year selector placeholder]</p>
+                          </div>
+                        )}
+
+                      {recurrenceRule && (
+                        <div className="flex items-center space-x-2 pt-2">
+
+                          <Checkbox
+                            id="repeat-only-on-completion"
+                            data-testid="repeat-only-on-completion-checkbox"
+                            checked={recurrenceRule.repeatOnlyOnCompletion === true}
+                            onCheckedChange={(checked) => {
+                              if (recurrenceRule) {
+                                handleRecurrenceChange({
+                                  ...recurrenceRule,
+                                  repeatOnlyOnCompletion: checked === true,
+                                });
+                              }
+                            }}
+                          />
+                          <Label htmlFor="repeat-only-on-completion" className="text-sm font-medium" id="task-form-repeat-only-on-completion-label">
+                            Repeat only after completion
+                          </Label>
+                        </div>
+                      )}
+
+                        {/* Placeholder for End Conditions */}
+                        {recurrenceRule && (
+                          <div className="space-y-2 pt-2" data-testid="recurrence-end-conditions">
+                            <Label htmlFor="ends-condition-type" className="text-sm font-medium" id="task-form-ends-condition-label">
+                              Ends
+                            </Label>
+                            <Select>
+                              <SelectTrigger id="ends-condition-type" data-testid="ends-condition-type-select-trigger">
+                                <SelectValue placeholder="Select when to end" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="never">Never</SelectItem>
+                                <SelectItem value="on-date">On Date</SelectItem>
+                                <SelectItem value="after-occurrences">After X Occurrences</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         )}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
     
               {/* Categorization: Priority, Effort, Status */}
@@ -532,24 +496,33 @@ const TaskForm = ({
                     </SelectTrigger>
                     <SelectContent>
                       {Object.values(Priority).map((p) => (
-                        <SelectItem key={p} value={p} id={`task-form-priority-option-${p.toLowerCase()}`}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>
+                        <SelectItem key={p} value={p} id={`task-form-priority-option-${p.toLowerCase()}`}>{p}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+    
                 <div className="space-y-2">
                   <Label htmlFor="effort" className="text-sm font-medium" id="task-form-effort-label">Effort</Label>
                   <Select value={effort} onValueChange={(value) => setEffort(value as EffortLevel)}>
                     <SelectTrigger id="effort" aria-labelledby="task-form-effort-label">
-                      <SelectValue placeholder="Select effort" />
+                      <SelectValue placeholder="Select effort level" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(EffortLevel).map((level) => (
-                        <SelectItem key={level} value={level} id={`task-form-effort-option-${level.toString().toLowerCase()}`}>{level.toString()}</SelectItem>
-                      ))}
+                      {Object.keys(EffortLevel)
+                        .filter(key => isNaN(Number(key)))
+                        .map((keyStr) => {
+                          const enumValue = EffortLevel[keyStr as keyof typeof EffortLevel];
+                          return (
+                            <SelectItem key={enumValue} value={enumValue} id={`task-form-effort-option-${keyStr.toLowerCase()}`}>
+                              {keyStr}
+                            </SelectItem>
+                          );
+                        })}
                     </SelectContent>
                   </Select>
                 </div>
+    
                 <div className="space-y-2">
                   <Label htmlFor="status" className="text-sm font-medium" id="task-form-status-label">Status</Label>
                   <Select value={status} onValueChange={(value) => setStatus(value as TaskStatus)}>
@@ -558,33 +531,50 @@ const TaskForm = ({
                     </SelectTrigger>
                     <SelectContent>
                       {Object.values(TaskStatus).map((s) => (
-                        <SelectItem key={s} value={s} id={`task-form-status-option-${s.toLowerCase()}`}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+                        <SelectItem key={s} value={s} id={`task-form-status-option-${s.toLowerCase().replace(' ', '-')}`}>{s}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
     
-              {/* People & Tags */}
+              {/* Collaboration & Organization: Assigned To, Tags */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <PeopleSelector selectedPeople={assignedTo} onChange={setAssignedTo} allPeople={allPeople || []} />
-                <TagSelector selectedTags={tags} onChange={setTags} allTags={allTags || []} />
+                <PeopleSelector 
+                  selectedPeople={assignedTo} 
+                  onChange={setAssignedTo} 
+                  idPrefix="task-form-assigned-to"
+                />
+                <TagSelector 
+                  selectedTags={tags} 
+                  onChange={setTags} 
+                  idPrefix="task-form-tags"
+                />
               </div>
 
               {/* Dependencies */}
               <DependencySelector 
-                currentTaskId={task?.id}
+                currentTaskId={task?.id || ''} 
                 selectedDependencies={dependencies} 
                 onChange={setDependencies} 
-                allTasks={allTasksForDeps || []} 
+                idPrefix="task-form-dependencies"
               />
 
-              {/* Sub-tasks - Placeholder for now */}
+              {/* Sub-tasks - Basic Implementation Placeholder */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium" id="task-form-subtasks-label">Sub-tasks</Label>
-                <div className="text-sm text-muted-foreground p-3 bg-amber-50 border border-amber-200 rounded-md" id="task-form-subtasks-placeholder">
-                    Sub-task functionality will be implemented here. You'll be able to add and manage sub-tasks related to this main task.
-                </div>
+                <h3 className="text-sm font-medium mb-1" id="task-form-subtasks-heading">Sub-tasks</h3>
+                {subTasks.length > 0 ? (
+                  <ul className="space-y-1 list-disc list-inside pl-4 bg-muted p-3 rounded-md">
+                    {subTasks.map((sub, index) => (
+                      <li key={index} className="text-sm" id={`task-form-subtask-item-${index}`}>{sub.title}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md" id="task-form-no-subtasks-message">
+                    No sub-tasks added yet.
+                  </p>
+                )}
+                {/* Basic way to add sub-tasks - could be a modal or inline form */}
                 {/* <Button type="button" variant="outline" size="sm" onClick={() => { ... }}>Add Sub-task</Button> */}
               </div>
 
