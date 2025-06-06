@@ -334,6 +334,7 @@ const TaskForm = ({
                   originalDatePhrase={liveParseState.originalDatePhrase}
                   clearOriginalDatePhrase={() => setLiveParseState(prev => ({...prev, originalDatePhrase: null}))}
                   idPrefix="task-form-due-date"
+                  aria-label="Select a due date for this task"
                 />
                 <DatePickerField 
                   label="Scheduled Date" 
@@ -341,6 +342,8 @@ const TaskForm = ({
                   setDate={setScheduledDate} 
                   enableTime={false} 
                   idPrefix="task-form-scheduled-date"
+                  aria-label="Select a scheduled date for this task"
+                  description="The date when this task is planned to be worked on"
                 />
               </div>
 
