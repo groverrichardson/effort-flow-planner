@@ -134,8 +134,12 @@ const mapDbTaskToTask = (
         priority: dbTask.priority as Priority,
         dueDate: dbTask.due_date ? new Date(dbTask.due_date) : null,
         dueDateType: dbTask.due_date_type as DueDateType,
+        /** @deprecated Use scheduledDate instead */
         targetDeadline: dbTask.target_deadline
             ? new Date(dbTask.target_deadline)
+            : null,
+        scheduledDate: dbTask.scheduled_date
+            ? new Date(dbTask.scheduled_date)
             : null,
         goLiveDate: dbTask.go_live_date ? new Date(dbTask.go_live_date) : null,
         effortLevel: dbTask.effort_level as EffortLevel,
@@ -841,8 +845,13 @@ export const TaskService = {
         : null,
     due_date_type: mainTaskInput.dueDateType,
     target_deadline: mainTaskInput.targetDeadline
-        ? formatISO(new Date(mainTaskInput.targetDeadline)) // Using formatISO
-    : null,
+    ? formatISO(new Date(mainTaskInput.targetDeadline))
+    : null, // Keep populating this for now during transition
+scheduled_date: mainTaskInput.scheduledDate
+    ? formatISO(new Date(mainTaskInput.scheduledDate))
+    : mainTaskInput.targetDeadline // Fallback to targetDeadline if scheduledDate is not provided
+        ? formatISO(new Date(mainTaskInput.targetDeadline))
+        : null,
     go_live_date: mainTaskInput.goLiveDate
         ? formatISO(new Date(mainTaskInput.goLiveDate)) // Using formatISO
         : null,
@@ -1116,8 +1125,19 @@ export const TaskService = {
         if (mainTaskUpdates.targetDeadline !== undefined)
             taskChangesForSupabase.target_deadline =
                 mainTaskUpdates.targetDeadline
-                    ? formatISO(new Date(mainTaskUpdates.targetDeadline))
-                    : null;
+                ? formatISO(new Date(mainTaskUpdates.targetDeadline))
+                : null;
+    // Handle scheduledDate, falling back to targetDeadline for scheduled_date if scheduledDate is not explicitly set
+    if (mainTaskUpdates.scheduledDate !== undefined) {
+        taskChangesForSupabase.scheduled_date = mainTaskUpdates.scheduledDate
+            ? formatISO(new Date(mainTaskUpdates.scheduledDate))
+            : null;
+    } else if (mainTaskUpdates.targetDeadline !== undefined) { 
+        // Fallback to targetDeadline for scheduled_date if scheduledDate is not explicitly provided in the update
+        taskChangesForSupabase.scheduled_date = mainTaskUpdates.targetDeadline
+            ? formatISO(new Date(mainTaskUpdates.targetDeadline))
+            : null;
+    }
         if (mainTaskUpdates.goLiveDate !== undefined)
             taskChangesForSupabase.go_live_date = mainTaskUpdates.goLiveDate
                 ? formatISO(new Date(mainTaskUpdates.goLiveDate))
