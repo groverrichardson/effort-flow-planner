@@ -26,13 +26,13 @@ export interface TaskGroup {
 }
 
 /**
- * Determines which date group a task belongs to based on its targetDeadline.
+ * Determines which date group a task belongs to based on its scheduledDate.
  * 
  * @param task The task to categorize
  * @returns The DateGroup enum value representing the task's group
  */
 export const determineTaskDateGroup = (task: Task): DateGroup => {
-  const taskDateForGrouping = task.scheduledDate || task.targetDeadline;
+  const taskDateForGrouping = task.scheduledDate;
   
   if (!taskDateForGrouping) {
     return DateGroup.NO_DATE;
@@ -148,7 +148,7 @@ export const formatGroupTitle = (group: DateGroup, tasks: Task[]): string => {
 };
 
 /**
- * Determines if task dates (targetDeadline or dueDate) are in a valid format that can be parsed by new Date().
+ * Determines if task dates (scheduledDate or dueDate) are in a valid format that can be parsed by new Date().
  * 
  * @param task The task to check
  * @returns Boolean indicating if the task has properly formatted dates or no dates.
@@ -166,5 +166,28 @@ export const hasValidDateFormat = (task: Task): boolean => {
     }
   };
 
-  return checkDateValidity(task.targetDeadline) && checkDateValidity(task.dueDate) && checkDateValidity(task.scheduledDate);
+  return checkDateValidity(task.dueDate) && checkDateValidity(task.scheduledDate);
+};
+
+/**
+ * Sorts tasks by their scheduledDate in ascending order.
+ * Tasks without a scheduledDate are placed at the end.
+ * 
+ * @param tasks Array of tasks to sort
+ * @returns Sorted array of tasks
+ */
+export const sortTasksByDate = (tasks: Task[]): Task[] => {
+  return [...tasks].sort((a, b) => {
+    // If neither task has a scheduledDate, maintain original order
+    if (!a.scheduledDate && !b.scheduledDate) return 0;
+    
+    // Tasks without scheduledDate come last
+    if (!a.scheduledDate) return 1;
+    if (!b.scheduledDate) return -1;
+    
+    // Compare dates
+    const dateA = new Date(a.scheduledDate).getTime();
+    const dateB = new Date(b.scheduledDate).getTime();
+    return dateA - dateB;
+  });
 };
