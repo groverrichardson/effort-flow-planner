@@ -235,43 +235,68 @@ test.describe('Device-specific views', () => {
 
             // Screenshot main content area - avoiding precise element selection
             // Just give the app enough time to fully render
-            await expect(page).toHaveScreenshot(
-                'desktop-dashboard-content.png'
-            );
+            await expect(page).toHaveScreenshot('desktop-dashboard-content.png');
         });
     });
 
     // Mobile view tests
     test.describe('Mobile viewport', () => {
         test.use({ viewport: devices.mobile });
+        
+        // Authentication state for mobile tests
+        authStates['Mobile viewport'] = { isAuthenticated: false };
+        
+        // Authenticate once before all tests in this group
+        test.beforeAll(async ({ browser }) => {
+            if (!authStates['Mobile viewport'].isAuthenticated) {
+                const page = await browser.newPage();
+                try {
+                    await authenticate(page);
+                    authStates['Mobile viewport'].isAuthenticated = true;
+                } catch (e) {
+                    console.error('Mobile viewport authentication failed:', e);
+                } finally {
+                    await page.close();
+                }
+            }
+        });
 
         test('mobile layout (sidebar likely collapsed)', async ({ page }) => {
-            await navigateToPage(page, '/');
-            
-            // On mobile, sidebar may be collapsed by default - this is expected
-            await expect(page).toHaveScreenshot('mobile-default-view.png');
-            
-            // Try to find and click a hamburger menu or sidebar toggle if it exists
-            const possibleToggles = [
-                page.getByRole('button', {
-                    name: /menu|toggle|hamburger|sidebar/i,
-                }),
-                page.locator(
-                    '.hamburger, [data-testid="menu-button"], button.menu-toggle'
-                ),
-                page.locator('button').filter({ hasText: /☰|≡|menu/i }),
-            ];
+            try {
+                await navigateToPage(page, '/');
+                
+                // On mobile, sidebar may be collapsed by default - this is expected
+                await expect(page).toHaveScreenshot('mobile-default-view.png');
+                
+                // Try to find and click a hamburger menu or sidebar toggle if it exists
+                const possibleToggles = [
+                    page.getByRole('button', {
+                        name: /menu|toggle|hamburger|sidebar/i,
+                    }),
+                    page.locator(
+                        '.hamburger, [data-testid="menu-button"], button.menu-toggle'
+                    ),
+                    page.locator('button').filter({ hasText: /☰|≡|menu/i }),
+                ];
 
-            // Try each possible toggle selector
-            for (const toggle of possibleToggles) {
-                if ((await toggle.count()) > 0 && (await toggle.isVisible())) {
-                    await toggle.click();
-                    await page.waitForTimeout(1000); // Wait for animation
-                    await expect(page).toHaveScreenshot(
-                        'mobile-with-sidebar-open.png'
-                    );
-                    break; // Stop after first successful toggle
+                // Try each possible toggle selector
+                let toggleFound = false;
+                for (const toggle of possibleToggles) {
+                    if ((await toggle.count()) > 0 && (await toggle.isVisible())) {
+                        await toggle.click();
+                        await page.waitForTimeout(1000); // Wait for animation
+                        await expect(page).toHaveScreenshot('mobile-with-sidebar-open.png');
+                        toggleFound = true;
+                        break; // Stop after first successful toggle
+                    }
                 }
+                
+                if (!toggleFound) {
+                    console.log('No visible sidebar toggle found on mobile view');
+                }
+            } catch (e) {
+                console.error('Mobile layout test failed:', e);
+                throw e;
             }
         });
     });
@@ -281,6 +306,7 @@ test.describe('Device-specific views', () => {
 test.describe('Automatic route testing', () => {
     // Authentication state for this group
     authStates['Automatic route testing'] = { isAuthenticated: false };
+    
     // Run on both desktop and mobile
     for (const [deviceName, viewport] of Object.entries(devices)) {
         test.describe(`${deviceName} view`, () => {
@@ -297,30 +323,50 @@ test.describe('Automatic route testing', () => {
                 }
             });
             
-            test(`auto-visual test of routes on ${deviceName}`, async ({
-                page,
-            }) => {
-                // List of routes to test
-                const routes = ['/', '/tasks', '/notes', '/login'];
-                
-                // Start with login route to handle authentication first
-                const sortedRoutes = [
-                    '/login',
-                    ...routes.filter((r) => r !== '/login'),
-                ];
+            test(`auto-visual test of routes on ${deviceName}`, async ({ page }) => {
+                try {
+                    // List of routes to test
+                    const routes = ['/', '/tasks', '/notes', '/login'];
+                    
+                    // Start with login route to handle authentication first
+                    const sortedRoutes = [
+                        '/login',
+                        ...routes.filter((r) => r !== '/login'),
+                    ];
 
-                for (const route of sortedRoutes) {
-                    // Get a simple name for the route for the screenshot file
-                    const pageName =
-                        route === '/' ? 'home' : route.substring(1);
+                    for (const route of sortedRoutes) {
+                        // Get a simple name for the route for the screenshot file
+                        const pageName = route === '/' ? 'home' : route.substring(1);
 
-                    // Use standardized navigation pattern
-                    await navigateToPage(page, route);
+                        console.log(`Testing ${deviceName} view of ${route}`);
+                        
+                        // Use standardized navigation pattern
+                        await navigateToPage(page, route);
+                        
+                        // Additional checks for device-specific features
+                        if (deviceName === 'desktop') {
+                            // For desktop, verify sidebar is expanded
+                            const sidebar = page.locator('.sidebar, [data-testid="sidebar"], nav.main-nav').first();
+                            if (await sidebar.count() > 0) {
+                                // Check if sidebar is visible and has appropriate width
+                                const box = await sidebar.boundingBox();
+                                if (box && box.width < 100) {
+                                    console.warn(`Desktop sidebar appears collapsed on ${route}, width: ${box.width}px`);
+                                }
+                            }
+                        } else if (deviceName === 'mobile') {
+                            // For mobile, verify screen is appropriate for mobile view
+                            // Mobile-specific checks could go here
+                        }
 
-                    // Take screenshot with device prefix to distinguish between views
-                    await expect(page).toHaveScreenshot(
-                        `${deviceName}-${pageName}-page.png`
-                    );
+                        // Take screenshot with device prefix to distinguish between views
+                        await expect(page).toHaveScreenshot(
+                            `${deviceName}-${pageName}-page.png`
+                        );
+                    }
+                } catch (e) {
+                    console.error(`Error in ${deviceName} route test:`, e);
+                    throw e;
                 }
             });
         });

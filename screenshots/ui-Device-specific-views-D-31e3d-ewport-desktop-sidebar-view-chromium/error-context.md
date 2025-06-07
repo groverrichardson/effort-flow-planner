@@ -8,7 +8,7 @@
 ```
 Error: expect(page).toHaveScreenshot(expected)
 
-  76647 pixels (ratio 0.09 of all image pixels) are different.
+  76639 pixels (ratio 0.09 of all image pixels) are different.
 
 Expected: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts-snapshots/desktop-with-sidebar-chromium-darwin.png
 Received: /Users/freedommarketing/Desktop/effort-flow-planner/screenshots/ui-Device-specific-views-D-31e3d-ewport-desktop-sidebar-view-chromium/desktop-with-sidebar-actual.png
@@ -21,14 +21,14 @@ Call log:
     - disabled all CSS animations
   - waiting for fonts to load...
   - fonts loaded
-  - 76647 pixels (ratio 0.09 of all image pixels) are different.
+  - 76639 pixels (ratio 0.09 of all image pixels) are different.
   - waiting 100ms before taking screenshot
   - taking page screenshot
     - disabled all CSS animations
   - waiting for fonts to load...
   - fonts loaded
   - captured a stable screenshot
-  - 76647 pixels (ratio 0.09 of all image pixels) are different.
+  - 76639 pixels (ratio 0.09 of all image pixels) are different.
 
     at /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:230:32
 ```
@@ -208,96 +208,97 @@ Call log:
   235 |
   236 |             // Screenshot main content area - avoiding precise element selection
   237 |             // Just give the app enough time to fully render
-  238 |             await expect(page).toHaveScreenshot(
-  239 |                 'desktop-dashboard-content.png'
-  240 |             );
-  241 |         });
-  242 |     });
-  243 |
-  244 |     // Mobile view tests
-  245 |     test.describe('Mobile viewport', () => {
-  246 |         test.use({ viewport: devices.mobile });
-  247 |
-  248 |         test('mobile layout (sidebar likely collapsed)', async ({ page }) => {
-  249 |             await navigateToPage(page, '/');
-  250 |             
-  251 |             // On mobile, sidebar may be collapsed by default - this is expected
-  252 |             await expect(page).toHaveScreenshot('mobile-default-view.png');
-  253 |             
-  254 |             // Try to find and click a hamburger menu or sidebar toggle if it exists
-  255 |             const possibleToggles = [
-  256 |                 page.getByRole('button', {
-  257 |                     name: /menu|toggle|hamburger|sidebar/i,
-  258 |                 }),
-  259 |                 page.locator(
-  260 |                     '.hamburger, [data-testid="menu-button"], button.menu-toggle'
-  261 |                 ),
-  262 |                 page.locator('button').filter({ hasText: /☰|≡|menu/i }),
-  263 |             ];
-  264 |
-  265 |             // Try each possible toggle selector
-  266 |             for (const toggle of possibleToggles) {
-  267 |                 if ((await toggle.count()) > 0 && (await toggle.isVisible())) {
-  268 |                     await toggle.click();
-  269 |                     await page.waitForTimeout(1000); // Wait for animation
-  270 |                     await expect(page).toHaveScreenshot(
-  271 |                         'mobile-with-sidebar-open.png'
-  272 |                     );
-  273 |                     break; // Stop after first successful toggle
-  274 |                 }
-  275 |             }
-  276 |         });
-  277 |     });
-  278 | });
-  279 |
-  280 | // This is a utility to help generate visual tests for all routes
-  281 | test.describe('Automatic route testing', () => {
-  282 |     // Authentication state for this group
-  283 |     authStates['Automatic route testing'] = { isAuthenticated: false };
-  284 |     // Run on both desktop and mobile
-  285 |     for (const [deviceName, viewport] of Object.entries(devices)) {
-  286 |         test.describe(`${deviceName} view`, () => {
-  287 |             // Set viewport for this test group
-  288 |             test.use({ viewport });
-  289 |
-  290 |             // Authenticate once before all tests in this device group
-  291 |             test.beforeAll(async ({ browser }) => {
-  292 |                 if (!authStates['Automatic route testing'].isAuthenticated) {
-  293 |                     const page = await browser.newPage();
-  294 |                     await authenticate(page);
-  295 |                     authStates['Automatic route testing'].isAuthenticated = true;
-  296 |                     await page.close();
-  297 |                 }
-  298 |             });
-  299 |             
-  300 |             test(`auto-visual test of routes on ${deviceName}`, async ({
-  301 |                 page,
-  302 |             }) => {
-  303 |                 // List of routes to test
-  304 |                 const routes = ['/', '/tasks', '/notes', '/login'];
-  305 |                 
-  306 |                 // Start with login route to handle authentication first
-  307 |                 const sortedRoutes = [
-  308 |                     '/login',
-  309 |                     ...routes.filter((r) => r !== '/login'),
-  310 |                 ];
-  311 |
-  312 |                 for (const route of sortedRoutes) {
-  313 |                     // Get a simple name for the route for the screenshot file
-  314 |                     const pageName =
-  315 |                         route === '/' ? 'home' : route.substring(1);
-  316 |
-  317 |                     // Use standardized navigation pattern
-  318 |                     await navigateToPage(page, route);
-  319 |
-  320 |                     // Take screenshot with device prefix to distinguish between views
-  321 |                     await expect(page).toHaveScreenshot(
-  322 |                         `${deviceName}-${pageName}-page.png`
-  323 |                     );
-  324 |                 }
-  325 |             });
-  326 |         });
-  327 |     }
-  328 | });
-  329 |
+  238 |             await expect(page).toHaveScreenshot('desktop-dashboard-content.png');
+  239 |         });
+  240 |     });
+  241 |
+  242 |     // Mobile view tests
+  243 |     test.describe('Mobile viewport', () => {
+  244 |         test.use({ viewport: devices.mobile });
+  245 |         
+  246 |         // Authentication state for mobile tests
+  247 |         authStates['Mobile viewport'] = { isAuthenticated: false };
+  248 |         
+  249 |         // Authenticate once before all tests in this group
+  250 |         test.beforeAll(async ({ browser }) => {
+  251 |             if (!authStates['Mobile viewport'].isAuthenticated) {
+  252 |                 const page = await browser.newPage();
+  253 |                 try {
+  254 |                     await authenticate(page);
+  255 |                     authStates['Mobile viewport'].isAuthenticated = true;
+  256 |                 } catch (e) {
+  257 |                     console.error('Mobile viewport authentication failed:', e);
+  258 |                 } finally {
+  259 |                     await page.close();
+  260 |                 }
+  261 |             }
+  262 |         });
+  263 |
+  264 |         test('mobile layout (sidebar likely collapsed)', async ({ page }) => {
+  265 |             try {
+  266 |                 await navigateToPage(page, '/');
+  267 |                 
+  268 |                 // On mobile, sidebar may be collapsed by default - this is expected
+  269 |                 await expect(page).toHaveScreenshot('mobile-default-view.png');
+  270 |                 
+  271 |                 // Try to find and click a hamburger menu or sidebar toggle if it exists
+  272 |                 const possibleToggles = [
+  273 |                     page.getByRole('button', {
+  274 |                         name: /menu|toggle|hamburger|sidebar/i,
+  275 |                     }),
+  276 |                     page.locator(
+  277 |                         '.hamburger, [data-testid="menu-button"], button.menu-toggle'
+  278 |                     ),
+  279 |                     page.locator('button').filter({ hasText: /☰|≡|menu/i }),
+  280 |                 ];
+  281 |
+  282 |                 // Try each possible toggle selector
+  283 |                 let toggleFound = false;
+  284 |                 for (const toggle of possibleToggles) {
+  285 |                     if ((await toggle.count()) > 0 && (await toggle.isVisible())) {
+  286 |                         await toggle.click();
+  287 |                         await page.waitForTimeout(1000); // Wait for animation
+  288 |                         await expect(page).toHaveScreenshot('mobile-with-sidebar-open.png');
+  289 |                         toggleFound = true;
+  290 |                         break; // Stop after first successful toggle
+  291 |                     }
+  292 |                 }
+  293 |                 
+  294 |                 if (!toggleFound) {
+  295 |                     console.log('No visible sidebar toggle found on mobile view');
+  296 |                 }
+  297 |             } catch (e) {
+  298 |                 console.error('Mobile layout test failed:', e);
+  299 |                 throw e;
+  300 |             }
+  301 |         });
+  302 |     });
+  303 | });
+  304 |
+  305 | // This is a utility to help generate visual tests for all routes
+  306 | test.describe('Automatic route testing', () => {
+  307 |     // Authentication state for this group
+  308 |     authStates['Automatic route testing'] = { isAuthenticated: false };
+  309 |     
+  310 |     // Run on both desktop and mobile
+  311 |     for (const [deviceName, viewport] of Object.entries(devices)) {
+  312 |         test.describe(`${deviceName} view`, () => {
+  313 |             // Set viewport for this test group
+  314 |             test.use({ viewport });
+  315 |
+  316 |             // Authenticate once before all tests in this device group
+  317 |             test.beforeAll(async ({ browser }) => {
+  318 |                 if (!authStates['Automatic route testing'].isAuthenticated) {
+  319 |                     const page = await browser.newPage();
+  320 |                     await authenticate(page);
+  321 |                     authStates['Automatic route testing'].isAuthenticated = true;
+  322 |                     await page.close();
+  323 |                 }
+  324 |             });
+  325 |             
+  326 |             test(`auto-visual test of routes on ${deviceName}`, async ({ page }) => {
+  327 |                 try {
+  328 |                     // List of routes to test
+  329 |                     const routes = ['/', '/tasks', '/notes', '/login'];
+  330 |                     
 ```
