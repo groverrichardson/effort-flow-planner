@@ -71,3 +71,45 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Testing
+
+### Unit Testing with Vitest
+
+Run unit tests using Vitest:
+
+```sh
+npm run test:unit
+```
+
+### UI Testing with Playwright
+
+Run UI tests using Playwright:
+
+```sh
+npm run test:ui
+```
+
+### Running All Tests
+
+Run both unit and UI tests in parallel:
+
+```sh
+npm run test:all
+```
+
+### VS Code Integration
+
+For better testing experience in VS Code:
+
+1. Install the Playwright Test for VS Code extension:
+   - Open VS Code
+   - Go to Extensions (Ctrl+Shift+X or Cmd+Shift+X)
+   - Search for "Playwright Test for VS Code"
+   - Click Install
+
+2. Run tests directly from VS Code:
+   - Open the Testing panel in the sidebar
+   - You'll see both Vitest and Playwright tests
+   - Click the play button next to any test to run it
+   - Click the debug button to run with debugging
