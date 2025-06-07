@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { verifyUrl, verifyNavigation } from './utils/urlVerification';
+import { waitForRouteReady, verifyRouteElements, getRouteElements } from './utils/routeVerification';
+import { navigateTo, NavigationResult } from './utils/navigationHelper';
 
 // Define device viewports
 const devices = {
@@ -15,39 +17,64 @@ type AuthState = {
 // Create authentication state for each test group
 const authStates: Record<string, AuthState> = {};
 
-// Helper function to wait for page stability
-async function waitForPageStability(page) {
+// Helper function to wait for page stability with improved element verification
+async function waitForPageStability(page, route = null) {
     // Basic page load waiting
-    await page.waitForLoadState('networkidle');
     await page.waitForLoadState('domcontentloaded');
-
-    // Wait for any animations or transitions to complete
+    
+    // Try to wait for network idle, but don't fail if it times out
+    await page.waitForLoadState('networkidle').catch(() => {
+        console.log('Network did not reach idle state within timeout, continuing');
+    });
+    
+    // If a specific route is provided, use element-based verification
+    if (route) {
+        try {
+            // Wait for route-specific elements
+            await verifyRouteElements(page, route, { 
+                verbose: true, 
+                throwOnFailure: false, 
+                timeout: 5000 
+            });
+            return;
+        } catch (error) {
+            console.warn(`Route element verification failed: ${error.message}`);
+            // Fall back to timeout if route verification fails
+        }
+    }
+    
+    // Fall back to timeout if no route provided or verification failed
     await page.waitForTimeout(1500);
 }
 
-// Helper function for standardized navigation pattern
-async function navigateToPage(page, route) {
-    // Navigate to the specified route
-    await page.goto(route);
-    
-    // Wait for page stability
-    await waitForPageStability(page);
-    
-    // Enhanced safety check for authentication using our URL verification utility
-    const currentUrl = page.url();
-    const isOnLoginPage = verifyUrl(currentUrl, '/login', { exactMatch: false });
-    
-    if (route !== '/login' && isOnLoginPage) {
-        console.log(`Navigation to ${route} redirected to login - performing authentication`);
-        await authenticate(page);
-        await page.goto(route);
-        await waitForPageStability(page);
+// Helper function for standardized navigation pattern with comprehensive verification
+async function navigateToPage(page, route): Promise<NavigationResult> {
+    // Use our enhanced navigation helper that includes retry logic and detailed reporting
+    try {
+        const result = await navigateTo(page, route, authenticate, {
+            maxRetries: 2,
+            timeout: 15000,
+            throwOnFailure: false,
+            verificationOptions: {
+                timeout: 10000,
+                screenshotPath: `route-verification-${route.replace(/\//g, '_')}-${Date.now()}.png`,
+                verbose: true
+            },
+            verbose: true
+        });
         
-        // Verify successful navigation after authentication
-        await verifyNavigation(page, route);
-    } else {
-        // Verify we landed on the correct page
-        await verifyNavigation(page, route);
+        if (!result.success) {
+            console.error(`Navigation to ${route} failed: ${result.errorMessage}`);
+            if (result.screenshotPath) {
+                console.log(`See screenshot: ${result.screenshotPath}`);
+            }
+            throw new Error(`Navigation to ${route} failed: ${result.errorMessage}`);
+        }
+        
+        return result;
+    } catch (error) {
+        console.error(`Unexpected error during navigation to ${route}: ${error.message}`);
+        throw error;
     }
 }
 
@@ -139,32 +166,64 @@ test.describe('Visual Tests for Main Pages', () => {
     });
 
     test('login page visual test', async ({ page }) => {
-        // Navigate to the login page with standard pattern
-        await navigateToPage(page, '/login');
+        // Navigate to the login page with enhanced navigation helper
+        const navigationResult = await navigateToPage(page, '/login');
+        
+        // Assert navigation was successful
+        expect(navigationResult.success).toBe(true);
+        expect(navigationResult.urlVerified).toBe(true);
+        expect(navigationResult.elementsVerified).toBe(true);
+        
+        // Log which elements were found for reporting
+        console.log(`Login page elements found: ${navigationResult.elementDetails?.found.length}`);
 
         // Take a screenshot and compare it to the baseline
         await expect(page).toHaveScreenshot('login-page.png');
     });
 
     test('dashboard visual test', async ({ page }) => {
-        // Navigate to the dashboard with standard pattern
-        await navigateToPage(page, '/');
+        // Navigate to the dashboard with enhanced navigation helper
+        const navigationResult = await navigateToPage(page, '/');
+        
+        // Assert navigation was successful
+        expect(navigationResult.success).toBe(true);
+        expect(navigationResult.urlVerified).toBe(true);
+        expect(navigationResult.elementsVerified).toBe(true);
+        
+        // Log which elements were found for reporting
+        console.log(`Dashboard elements found: ${navigationResult.elementDetails?.found.join(', ')}`);
         
         // Take a screenshot and compare it to the baseline
         await expect(page).toHaveScreenshot('dashboard-page.png');
     });
 
     test('tasks page visual test', async ({ page }) => {
-        // Navigate to tasks page with standard pattern
-        await navigateToPage(page, '/tasks');
+        // Navigate to tasks page with enhanced navigation helper
+        const navigationResult = await navigateToPage(page, '/tasks');
+        
+        // Assert navigation was successful
+        expect(navigationResult.success).toBe(true);
+        expect(navigationResult.urlVerified).toBe(true);
+        expect(navigationResult.elementsVerified).toBe(true);
+        
+        // Log which elements were found for reporting
+        console.log(`Tasks page elements found: ${navigationResult.elementDetails?.found.join(', ')}`);
         
         // Take a screenshot and compare it to the baseline
         await expect(page).toHaveScreenshot('tasks-page.png');
     });
 
     test('notes page visual test', async ({ page }) => {
-        // Navigate to notes page with standard pattern
-        await navigateToPage(page, '/notes');
+        // Navigate to notes page with enhanced navigation helper
+        const navigationResult = await navigateToPage(page, '/notes');
+        
+        // Assert navigation was successful
+        expect(navigationResult.success).toBe(true);
+        expect(navigationResult.urlVerified).toBe(true);
+        expect(navigationResult.elementsVerified).toBe(true);
+        
+        // Log which elements were found for reporting
+        console.log(`Notes page elements found: ${navigationResult.elementDetails?.found.join(', ')}`);
         
         // Take a screenshot and compare it to the baseline
         await expect(page).toHaveScreenshot('notes-page.png');
@@ -172,17 +231,29 @@ test.describe('Visual Tests for Main Pages', () => {
 
     // Component-specific tests
     test('task creation form', async ({ page }) => {
-        // Use the standardized navigation pattern to ensure authenticated access to tasks page
+        // Use our enhanced navigation helper with comprehensive verification
         console.log('Starting task creation form test');
-        await navigateToPage(page, '/tasks');
-
-        // Verify we're on the tasks page before proceeding using our robust URL verification utility
-        try {
-            await verifyNavigation(page, '/tasks');
-        } catch (error) {
-            console.error(error.message);
-            await expect(page).toHaveScreenshot('navigation-failed-tasks-page.png');
-            throw error;
+        
+        const navigationResult = await navigateToPage(page, '/tasks');
+        
+        // Assert navigation was successful with detailed reporting
+        expect(navigationResult.success).toBe(true);
+        expect(navigationResult.urlVerified).toBe(true);
+        expect(navigationResult.elementsVerified).toBe(true);
+        
+        // Log navigation details for reporting
+        console.log(`Navigation to tasks page: SUCCESS`);
+        console.log(`• URL verification: ${navigationResult.urlVerified ? '✅' : '❌'}`);
+        console.log(`• Elements verification: ${navigationResult.elementsVerified ? '✅' : '❌'}`);
+        console.log(`• Found elements: ${navigationResult.elementDetails?.found.join(', ')}`);
+        
+        // Get access to specific route elements for test interactions
+        const tasksElements = getRouteElements(page, '/tasks');
+        expect(tasksElements).toBeTruthy();
+        
+        // Verify we can access expected route elements
+        if (tasksElements.taskList) {
+            console.log('✅ Task list element is accessible for test interactions');
         }
         
         // Allow page to stabilize and verify task list is present
