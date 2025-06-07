@@ -8,7 +8,8 @@ import {
   NavigationResult, 
   waitForRouteReady, 
   getRouteElements,
-  navigationReporter // Import the reporter
+  navigationReporter, // Import the reporter
+  bypassLogin // Import bypassLogin
 } from './utils';
 
 // Define device viewports
@@ -70,7 +71,7 @@ async function navigateToPage(page: Page, routeIdOrPath: string, testInfo: TestI
         const routeName = routeConfig ? routeConfig.title : routeIdOrPath;
         // console.log(`📱 Navigating to ${routeName}`); // Reporter will provide detailed logs
         
-        const result = await navigateTo(page, routeIdOrPath, authenticate, {
+        const result = await navigateTo(page, routeIdOrPath, bypassLogin, {
             maxRetries: 2,
             timeout: 15000,
             throwOnFailure: false,
@@ -122,70 +123,6 @@ async function navigateToPage(page: Page, routeIdOrPath: string, testInfo: TestI
     }
 }
 
-// Helper function to handle authentication
-async function authenticate(page) {
-    // Check if we're already on a login page
-    const currentUrl = page.url();
-    if (currentUrl.includes('/login')) {
-        // We're already on login page
-    } else if (currentUrl.includes('auth') || currentUrl.includes('signin')) {
-        // We're already on some auth page
-    } else {
-        // Go to login page first
-        await page.goto('/login');
-        await waitForPageStability(page);
-    }
-
-    // First priority: try to find and click the bypass login button
-    const bypassSelectors = [
-        page.getByRole('button', { name: /quick access|bypass login/i }),
-        page.getByText(/quick access|bypass login|skip login/i),
-        page.locator('button:has-text("Quick Access")'),
-        page.locator('button:has-text("Bypass")')
-    ];
-    
-    for (const selector of bypassSelectors) {
-        try {
-            if ((await selector.count()) > 0 && await selector.isVisible()) {
-                console.log('Using bypass login button');
-                await selector.click();
-                await waitForPageStability(page);
-                return; // Successfully used bypass button, exit function
-            }
-        } catch (e) {
-            console.log('Error trying bypass selector:', e);
-        }
-    }
-    
-    // If bypass didn't work, try traditional form login
-    const emailInput = page.getByLabel(/email/i);
-    const passwordInput = page.getByLabel(/password/i);
-    const loginButton = page.getByRole('button', { name: /log[ -]?in|sign[ -]?in/i });
-
-    if (
-        (await emailInput.count()) > 0 &&
-        (await passwordInput.count()) > 0 &&
-        (await loginButton.count()) > 0
-    ) {
-        const { TEST_EMAIL, TEST_PASSWORD } = process.env;
-
-        // Check if env variables exist
-        if (!TEST_EMAIL || !TEST_PASSWORD) {
-            console.log('Using default test credentials - set TEST_EMAIL and TEST_PASSWORD for custom values');
-            // Use default test credentials
-            await emailInput.fill('test@example.com');
-            await passwordInput.fill('password123');
-        } else {
-            // Use provided test credentials from env variables
-            await emailInput.fill(TEST_EMAIL);
-            await passwordInput.fill(TEST_PASSWORD);
-        }
-        
-        // Click login button and wait
-        await loginButton.first().click();
-        await waitForPageStability(page);
-    }
-}
 
 // Test all main pages for visual regressions
 test.describe('Visual Tests for Main Pages', () => {
