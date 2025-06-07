@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { verifyUrl, verifyNavigation } from './utils/urlVerification';
 
 // Define device viewports
 const devices = {
@@ -32,12 +33,21 @@ async function navigateToPage(page, route) {
     // Wait for page stability
     await waitForPageStability(page);
     
-    // Simple safety check for authentication
-    if (route !== '/login' && page.url().includes('/login')) {
+    // Enhanced safety check for authentication using our URL verification utility
+    const currentUrl = page.url();
+    const isOnLoginPage = verifyUrl(currentUrl, '/login', { exactMatch: false });
+    
+    if (route !== '/login' && isOnLoginPage) {
         console.log(`Navigation to ${route} redirected to login - performing authentication`);
         await authenticate(page);
         await page.goto(route);
         await waitForPageStability(page);
+        
+        // Verify successful navigation after authentication
+        await verifyNavigation(page, route);
+    } else {
+        // Verify we landed on the correct page
+        await verifyNavigation(page, route);
     }
 }
 
@@ -166,12 +176,13 @@ test.describe('Visual Tests for Main Pages', () => {
         console.log('Starting task creation form test');
         await navigateToPage(page, '/tasks');
 
-        // Verify we're on the tasks page before proceeding
-        const currentUrl = page.url();
-        if (!currentUrl.includes('/tasks')) {
-            console.error(`Navigation failed: Expected to be on /tasks page but got ${currentUrl}`);
+        // Verify we're on the tasks page before proceeding using our robust URL verification utility
+        try {
+            await verifyNavigation(page, '/tasks');
+        } catch (error) {
+            console.error(error.message);
             await expect(page).toHaveScreenshot('navigation-failed-tasks-page.png');
-            throw new Error(`Failed to navigate to tasks page. Current URL: ${currentUrl}`);
+            throw error;
         }
         
         // Allow page to stabilize and verify task list is present
