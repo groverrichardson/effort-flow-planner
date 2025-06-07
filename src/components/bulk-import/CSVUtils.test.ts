@@ -230,16 +230,16 @@ describe('CSVUtils', () => {
             expect(result).toEqual({
                 Title: 'title',
                 description: 'description',
+                tags: 'tags',
+                People: 'people',
                 'DUE DATE': 'scheduledDate',
                 'scheduled date': 'scheduledDate',
-                'DUE DATE TYPE': 'dueDateType',
-                scheduleddatetype: 'dueDateType',
-                People: 'people',
-                tags: 'tags',
-                'Unknown Column': 'ignore',
+                'DUE DATE TYPE': 'scheduledDateType',
+                scheduleddatetype: 'scheduledDateType',
+                'Unknown Column': 'ignore'
             });
         });
-
+        
         it('should map all columns to ignore when hasHeaders is false', () => {
             const headers = ['Column 1', 'Column 2', 'Column 3']; // Generic headers when hasHeaders is false
             const result = createInitialColumnMap(headers, false);

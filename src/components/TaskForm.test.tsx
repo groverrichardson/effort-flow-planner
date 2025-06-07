@@ -32,6 +32,9 @@ const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
 beforeEach(() => {
+  // Reset mock state between tests
+  vi.clearAllMocks();
+    
   // Suppress specific warnings and errors that aren't affecting test functionality
   console.error = (...args) => {
     const msg = args.join(' ');
@@ -42,9 +45,12 @@ beforeEach(() => {
   };
   
   console.warn = (...args) => {
-
-  console.warn = originalConsoleWarn;
-  vi.clearAllMocks();
+    const msg = args.join(' ');
+    if (msg.includes('toast') || msg.includes('controlled')) {
+      return; // Silence these warnings
+    }
+    originalConsoleWarn(...args);
+  };
 });
 
 // Instead of trying complex mocking, just mock the specific module import used in TaskForm.tsx
@@ -668,6 +674,136 @@ await waitFor(() => {
         // TODO: Add similar tests for Weekly, Monthly, Yearly, and switching back to Never.
         // TODO: Add tests for state updates based on interactions.
         // TODO: Add tests for handleSubmit logic regarding recurrence.
+    });
+
+    describe('Error Handling', () => {
+        it('should show error toast when form submission fails with generic error', async () => {
+            const user = userEvent.setup();
+            const errorMessage = 'Failed to save task';
+            const mockOnSubmitError = vi.fn().mockRejectedValue(new Error(errorMessage));
+            
+            await setup({ onSubmit: mockOnSubmitError });
+            
+            // Fill in required fields
+            await user.type(screen.getByLabelText(/title/i), 'Test Task Title');
+            
+            // Submit the form
+            await user.click(screen.getByRole('button', { name: /create task/i }));
+            
+            // Wait for the error to be processed
+            await waitFor(() => {
+                expect(mockOnSubmitError).toHaveBeenCalledTimes(1);
+            });
+            
+            // Verify toast was called with correct parameters
+            expect(mockToast).toHaveBeenCalledTimes(1);
+            expect(mockToast).toHaveBeenCalledWith({
+                title: "Submission Error",
+                description: errorMessage,
+                variant: "destructive"
+            });
+        });
+        
+        it('should show error toast when updating existing task fails', async () => {
+            const user = userEvent.setup();
+            const networkErrorMessage = 'Network error: Unable to connect to server';
+            const mockOnSubmitError = vi.fn().mockRejectedValue(new Error(networkErrorMessage));
+            
+            // Setup with existing task
+            const mockTask: Task = {
+                id: 'task-1',
+                title: 'Existing Task Title',
+                description: 'Existing task description.',
+                priority: Priority.NORMAL,
+                dueDate: null,
+                dueDateType: DueDateType.ON,
+                goLiveDate: null,
+                effortLevel: 1,
+                status: TaskStatus.PENDING,
+                scheduledDate: null,
+                targetDeadline: null,
+                userId: 'test-user-id',
+                completed: false,
+                completedDate: null,
+                tags: [],
+                people: [],
+                dependencies: [],
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            };
+            mockTasks = [mockTask]; 
+            
+            await setup({ task: mockTask, onSubmit: mockOnSubmitError });
+            
+            // Submit the form without changing anything
+            await user.click(screen.getByRole('button', { name: /update task/i }));
+            
+            // Wait for the error to be processed
+            await waitFor(() => {
+                expect(mockOnSubmitError).toHaveBeenCalledTimes(1);
+            });
+            
+            // Verify toast was called with correct parameters
+            expect(mockToast).toHaveBeenCalledTimes(1);
+            expect(mockToast).toHaveBeenCalledWith({
+                title: "Submission Error",
+                description: networkErrorMessage,
+                variant: "destructive"
+            });
+        });
+        
+        it('should handle errors with missing error message gracefully', async () => {
+            const user = userEvent.setup();
+            // Create an error without a message property
+            const errorWithoutMessage = new Error();
+            Object.defineProperty(errorWithoutMessage, 'message', { value: '' });
+            
+            const mockOnSubmitError = vi.fn().mockRejectedValue(errorWithoutMessage);
+            
+            await setup({ onSubmit: mockOnSubmitError });
+            
+            // Fill in required fields
+            await user.type(screen.getByLabelText(/title/i), 'Test Task Title');
+            
+            // Submit the form
+            await user.click(screen.getByRole('button', { name: /create task/i }));
+            
+            // Wait for the error to be processed
+            await waitFor(() => {
+                expect(mockOnSubmitError).toHaveBeenCalledTimes(1);
+            });
+            
+            // Verify toast uses the fallback error message
+            expect(mockToast).toHaveBeenCalledTimes(1);
+            expect(mockToast).toHaveBeenCalledWith({
+                title: "Submission Error",
+                description: "Could not save the task. Please try again.",
+                variant: "destructive"
+            });
+        });
+        
+        it('should reset loading state after error', async () => {
+            const user = userEvent.setup();
+            const mockOnSubmitError = vi.fn().mockRejectedValue(new Error('Test error'));
+            
+            // Setup and mock implementation to expose loading state
+            const { container } = await setup({ onSubmit: mockOnSubmitError });
+            
+            // Fill in required fields and submit
+            await user.type(screen.getByLabelText(/title/i), 'Test Task');
+            await user.click(screen.getByRole('button', { name: /create task/i }));
+            
+            // Verify form exits loading state after error
+            await waitFor(() => {
+                // Button should not be in loading state anymore
+                const submitButton = screen.getByRole('button', { name: /create task/i });
+                expect(submitButton).not.toHaveAttribute('data-state', 'loading');
+                expect(submitButton).not.toBeDisabled();
+            });
+            
+            // Verify toast was called
+            expect(mockToast).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('Linked Notes Section', () => {
