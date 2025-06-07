@@ -162,45 +162,146 @@ test.describe('Visual Tests for Main Pages', () => {
 
     // Component-specific tests
     test('task creation form', async ({ page }) => {
-        // Navigate to tasks page (authentication already handled)
+        // Use the standardized navigation pattern to ensure authenticated access to tasks page
+        console.log('Starting task creation form test');
         await navigateToPage(page, '/tasks');
 
-        // Try several approaches to find and click the create task button
+        // Verify we're on the tasks page before proceeding
+        const currentUrl = page.url();
+        if (!currentUrl.includes('/tasks')) {
+            console.error(`Navigation failed: Expected to be on /tasks page but got ${currentUrl}`);
+            await expect(page).toHaveScreenshot('navigation-failed-tasks-page.png');
+            throw new Error(`Failed to navigate to tasks page. Current URL: ${currentUrl}`);
+        }
+        
+        // Allow page to stabilize and verify task list is present
         try {
-            // Try to find button by text content first
-            const buttonSelectors = [
-                page.getByRole('button', { name: /add|create|new task/i }),
-                page.getByTestId('create-task-button'),
-                page.locator('button:has-text("Create Task")'),
-                page.locator('button:has-text("+")'),
+            // Check for task list container to verify page is ready
+            const taskListSelectors = [
+                page.locator('[data-testid="task-list"]'),
+                page.locator('.tasks-container'),
+                page.locator('.task-list-wrapper')
             ];
             
-            // Try each selector until we find one that works
-            let clicked = false;
-            for (const selector of buttonSelectors) {
-                if ((await selector.count()) > 0 && (await selector.isVisible())) {
-                    await selector.click();
-                    clicked = true;
+            let taskListFound = false;
+            for (const selector of taskListSelectors) {
+                if (await selector.count() > 0) {
+                    taskListFound = true;
                     break;
                 }
             }
             
+            if (!taskListFound) {
+                console.warn('Task list container not found - page may not be fully loaded');
+                await page.waitForTimeout(1000); // Additional wait if task list not found immediately
+            }
+            
+            // Enhanced button selectors with clear IDs and additional options
+            const buttonSelectors = [
+                // Primary selectors - explicit IDs and test IDs
+                page.getByTestId('create-task-button'),
+                page.locator('#create-task-button'),
+                page.locator('#add-task-button'),
+                
+                // Role-based selectors
+                page.getByRole('button', { name: /add task|create task|new task/i }),
+                page.getByRole('button', { name: /\+|create/i }),
+                
+                // Text-based selectors
+                page.locator('button:has-text("Create Task")'),
+                page.locator('button:has-text("Add Task")'),
+                page.locator('button:has-text("+")'),
+                
+                // Position-based selectors as last resort
+                page.locator('.task-header button'),
+                page.locator('header button').last(),
+                page.locator('.fixed button').first()
+            ];
+            
+            // Debug information
+            console.log('Searching for task creation button...');
+            
+            // Try each selector until we find one that works
+            let clicked = false;
+            let buttonDetails = '';
+            
+            for (const selector of buttonSelectors) {
+                const count = await selector.count();
+                if (count > 0) {
+                    const isVisible = await selector.isVisible();
+                    if (isVisible) {
+                        // Capture button details for debugging
+                        try {
+                            const text = await selector.textContent() || 'No text';
+                            const box = await selector.boundingBox() || { x: 0, y: 0, width: 0, height: 0 };
+                            buttonDetails = `Button found: text="${text}", position=(${box.x},${box.y}), size=${box.width}x${box.height}`;
+                            console.log(buttonDetails);
+                            
+                            // Take screenshot before clicking
+                            await expect(page).toHaveScreenshot('before-clicking-create-button.png');
+                            
+                            // Scroll to ensure button is in view
+                            await selector.scrollIntoViewIfNeeded();
+                            await page.waitForTimeout(300);
+                            
+                            await selector.click();
+                            clicked = true;
+                            console.log('Successfully clicked task creation button');
+                            break;
+                        } catch (clickErr) {
+                            console.warn('Found button but click failed:', clickErr);
+                            // Continue to next selector
+                        }
+                    } else {
+                        console.log('Button found but not visible');
+                    }
+                }
+            }
+            
             if (clicked) {
-                // Wait briefly for dialog to appear
-                await page.waitForTimeout(800);
-
-                // Take a screenshot of the whole page with dialog open
-                await expect(page).toHaveScreenshot('task-create-form-page.png');
+                // Wait for dialog to appear with increased timeout
+                console.log('Waiting for task form dialog to appear...');
+                await page.waitForTimeout(1200);
+                
+                // Verify dialog is actually present
+                const dialogSelectors = [
+                    page.locator('dialog[open]'),
+                    page.locator('.modal.open'),
+                    page.locator('[role="dialog"]'),
+                    page.locator('.dialog-container'),
+                    page.locator('[data-testid="task-form"]')
+                ];
+                
+                let dialogVisible = false;
+                let dialogDetails = '';
+                
+                for (const dialog of dialogSelectors) {
+                    if ((await dialog.count()) > 0 && (await dialog.isVisible())) {
+                        dialogVisible = true;
+                        dialogDetails = `Dialog found using selector: ${dialog}`;
+                        console.log(dialogDetails);
+                        break;
+                    }
+                }
+                
+                if (dialogVisible) {
+                    console.log('Task creation dialog successfully opened');
+                    await expect(page).toHaveScreenshot('task-create-form-page.png');
+                } else {
+                    console.error('Button was clicked but dialog did not appear');
+                    await expect(page).toHaveScreenshot('task-dialog-not-visible.png');
+                    throw new Error('Task form dialog not found after clicking create button');
+                }
             } else {
-                throw new Error('No visible create task button found');
+                console.error('No viable task creation button found');
+                await expect(page).toHaveScreenshot('no-create-button-found.png');
+                throw new Error('No visible create task button found on tasks page');
             }
         } catch (e) {
-            console.log(
-                'Could not find or interact with task creation button:',
-                e
-            );
-            // Take screenshot anyway to see current state
-            await expect(page).toHaveScreenshot('tasks-page-no-dialog.png');
+            console.error('Task creation form test failed:', e);
+            // Take screenshot of current state for debugging
+            await expect(page).toHaveScreenshot('task-creation-test-failed.png');
+            throw e;
         }
     });
 });
