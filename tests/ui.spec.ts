@@ -403,73 +403,124 @@ test.describe('Device-specific views', () => {
     });
 });
 
-// This is a utility to help generate visual tests for all routes
+// This is a utility to help generate visual tests for all routes efficiently
 test.describe('Automatic route testing', () => {
-    // Authentication state for this group
-    authStates['Automatic route testing'] = { isAuthenticated: false };
+    // Define routes once for reuse
+    const routes = [
+        { path: '/', name: 'home' },
+        { path: '/tasks', name: 'tasks' },
+        { path: '/notes', name: 'notes' },
+        { path: '/login', name: 'login' }
+    ];
     
-    // Run on both desktop and mobile
-    for (const [deviceName, viewport] of Object.entries(devices)) {
-        test.describe(`${deviceName} view`, () => {
+    // Authentication is now handled automatically by navigateToPage
+    // so we don't need manual flags anymore
+    
+    // Run for specified devices
+    const deviceTests = [
+        { name: 'desktop', viewport: devices.desktop, checkSidebar: true },
+        { name: 'mobile', viewport: devices.mobile, checkSidebar: false }
+    ];
+    
+    for (const device of deviceTests) {
+        test.describe(`${device.name} view`, () => {
             // Set viewport for this test group
-            test.use({ viewport });
+            test.use({ viewport: device.viewport });
 
-            // Authenticate once before all tests in this device group
+            // Single authentication at device group level
             test.beforeAll(async ({ browser }) => {
-                if (!authStates['Automatic route testing'].isAuthenticated) {
-                    const page = await browser.newPage();
+                // Create a new page just for authentication
+                const page = await browser.newPage();
+                try {
+                    await page.setViewportSize(device.viewport);
+                    // This will authenticate once per device type
                     await authenticate(page);
-                    authStates['Automatic route testing'].isAuthenticated = true;
+                    console.log(`Authenticated for ${device.name} device tests`);
+                } catch (e) {
+                    console.error(`Authentication failed for ${device.name} device:`, e);
+                } finally {
                     await page.close();
                 }
             });
             
-            test(`auto-visual test of routes on ${deviceName}`, async ({ page }) => {
+            // Use a single test per device to test all routes efficiently
+            test(`visual tests for all routes on ${device.name}`, async ({ page }) => {
                 try {
-                    // List of routes to test
-                    const routes = ['/', '/tasks', '/notes', '/login'];
+                    console.log(`Starting route tests for ${device.name} device`);
                     
-                    // Start with login route to handle authentication first
-                    const sortedRoutes = [
-                        '/login',
-                        ...routes.filter((r) => r !== '/login'),
-                    ];
-
-                    for (const route of sortedRoutes) {
-                        // Get a simple name for the route for the screenshot file
-                        const pageName = route === '/' ? 'home' : route.substring(1);
-
-                        console.log(`Testing ${deviceName} view of ${route}`);
+                    // Test each route in sequence
+                    for (const route of routes) {
+                        console.log(`Testing ${route.path} on ${device.name}`);
                         
-                        // Use standardized navigation pattern
-                        await navigateToPage(page, route);
+                        // Navigate using our standard helper
+                        await navigateToPage(page, route.path);
                         
-                        // Additional checks for device-specific features
-                        if (deviceName === 'desktop') {
-                            // For desktop, verify sidebar is expanded
-                            const sidebar = page.locator('.sidebar, [data-testid="sidebar"], nav.main-nav').first();
-                            if (await sidebar.count() > 0) {
-                                // Check if sidebar is visible and has appropriate width
-                                const box = await sidebar.boundingBox();
-                                if (box && box.width < 100) {
-                                    console.warn(`Desktop sidebar appears collapsed on ${route}, width: ${box.width}px`);
-                                }
-                            }
-                        } else if (deviceName === 'mobile') {
-                            // For mobile, verify screen is appropriate for mobile view
-                            // Mobile-specific checks could go here
+                        // Verify we reached the correct page
+                        if (!page.url().includes(route.path.replace('/', ''))) {
+                            console.warn(`Expected to be on ${route.path} but got ${page.url()}`);
                         }
-
-                        // Take screenshot with device prefix to distinguish between views
+                        
+                        // Device-specific verifications
+                        if (device.checkSidebar) {
+                            await verifyDesktopSidebar(page, route.path);
+                        }
+                        
+                        // Take screenshot with consistent naming
                         await expect(page).toHaveScreenshot(
-                            `${deviceName}-${pageName}-page.png`
+                            `${device.name}-${route.name}-page.png`
                         );
                     }
+                    
+                    console.log(`Completed all route tests for ${device.name}`);
                 } catch (e) {
-                    console.error(`Error in ${deviceName} route test:`, e);
+                    console.error(`Error in ${device.name} route test:`, e);
+                    // Take a diagnostic screenshot of the failure state
+                    await expect(page).toHaveScreenshot(
+                        `${device.name}-route-test-error.png`
+                    );
                     throw e;
                 }
             });
         });
     }
 });
+
+// Helper function to verify desktop sidebar state
+async function verifyDesktopSidebar(page, route) {
+    // Check for various sidebar selectors
+    const sidebarSelectors = [
+        '.sidebar',
+        '[data-testid="sidebar"]',
+        'nav.main-nav',
+        '.navigation-sidebar',
+        '#app-sidebar'
+    ];
+    
+    // Try each selector
+    for (const selector of sidebarSelectors) {
+        const sidebar = page.locator(selector).first();
+        const count = await sidebar.count();
+        
+        if (count > 0 && await sidebar.isVisible()) {
+            // Sidebar found, check its dimensions
+            const box = await sidebar.boundingBox();
+            if (box) {
+                if (box.width < 100) {
+                    console.warn(`Desktop sidebar appears collapsed on ${route}, width: ${box.width}px`);
+                } else {
+                    // Sidebar is properly expanded
+                    return true;
+                }
+            }
+            break;
+        }
+    }
+    
+    // If we get here and it's not login page, log a warning
+    if (!route.includes('login')) {
+        console.log(`No visible sidebar found on desktop for ${route}`);
+    }
+    
+    return false;
+}
+
