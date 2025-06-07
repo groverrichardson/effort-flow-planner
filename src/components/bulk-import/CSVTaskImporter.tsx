@@ -115,7 +115,8 @@ const CSVTaskImporter = () => {
         priority: task.priority || enhancedTaskData.priority || Priority.NORMAL,
         dueDate: enhancedTaskData.dueDate || (task.dueDate ? new Date(task.dueDate) : null),
         dueDateType: enhancedTaskData.dueDateType || 'by',
-        targetDeadline: enhancedTaskData.targetDeadline || null,
+        scheduledDate: enhancedTaskData.scheduledDate || enhancedTaskData.targetDeadline || (task.scheduledDate ? new Date(task.scheduledDate) : (task.targetDeadline ? new Date(task.targetDeadline) : null)),
+        targetDeadline: enhancedTaskData.scheduledDate || enhancedTaskData.targetDeadline || (task.scheduledDate ? new Date(task.scheduledDate) : (task.targetDeadline ? new Date(task.targetDeadline) : null)), // For transition period
         goLiveDate: enhancedTaskData.goLiveDate || null,
         effortLevel: enhancedTaskData.effortLevel || EffortLevel.M, // Default to Medium effort
         completed: false,

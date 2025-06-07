@@ -75,7 +75,7 @@ export const createInitialColumnMap = (headers: string[], hasHeaders: boolean): 
       if (lowerHeader === 'title') initialMap[header] = 'title';
       else if (lowerHeader === 'description') initialMap[header] = 'description';
       else if (lowerHeader === 'priority') initialMap[header] = 'priority';
-      else if (lowerHeader === 'duedate' || lowerHeader === 'due date' || lowerHeader === 'scheduleddate' || lowerHeader === 'scheduled date') initialMap[header] = 'targetDeadline';
+      else if (lowerHeader === 'duedate' || lowerHeader === 'due date' || lowerHeader === 'scheduleddate' || lowerHeader === 'scheduled date') initialMap[header] = 'scheduledDate';
       else if (lowerHeader === 'people' || lowerHeader === 'person') initialMap[header] = 'people';
       else if (lowerHeader === 'tags' || lowerHeader === 'tag') initialMap[header] = 'tags';
       else if (lowerHeader === 'due date type' || lowerHeader === 'duedatetype' || lowerHeader === 'scheduled date type' || lowerHeader === 'scheduleddatetype') initialMap[header] = 'scheduledDateType';
@@ -148,7 +148,14 @@ export const generateTasksFromCSV = (parsedData: ParsedCSVData, columnMap: Recor
         case 'goLiveDate':
           task.goLiveDate = value;
           break;
+        case 'scheduledDate':
+          task.scheduledDate = value;
+          // During transition, set targetDeadline as well for backwards compatibility
+          task.targetDeadline = value;
+          break;
+        // Support legacy targetDeadline for backward compatibility
         case 'targetDeadline':
+          task.scheduledDate = value;
           task.targetDeadline = value;
           break;
       }

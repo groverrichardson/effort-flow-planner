@@ -11,7 +11,8 @@ export interface CSVTask {
   completedDate?: string;
   dueDateType?: string;
   goLiveDate?: string;
-  targetDeadline?: string;
+  scheduledDate?: string;
+  targetDeadline?: string; // Will be removed after transition period completes
   status?: 'pending' | 'processing' | 'error' | 'success';
   error?: string;
 }
