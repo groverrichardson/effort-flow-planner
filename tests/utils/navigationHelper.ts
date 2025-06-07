@@ -1,13 +1,14 @@
 /**
  * Navigation Helper Utilities
  * 
- * Provides enhanced navigation functionality with retry logic, detailed logging,
- * and structured return objects for test assertions.
+ * This file provides robust navigation functions with verification and retries
+ * to ensure stable end-to-end tests using route configuration objects.
  */
 
 import { Page } from '@playwright/test';
-import { verifyUrl } from './urlVerification';
-import { verifyRouteElements, RouteVerificationOptions } from './routeVerification';
+import { verifyUrl, waitForUrlMatch, verifyNavigation } from './urlVerification';
+import { getRouteById, getRouteByPath, RouteConfig } from './routeConfig';
+import { verifyRouteElements, waitForRouteReady, ElementVerificationResult, ElementVerificationOptions } from './routeElementVerifier';
 
 /**
  * Navigation result object returned by navigation functions
@@ -16,54 +17,63 @@ export interface NavigationResult {
   /** Whether navigation was successful */
   success: boolean;
   
-  /** The target route that was navigated to */
-  route: string;
+  /** The target route that was navigated to (ID or path) */
+  targetRoute: string;
   
-  /** The final URL after navigation */
-  finalUrl: string;
+  /** Route configuration object used */
+  routeConfig?: RouteConfig;
   
-  /** Whether URL verification was successful */
+  /** The actual URL after navigation */
+  actualUrl: string;
+  
+  /** Whether the URL was verified to match the expected route */
   urlVerified: boolean;
   
-  /** Whether route element verification was successful */
+  /** Whether the page elements were verified */
   elementsVerified: boolean;
   
-  /** Details about which elements were found and not found */
+  /** Details about element verification */
   elementDetails?: {
+    /** Elements that were successfully found */
     found: string[];
+    
+    /** Optional elements that were not found */
     notFound: string[];
+    
+    /** Required elements that were not found */
+    missing?: string[];
   };
   
   /** Error message if navigation failed */
   errorMessage?: string;
   
-  /** Screenshot path if a screenshot was taken */
+  /** Path to screenshot if one was taken */
   screenshotPath?: string;
+  
+  /** Timestamp when navigation completed */
+  timestamp: number;
+  
+  /** Duration in milliseconds that navigation took */
+  duration: number;
 }
 
 /**
- * Navigation options
+ * Options for navigation functions
  */
 export interface NavigationOptions {
-  /** Maximum number of retry attempts for navigation */
+  /** Maximum number of retries if navigation fails */
   maxRetries?: number;
   
-  /** Timeout in milliseconds for each navigation attempt */
+  /** Timeout for navigation in milliseconds */
   timeout?: number;
   
   /** Whether to throw an error if navigation fails */
   throwOnFailure?: boolean;
   
   /** Options for route element verification */
-  verificationOptions?: RouteVerificationOptions;
+  verificationOptions?: ElementVerificationOptions;
   
-  /** Whether to take a screenshot if navigation fails */
-  screenshotOnFailure?: boolean;
-  
-  /** Whether to verify URL match */
-  verifyUrl?: boolean;
-  
-  /** Whether to verify route elements */
+  /** Whether to log detailed navigation steps */
   verifyElements?: boolean;
   
   /** Whether to print detailed logs */
@@ -71,16 +81,16 @@ export interface NavigationOptions {
 }
 
 /**
- * Navigate to a specific route with enhanced verification, retry logic and detailed reporting
+ * Navigate to a route with comprehensive verification
  * 
- * @param page - Playwright page object
- * @param route - The route to navigate to
- * @param options - Navigation options
- * @returns Promise resolving to navigation result
+ * @param page Playwright page object
+ * @param routeIdOrPath Route ID or path to navigate to
+ * @param options Navigation options
+ * @returns Navigation result
  */
 export async function navigateWithVerification(
   page: Page,
-  route: string,
+  routeIdOrPath: string,
   options: NavigationOptions = {}
 ): Promise<NavigationResult> {
   const {

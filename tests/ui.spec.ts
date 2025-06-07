@@ -1,7 +1,15 @@
-import { test, expect } from '@playwright/test';
-import { verifyUrl, verifyNavigation } from './utils/urlVerification';
-import { waitForRouteReady, verifyRouteElements, getRouteElements } from './utils/routeVerification';
-import { navigateTo, NavigationResult } from './utils/navigationHelper';
+import { test, expect, Page, TestInfo } from '@playwright/test'; // Added Page, TestInfo
+import { 
+  verifyUrl, 
+  verifyNavigation,
+  routes, 
+  getRouteById, 
+  navigateTo, 
+  NavigationResult, 
+  waitForRouteReady, 
+  getRouteElements,
+  navigationReporter // Import the reporter
+} from './utils';
 
 // Define device viewports
 const devices = {
@@ -30,51 +38,87 @@ async function waitForPageStability(page, route = null) {
     // If a specific route is provided, use element-based verification
     if (route) {
         try {
-            // Wait for route-specific elements
-            await verifyRouteElements(page, route, { 
+            // Wait for route-specific elements using route ID if possible
+            // This function verifies the route is ready with all required elements
+            await waitForRouteReady(page, route, { 
                 verbose: true, 
                 throwOnFailure: false, 
                 timeout: 5000 
             });
-            return;
+            console.log(`Route elements verified for ${route}`);
         } catch (error) {
-            console.warn(`Route element verification failed: ${error.message}`);
-            // Fall back to timeout if route verification fails
-        }
+            console.error(`Failed to verify elements for ${route}: ${error.message}`);
+            // Take screenshot to help identify the issue
+            const routeId = typeof route === 'string' ? route : 'unknown';
+            await page.screenshot({ path: `route-verification-failed-${routeId}.png` });
+            throw error;
+        } 
     }
-    
     // Fall back to timeout if no route provided or verification failed
     await page.waitForTimeout(1500);
 }
 
 // Helper function for standardized navigation pattern with comprehensive verification
-async function navigateToPage(page, route): Promise<NavigationResult> {
+async function navigateToPage(page: Page, routeIdOrPath: string, testInfo: TestInfo): Promise<NavigationResult> {
     // Use our enhanced navigation helper that includes retry logic and detailed reporting
     try {
-        const result = await navigateTo(page, route, authenticate, {
+        // Get route configuration for better reporting
+        const routeConfig = typeof routeIdOrPath === 'string' && routes[routeIdOrPath] 
+            ? routes[routeIdOrPath] 
+            : null;
+            
+        const routeName = routeConfig ? routeConfig.title : routeIdOrPath;
+        // console.log(`📱 Navigating to ${routeName}`); // Reporter will provide detailed logs
+        
+        const result = await navigateTo(page, routeIdOrPath, authenticate, {
             maxRetries: 2,
             timeout: 15000,
             throwOnFailure: false,
             verificationOptions: {
                 timeout: 10000,
-                screenshotPath: `route-verification-${route.replace(/\//g, '_')}-${Date.now()}.png`,
+                screenshotPath: `route-verification-${routeIdOrPath.replace(/\//g, '_')}-${Date.now()}.png`,
                 verbose: true
             },
             verbose: true
         });
         
         if (!result.success) {
-            console.error(`Navigation to ${route} failed: ${result.errorMessage}`);
+            console.error(`❌ Navigation to ${routeName} failed: ${result.errorMessage}`);
             if (result.screenshotPath) {
-                console.log(`See screenshot: ${result.screenshotPath}`);
+                console.log(`📸 See screenshot: ${result.screenshotPath}`);
             }
-            throw new Error(`Navigation to ${route} failed: ${result.errorMessage}`);
+            throw new Error(`Navigation to ${routeName} failed: ${result.errorMessage}`);
+        }
+        
+        // Reporter handles detailed logging
+        navigationReporter.logNavigation(result, testInfo.title);
+
+        // If navigation failed, throw an error to ensure the test fails clearly here
+        if (!result.success) {
+            const effectiveRouteName = result.routeConfig?.title || result.targetRoute;
+            // The reporter already console.error-ed details. This throw makes the test fail.
+            throw new Error(`Navigation to ${effectiveRouteName} failed as reported: ${result.errorMessage}`);
         }
         
         return result;
     } catch (error) {
-        console.error(`Unexpected error during navigation to ${route}: ${error.message}`);
-        throw error;
+        // This catch block handles errors thrown by navigateToPage itself or if navigateTo throws unexpectedly
+        const routeName = typeof routeIdOrPath === 'string' && routes[routeIdOrPath] ? routes[routeIdOrPath].title : routeIdOrPath;
+        const errorMsg = error instanceof Error ? error.message : String(error);
+
+        const failureResult: NavigationResult = {
+            success: false,
+            targetRoute: routeIdOrPath,
+            actualUrl: page ? page.url() : 'unknown',
+            urlVerified: false,
+            elementsVerified: false,
+            errorMessage: `Critical error in navigateToPage for ${routeName}: ${errorMsg}`,
+            timestamp: Date.now(),
+            duration: 0, // Duration calculation might need a startTime at the beginning of navigateToPage
+        };
+        navigationReporter.logNavigation(failureResult, testInfo.title);
+        // console.error(`❌ Critical error during navigation to ${routeName}: ${errorMsg}`); // Reporter logs this
+        throw error; // Re-throw to ensure test fails
     }
 }
 
@@ -160,14 +204,14 @@ test.describe('Visual Tests for Main Pages', () => {
     });
     
     // Run before each test
-    test.beforeEach(async ({ page }) => {
+    test.beforeEach(async ({ page }, testInfo: TestInfo) => {
         // Set a consistent viewport for all tests
         await page.setViewportSize({ width: 1280, height: 800 });
     });
 
-    test('login page visual test', async ({ page }) => {
-        // Navigate to the login page with enhanced navigation helper
-        const navigationResult = await navigateToPage(page, '/login');
+    test('login page visual test', async ({ page }, testInfo: TestInfo) => {
+        // Navigate to the login page using route ID
+        const navigationResult = await navigateToPage(page, 'login', testInfo);
         
         // Assert navigation was successful
         expect(navigationResult.success).toBe(true);
@@ -175,15 +219,15 @@ test.describe('Visual Tests for Main Pages', () => {
         expect(navigationResult.elementsVerified).toBe(true);
         
         // Log which elements were found for reporting
-        console.log(`Login page elements found: ${navigationResult.elementDetails?.found.length}`);
+        console.log(`Login page elements found: ${navigationResult.elementDetails?.found.join(', ')}`);
 
         // Take a screenshot and compare it to the baseline
         await expect(page).toHaveScreenshot('login-page.png');
     });
 
-    test('dashboard visual test', async ({ page }) => {
-        // Navigate to the dashboard with enhanced navigation helper
-        const navigationResult = await navigateToPage(page, '/');
+    test('dashboard visual test', async ({ page }, testInfo: TestInfo) => {
+        // Navigate to the dashboard using route ID instead of path
+        const navigationResult = await navigateToPage(page, 'dashboard', testInfo);
         
         // Assert navigation was successful
         expect(navigationResult.success).toBe(true);
@@ -197,9 +241,9 @@ test.describe('Visual Tests for Main Pages', () => {
         await expect(page).toHaveScreenshot('dashboard-page.png');
     });
 
-    test('tasks page visual test', async ({ page }) => {
-        // Navigate to tasks page with enhanced navigation helper
-        const navigationResult = await navigateToPage(page, '/tasks');
+    test('tasks page visual test', async ({ page }, testInfo: TestInfo) => {
+        // Navigate to tasks page using route ID
+        const navigationResult = await navigateToPage(page, 'tasks', testInfo);
         
         // Assert navigation was successful
         expect(navigationResult.success).toBe(true);
@@ -213,9 +257,9 @@ test.describe('Visual Tests for Main Pages', () => {
         await expect(page).toHaveScreenshot('tasks-page.png');
     });
 
-    test('notes page visual test', async ({ page }) => {
-        // Navigate to notes page with enhanced navigation helper
-        const navigationResult = await navigateToPage(page, '/notes');
+    test('notes page visual test', async ({ page }, testInfo: TestInfo) => {
+        // Navigate to notes page using route ID
+        const navigationResult = await navigateToPage(page, 'notes', testInfo);
         
         // Assert navigation was successful
         expect(navigationResult.success).toBe(true);
@@ -230,11 +274,11 @@ test.describe('Visual Tests for Main Pages', () => {
     });
 
     // Component-specific tests
-    test('task creation form', async ({ page }) => {
-        // Use our enhanced navigation helper with comprehensive verification
+    test('task creation form', async ({ page }, testInfo: TestInfo) => {
+        // Use our enhanced navigation helper with route ID instead of path
         console.log('Starting task creation form test');
         
-        const navigationResult = await navigateToPage(page, '/tasks');
+        const navigationResult = await navigateToPage(page, 'tasks', testInfo);
         
         // Assert navigation was successful with detailed reporting
         expect(navigationResult.success).toBe(true);
@@ -242,19 +286,25 @@ test.describe('Visual Tests for Main Pages', () => {
         expect(navigationResult.elementsVerified).toBe(true);
         
         // Log navigation details for reporting
-        console.log(`Navigation to tasks page: SUCCESS`);
+        console.log(`Navigation to ${navigationResult.routeConfig?.title || 'tasks page'}: SUCCESS`);
         console.log(`• URL verification: ${navigationResult.urlVerified ? '✅' : '❌'}`);
         console.log(`• Elements verification: ${navigationResult.elementsVerified ? '✅' : '❌'}`);
         console.log(`• Found elements: ${navigationResult.elementDetails?.found.join(', ')}`);
         
-        // Get access to specific route elements for test interactions
-        const tasksElements = getRouteElements(page, '/tasks');
+        // Access route elements directly from the route configuration
+        const tasksRoute = getRouteById('tasks');
+        const tasksElements = getRouteElements(page, 'tasks');
         expect(tasksElements).toBeTruthy();
         
-        // Verify we can access expected route elements
+        // Verify we can access expected route elements using route config properties
         if (tasksElements.taskList) {
             console.log('✅ Task list element is accessible for test interactions');
         }
+        
+        // Show how to access route configuration data in tests
+        console.log(`Testing route: ${tasksRoute.title} (${tasksRoute.path})`);
+        console.log(`Required auth: ${tasksRoute.requiresAuth ? 'Yes' : 'No'}`);
+        console.log(`Required elements: ${tasksRoute.elements.filter(e => e.required).length}`);
         
         // Allow page to stabilize and verify task list is present
         try {
@@ -405,16 +455,16 @@ test.describe('Device-specific views', () => {
     test.describe('Desktop viewport', () => {
         test.use({ viewport: devices.desktop });
 
-        test('desktop sidebar view', async ({ page }) => {
-            await navigateToPage(page, '/');
+        test('desktop sidebar view', async ({ page }, testInfo: TestInfo) => {
+            await navigateToPage(page, '/', testInfo);
 
             // For desktop, we expect the sidebar to be visible by default
             // Take full page screenshot that will include the sidebar
             await expect(page).toHaveScreenshot('desktop-with-sidebar.png');
         });
 
-        test('desktop dashboard content', async ({ page }) => {
-            await navigateToPage(page, '/');
+        test('desktop dashboard content', async ({ page }, testInfo: TestInfo) => {
+            await navigateToPage(page, '/', testInfo);
 
             // Screenshot main content area - avoiding precise element selection
             // Just give the app enough time to fully render
@@ -444,9 +494,9 @@ test.describe('Device-specific views', () => {
             }
         });
 
-        test('mobile layout (sidebar likely collapsed)', async ({ page }) => {
+        test('mobile layout (sidebar likely collapsed)', async ({ page }, testInfo: TestInfo) => {
             try {
-                await navigateToPage(page, '/');
+                await navigateToPage(page, '/', testInfo);
                 
                 // On mobile, sidebar may be collapsed by default - this is expected
                 await expect(page).toHaveScreenshot('mobile-default-view.png');
@@ -488,12 +538,12 @@ test.describe('Device-specific views', () => {
 // This is a utility to help generate visual tests for all routes efficiently
 test.describe('Automatic route testing', () => {
     // Define routes once for reuse
-    const routes = [
-        { path: '/', name: 'home' },
-        { path: '/tasks', name: 'tasks' },
-        { path: '/notes', name: 'notes' },
-        { path: '/login', name: 'login' }
-    ];
+    // const localOldRoutes = [
+    //     { path: '/', name: 'home' },
+    //     { path: '/tasks', name: 'tasks' },
+    //     { path: '/notes', name: 'notes' },
+    //     { path: '/login', name: 'login' }
+    // ]; // This local variable was shadowing the imported 'routes' from routeConfig.ts
     
     // Authentication is now handled automatically by navigateToPage
     // so we don't need manual flags anymore
@@ -526,30 +576,34 @@ test.describe('Automatic route testing', () => {
             });
             
             // Use a single test per device to test all routes efficiently
-            test(`visual tests for all routes on ${device.name}`, async ({ page }) => {
+            test(`visual tests for all routes on ${device.name}`, async ({ page }, testInfo: TestInfo) => {
+                const routesToTest = Object.values(routes); // Assuming 'routes' is the imported route configuration object
                 try {
                     console.log(`Starting route tests for ${device.name} device`);
                     
-                    // Test each route in sequence
-                    for (const route of routes) {
-                        console.log(`Testing ${route.path} on ${device.name}`);
-                        
-                        // Navigate using our standard helper
-                        await navigateToPage(page, route.path);
-                        
-                        // Verify we reached the correct page
-                        if (!page.url().includes(route.path.replace('/', ''))) {
-                            console.warn(`Expected to be on ${route.path} but got ${page.url()}`);
+                    for (const route of routesToTest) {
+                        if (!route || !route.id) {
+                            console.warn(`Skipping invalid route object: ${JSON.stringify(route)}`);
+                            continue;
                         }
+                        console.log(`Testing ${route.id} (${route.title || ''}) on ${device.name}`);
+                        
+                        // Navigate using our standard helper, now with testInfo
+                        await navigateToPage(page, route.id, testInfo);
+                        
+                        // Verify we reached the correct page (optional, navigateToPage does this)
+                        // if (!page.url().includes(route.path.replace('/', ''))) {
+                        //     console.warn(`Expected to be on ${route.path} but got ${page.url()}`);
+                        // }
                         
                         // Device-specific verifications
-                        if (device.checkSidebar) {
+                        if (device.checkSidebar && route.path) { // Ensure route.path exists
                             await verifyDesktopSidebar(page, route.path);
                         }
                         
                         // Take screenshot with consistent naming
                         await expect(page).toHaveScreenshot(
-                            `${device.name}-${route.name}-page.png`
+                            `${device.name}-${route.id}-page.png` // Use route.id for consistency
                         );
                     }
                     
@@ -605,4 +659,9 @@ async function verifyDesktopSidebar(page, route) {
     
     return false;
 }
+
+// After all tests in this file, generate the navigation report
+test.afterAll(async () => {
+  navigationReporter.generateReport();
+});
 
