@@ -6,6 +6,14 @@ const devices = {
     mobile: { width: 375, height: 667 },
 };
 
+// Authentication state storage
+type AuthState = {
+    isAuthenticated: boolean;
+};
+
+// Create authentication state for each test group
+const authStates: Record<string, AuthState> = {};
+
 // Helper function to wait for page stability
 async function waitForPageStability(page) {
     // Basic page load waiting
@@ -14,6 +22,23 @@ async function waitForPageStability(page) {
 
     // Wait for any animations or transitions to complete
     await page.waitForTimeout(1500);
+}
+
+// Helper function for standardized navigation pattern
+async function navigateToPage(page, route) {
+    // Navigate to the specified route
+    await page.goto(route);
+    
+    // Wait for page stability
+    await waitForPageStability(page);
+    
+    // Simple safety check for authentication
+    if (route !== '/login' && page.url().includes('/login')) {
+        console.log(`Navigation to ${route} redirected to login - performing authentication`);
+        await authenticate(page);
+        await page.goto(route);
+        await waitForPageStability(page);
+    }
 }
 
 // Helper function to handle authentication
@@ -85,6 +110,18 @@ async function authenticate(page) {
 test.describe('Visual Tests for Main Pages', () => {
     // Configure for desktop viewport by default
     test.use({ viewport: devices.desktop });
+    
+    // Authentication state for this group
+    authStates['Visual Tests for Main Pages'] = { isAuthenticated: false };
+    
+    // Authenticate once before all tests in this group
+    test.beforeAll(async ({ browser }) => {
+        const page = await browser.newPage();
+        await authenticate(page);
+        authStates['Visual Tests for Main Pages'].isAuthenticated = true;
+        await page.close();
+    });
+    
     // Run before each test
     test.beforeEach(async ({ page }) => {
         // Set a consistent viewport for all tests
@@ -92,91 +129,41 @@ test.describe('Visual Tests for Main Pages', () => {
     });
 
     test('login page visual test', async ({ page }) => {
-        // Navigate to the login page
-        await page.goto('/login');
-
-        // Use our helper function to wait for page stability
-        await waitForPageStability(page);
+        // Navigate to the login page with standard pattern
+        await navigateToPage(page, '/login');
 
         // Take a screenshot and compare it to the baseline
         await expect(page).toHaveScreenshot('login-page.png');
     });
 
     test('dashboard visual test', async ({ page }) => {
-        // Handle authentication first
-        await authenticate(page);
-
-        // Navigate to the dashboard
-        await page.goto('/');
-
-        // Wait for the page to stabilize
-        await waitForPageStability(page);
-
-        // Check if we got redirected to login page (authentication required)
-        if (page.url().includes('/login')) {
-            console.log(
-                'Redirected to login - authentication required for dashboard'
-            );
-            // Try authentication again
-            await authenticate(page);
-            await page.goto('/');
-            await waitForPageStability(page);
-        }
-
+        // Navigate to the dashboard with standard pattern
+        await navigateToPage(page, '/');
+        
         // Take a screenshot and compare it to the baseline
         await expect(page).toHaveScreenshot('dashboard-page.png');
     });
 
     test('tasks page visual test', async ({ page }) => {
-        // Handle authentication first
-        await authenticate(page);
-
-        // Navigate to tasks page after authentication
-        await page.goto('/tasks');
-        await waitForPageStability(page);
-
-        // Check if we got redirected to login page (authentication required)
-        if (page.url().includes('/login')) {
-            console.log(
-                'Redirected to login - authentication required for tasks page'
-            );
-            // Try authentication again
-            await authenticate(page);
-            await page.goto('/tasks');
-            await waitForPageStability(page);
-        }
-
+        // Navigate to tasks page with standard pattern
+        await navigateToPage(page, '/tasks');
+        
+        // Take a screenshot and compare it to the baseline
         await expect(page).toHaveScreenshot('tasks-page.png');
     });
 
     test('notes page visual test', async ({ page }) => {
-        // Handle authentication first
-        await authenticate(page);
-
-        // Navigate to notes page after authentication
-        await page.goto('/notes');
-        await waitForPageStability(page);
-
-        // Check if we got redirected to login page (authentication required)
-        if (page.url().includes('/login')) {
-            console.log(
-                'Redirected to login - authentication required for notes page'
-            );
-            // Try authentication again
-            await authenticate(page);
-            await page.goto('/notes');
-            await waitForPageStability(page);
-        }
-
+        // Navigate to notes page with standard pattern
+        await navigateToPage(page, '/notes');
+        
+        // Take a screenshot and compare it to the baseline
         await expect(page).toHaveScreenshot('notes-page.png');
     });
 
     // Component-specific tests
     test('task creation form', async ({ page }) => {
-        // Ensure we are logged-in, then navigate
-        await authenticate(page);
-        await page.goto('/tasks');
-        await waitForPageStability(page);
+        // Navigate to tasks page (authentication already handled)
+        await navigateToPage(page, '/tasks');
 
         // Try several approaches to find and click the create task button
         try {
@@ -184,28 +171,29 @@ test.describe('Visual Tests for Main Pages', () => {
             const buttonSelectors = [
                 page.getByRole('button', { name: /add|create|new task/i }),
                 page.getByTestId('create-task-button'),
-                page.locator('button:has-text("Task")'),
+                page.locator('button:has-text("Create Task")'),
                 page.locator('button:has-text("+")'),
             ];
-
+            
+            // Try each selector until we find one that works
             let clicked = false;
             for (const selector of buttonSelectors) {
-                if (
-                    (await selector.count()) > 0 &&
-                    (await selector.isVisible())
-                ) {
+                if ((await selector.count()) > 0 && (await selector.isVisible())) {
                     await selector.click();
                     clicked = true;
                     break;
                 }
             }
-            expect(clicked).toBe(true); // fail loudly if button not found
+            
+            if (clicked) {
+                // Wait briefly for dialog to appear
+                await page.waitForTimeout(800);
 
-            // Wait briefly for dialog to appear
-            await page.waitForTimeout(800);
-
-            // Just take a screenshot of the whole page with dialog open
-            await expect(page).toHaveScreenshot('task-create-form-page.png');
+                // Take a screenshot of the whole page with dialog open
+                await expect(page).toHaveScreenshot('task-create-form-page.png');
+            } else {
+                throw new Error('No visible create task button found');
+            }
         } catch (e) {
             console.log(
                 'Could not find or interact with task creation button:',
@@ -219,13 +207,23 @@ test.describe('Visual Tests for Main Pages', () => {
 
 // Device-specific tests for responsive views
 test.describe('Device-specific views', () => {
+    // Authentication state for this group
+    authStates['Device-specific views'] = { isAuthenticated: false };
+    
+    // Authenticate once before all tests in this group
+    test.beforeAll(async ({ browser }) => {
+        const page = await browser.newPage();
+        await authenticate(page);
+        authStates['Device-specific views'].isAuthenticated = true;
+        await page.close();
+    });
+    
     // Desktop view tests
     test.describe('Desktop viewport', () => {
         test.use({ viewport: devices.desktop });
 
         test('desktop sidebar view', async ({ page }) => {
-            await page.goto('/');
-            await waitForPageStability(page);
+            await navigateToPage(page, '/');
 
             // For desktop, we expect the sidebar to be visible by default
             // Take full page screenshot that will include the sidebar
@@ -233,8 +231,7 @@ test.describe('Device-specific views', () => {
         });
 
         test('desktop dashboard content', async ({ page }) => {
-            await page.goto('/');
-            await waitForPageStability(page);
+            await navigateToPage(page, '/');
 
             // Screenshot main content area - avoiding precise element selection
             // Just give the app enough time to fully render
@@ -249,12 +246,11 @@ test.describe('Device-specific views', () => {
         test.use({ viewport: devices.mobile });
 
         test('mobile layout (sidebar likely collapsed)', async ({ page }) => {
-            await page.goto('/');
-            await waitForPageStability(page);
-
+            await navigateToPage(page, '/');
+            
             // On mobile, sidebar may be collapsed by default - this is expected
             await expect(page).toHaveScreenshot('mobile-default-view.png');
-
+            
             // Try to find and click a hamburger menu or sidebar toggle if it exists
             const possibleToggles = [
                 page.getByRole('button', {
@@ -283,19 +279,30 @@ test.describe('Device-specific views', () => {
 
 // This is a utility to help generate visual tests for all routes
 test.describe('Automatic route testing', () => {
+    // Authentication state for this group
+    authStates['Automatic route testing'] = { isAuthenticated: false };
     // Run on both desktop and mobile
     for (const [deviceName, viewport] of Object.entries(devices)) {
         test.describe(`${deviceName} view`, () => {
             // Set viewport for this test group
             test.use({ viewport });
 
+            // Authenticate once before all tests in this device group
+            test.beforeAll(async ({ browser }) => {
+                if (!authStates['Automatic route testing'].isAuthenticated) {
+                    const page = await browser.newPage();
+                    await authenticate(page);
+                    authStates['Automatic route testing'].isAuthenticated = true;
+                    await page.close();
+                }
+            });
+            
             test(`auto-visual test of routes on ${deviceName}`, async ({
                 page,
             }) => {
                 // List of routes to test
                 const routes = ['/', '/tasks', '/notes', '/login'];
-                let authenticated = false;
-
+                
                 // Start with login route to handle authentication first
                 const sortedRoutes = [
                     '/login',
@@ -307,25 +314,8 @@ test.describe('Automatic route testing', () => {
                     const pageName =
                         route === '/' ? 'home' : route.substring(1);
 
-                    // Handle authentication only once if needed
-                    if (route !== '/login' && !authenticated) {
-                        await authenticate(page);
-                        authenticated = true;
-                    }
-
-                    // Navigate to the route
-                    await page.goto(route);
-                    await waitForPageStability(page);
-
-                    // Check if we got redirected to login page (authentication required)
-                    if (route !== '/login' && page.url().includes('/login')) {
-                        console.log(
-                            `Redirected to login - authentication required for ${route}`
-                        );
-                        await authenticate(page);
-                        await page.goto(route);
-                        await waitForPageStability(page);
-                    }
+                    // Use standardized navigation pattern
+                    await navigateToPage(page, route);
 
                     // Take screenshot with device prefix to distinguish between views
                     await expect(page).toHaveScreenshot(
