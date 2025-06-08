@@ -135,7 +135,8 @@ export async function navigateWithVerification(
     }
     
     // Go to the URL directly
-    await page.goto(routeIdOrPath, { timeout });
+    const navigationPath = typeof routeIdOrPath === 'string' ? routeIdOrPath : routeIdOrPath.path;
+    await page.goto(navigationPath, { timeout });
     
     // Create a minimal navigation result
     const result: NavigationResult = {
@@ -192,6 +193,9 @@ export async function navigateWithVerification(
         }
         
         // Verify route elements
+        // Add detailed debug logging before calling verifyRouteElements
+        console.log(`[navigateWithVerification DEBUG] RouteConfig for element verification: ${JSON.stringify(routeConfig, null, 2)}`);
+        
         elementResult = await verifyRouteElements(page, routeConfig, {
           ...verificationOptions,
           screenshotPath,
@@ -200,6 +204,8 @@ export async function navigateWithVerification(
         });
         
         elementsVerified = elementResult.success;
+        // Always log detailed element verification results for debugging
+        console.log(`[navigateWithVerification DEBUG] Full elementResult for route ${routeConfig?.title || 'UNKNOWN'}: ${JSON.stringify(elementResult, null, 2)}`);
         
         if (!elementsVerified && verbose) {
           console.warn(`⚠️ Element verification failed for ${routeConfig.title}`);
@@ -226,6 +232,7 @@ export async function navigateWithVerification(
         urlVerified,
         elementsVerified,
         elementDetails: elementResult ? elementResult.details : undefined,
+        errorMessage: lastError ? `Element verification failed: ${lastError.message}` : undefined,
         screenshotPath: elementResult ? elementResult.screenshotPath : undefined,
         timestamp: Date.now(),
         duration: Date.now() - startTime

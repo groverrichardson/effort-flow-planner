@@ -68,27 +68,31 @@ async function waitForPageStability(page, route = null) {
 // Helper function for standardized navigation pattern with comprehensive verification
 async function navigateToPage(
     page: Page,
-    routeIdOrPath: string,
+    routeIdOrPath: string | RouteConfig,
     testInfo: TestInfo
 ): Promise<NavigationResult> {
     // Use our enhanced navigation helper that includes retry logic and detailed reporting
     try {
         // Get route configuration for better reporting
         const routeConfig =
-            typeof routeIdOrPath === 'string' && routes[routeIdOrPath]
+            typeof routeIdOrPath === 'string'
                 ? routes[routeIdOrPath]
+                : typeof routeIdOrPath === 'object'
+                ? routeIdOrPath
                 : null;
 
-        const routeName = routeConfig ? routeConfig.title : routeIdOrPath;
+        const routeName = routeConfig ? routeConfig.title : (typeof routeIdOrPath === 'string' ? routeIdOrPath : 'Unknown Route');
         // console.log(`📱 Navigating to ${routeName}`); // Reporter will provide detailed logs
 
-        const result = await navigateTo(page, routeIdOrPath, bypassLogin, {
+        // Extract the route ID from the route config or use the routeIdOrPath string directly
+        const routeId = typeof routeIdOrPath === 'string' ? routeIdOrPath : routeIdOrPath.id;
+        const result = await navigateTo(page, routeId, bypassLogin, {
             maxRetries: 2,
             timeout: 15000,
             throwOnFailure: false,
             verificationOptions: {
                 timeout: 10000,
-                screenshotPath: `route-verification-${routeIdOrPath.replace(
+                screenshotPath: `route-verification-${(typeof routeIdOrPath === 'string' ? routeIdOrPath : routeIdOrPath.id).replace(
                     /\//g,
                     '_'
                 )}-${Date.now()}.png`,
@@ -159,14 +163,17 @@ test.describe('Visual Tests for Main Pages', () => {
         await page.setViewportSize({ width: 1280, height: 800 });
     });
 
-    test('login page visual test', async ({ page }, testInfo: TestInfo) => {
+    test('login page visual test', async ({ browser }, testInfo: TestInfo) => {
+        const context = await browser.newContext({ storageState: undefined }); // Use a new context without saved auth
+        const page = await context.newPage();
         // Navigate to the login page using route ID
-        const navigationResult = await navigateToPage(page, 'login', testInfo);
+        const route = routes.login; // Ensure we get the full route object
+        const navigationResult = await navigateToPage(page, route, testInfo);
 
         // Assert navigation was successful
         expect(navigationResult.success).toBe(true);
         expect(navigationResult.urlVerified).toBe(true);
-        expect(navigationResult.elementsVerified).toBe(true);
+        expect(navigationResult.elementsVerified, `Elements not verified on ${route.title}: ${navigationResult.errorMessage || (navigationResult.elementDetails?.missing ?? []).join(', ') || 'Unknown reasons'}`).toBe(true);
 
         // Log which elements were found for reporting
         console.log(
@@ -176,7 +183,12 @@ test.describe('Visual Tests for Main Pages', () => {
         );
 
         // Take a screenshot and compare it to the baseline
-        await expect(page).toHaveScreenshot('login-page.png');
+        try {
+          await expect(page).toHaveScreenshot('login-page.png');
+        } finally {
+            await page.close();
+            await context.close();
+        }
     });
 
     test('dashboard visual test', async ({ page }, testInfo: TestInfo) => {
@@ -602,14 +614,10 @@ test.describe('Automatic route testing', () => {
                 const page = await browser.newPage();
                 try {
                     await page.setViewportSize(device.viewport);
-                    // This will authenticate once per device type
-                    await authenticate(page);
-                    console.log(
-                        `Authenticated for ${device.name} device tests`
-                    );
+                    // Authentication is handled by global storageState; viewport is set here.
                 } catch (e) {
                     console.error(
-                        `Authentication failed for ${device.name} device:`,
+                        `Error during device setup for ${device.name} device:`,
                         e
                     );
                 } finally {

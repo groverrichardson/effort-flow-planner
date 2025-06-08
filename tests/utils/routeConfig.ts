@@ -124,15 +124,15 @@ export const routes: AppRoutes = {
     requiresAuth: true,
     elements: [
       {
-        id: 'dashboard_title',
-        name: 'Dashboard Title',
-        selector: selectors.heading('dashboard|home|welcome'),
+        id: 'suggestions_header_title',
+        name: 'Suggestions Header Title',
+        selector: selectors.heading('Suggestions for Next Steps'),
         required: true
       },
       {
-        id: 'tasks_overview',
-        name: 'Tasks Overview',
-        selector: selectors.byClass('dashboard-tasks', ['task-overview']),
+        id: 'all_tasks_section_container',
+        name: 'All Tasks Section Container',
+        selector: (page: Page) => page.locator('#all-tasks-section'),
         required: true
       },
       {
@@ -286,7 +286,7 @@ export const routes: AppRoutes = {
       {
         id: 'login_button',
         name: 'Login Button',
-        selector: selectors.button('log[ -]?in|sign[ -]?in'),
+        selector: page => page.locator('button[type="submit"]').first(),
         required: true
       }
     ],

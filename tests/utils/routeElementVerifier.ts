@@ -106,6 +106,7 @@ export async function verifyRouteElements(
   // Check each element in the route configuration
   await Promise.all(route.elements.map(async (element) => {
     const { id, name, selector, required = true, customVerify } = element;
+    if (verbose) console.log(`🔎 Checking element: ID='${id}', Name='${name}', Required=${required}`);
     
     try {
       const elementSelector = selector(page);
@@ -127,11 +128,15 @@ export async function verifyRouteElements(
         }
       } else {
         // Default verification
+        if (verbose) console.log(`  Attempting to find selector for '${name}'...`);
         await elementSelector.waitFor({ state: 'visible', timeout });
+        if (verbose) console.log(`  ✅ Selector for '${name}' resolved and element is visible.`);
         if (verbose) console.log(`✅ Found element: ${name}`);
         found.push(name);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message.split('\n')[0] : String(error);
+      if (verbose) console.error(`  ❗ Error for element '${name}': ${errorMessage}`);
       if (required) {
         if (verbose) console.error(`❌ Required element not found: ${name}`);
         missing.push(name);
@@ -183,6 +188,9 @@ export async function verifyRouteElements(
     throw new Error(errorMessage);
   }
 
+  // Always log for debugging the login page test issue
+  console.log(`[verifyRouteElements DEBUG] Received route object: ${JSON.stringify(route, null, 2)}`);
+  console.log(`[verifyRouteElements DEBUG] Route: ${route?.title || 'UNKNOWN'}, Success: ${success}, Missing: ${JSON.stringify(missing)}, Found: ${JSON.stringify(found)}, Optional Not Found: ${JSON.stringify(notFound)}`);
   return result;
 }
 
