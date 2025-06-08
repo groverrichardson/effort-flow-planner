@@ -452,3 +452,48 @@ export async function navigateTo(
   // Either no authentication needed or already on the right page
   return result;
 }
+
+export async function bypassLogin(page: Page, options: { verbose?: boolean } = {}): Promise<boolean> {
+  const { verbose = false } = options;
+  if (verbose) {
+    console.log('Attempting to bypass login...');
+  }
+  try {
+    const loginPagePath = '/login'; 
+    const expectedPostLoginPath = '/'; 
+
+    if (!page.url().includes(loginPagePath)) {
+        if (verbose) console.log(`Currently not on login page (${page.url()}). Assuming bypass can be triggered from current page or login page will be hit.`);
+    }
+    
+    const bypassButtonSelector = 'button#login-bypass-button'; // UPDATE THIS SELECTOR
+    
+    if (verbose) {
+        console.log(`Looking for bypass button: ${bypassButtonSelector}`);
+    }
+    await page.waitForSelector(bypassButtonSelector, { timeout: 10000 });
+    await page.click(bypassButtonSelector);
+    if (verbose) {
+      console.log('Clicked bypass login button.');
+    }
+
+    await page.waitForURL((url) => !url.pathname.includes(loginPagePath) || url.pathname === expectedPostLoginPath, { timeout: 15000 });
+    
+    if (page.url().includes(expectedPostLoginPath) || !page.url().includes(loginPagePath)) {
+      if (verbose) {
+        console.log(`✅ Login bypass successful. Current URL: ${page.url()}`);
+      }
+      return true;
+    } else {
+      if (verbose) {
+        console.error(`Login bypass attempt failed: Still on or redirected back to login page. Current URL: ${page.url()}`);
+      }
+      return false;
+    }
+  } catch (error) {
+    if (verbose) {
+      console.error(`❌ Error during login bypass: ${(error as Error).message}`);
+    }
+    return false;
+  }
+}

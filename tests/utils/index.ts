@@ -15,6 +15,7 @@ export * from './routeElementVerifier';
 
 // Navigation Helpers
 export * from './navigationHelperNew';
+export { bypassLogin } from './navigationHelperNew'; // Explicit re-export
 
 // Navigation Reporter
 export * from './navigationReporter';
