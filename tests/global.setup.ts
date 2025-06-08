@@ -61,10 +61,14 @@ async function globalSetup(config: FullConfig) {
         password: testUserPassword,
     });
 
-    // Detailed logging of Supabase response
-    console.log('Supabase signInWithPassword raw response:');
-    console.log('Error object:', error ? JSON.stringify(error, null, 2) : null);
-    console.log('Data object:', data ? JSON.stringify(data, null, 2) : null);
+    // Log authentication result without sensitive data
+    if (error) {
+        console.log('Supabase signInWithPassword failed');
+    } else {
+        console.log('Supabase signInWithPassword succeeded');
+        console.log('Session exists:', !!data?.session);
+        console.log('User ID:', data?.user?.id);
+    }
 
     if (error) {
         console.error('Supabase sign-in error:', error.message);
