@@ -11,8 +11,11 @@
         "preview": "vite preview",
         "test": "vitest run -c vitest.config.ts",
         "test:unit": "vitest --watch",
-        "test:ui": "cross-env PWTEST_WATCH=1 npx playwright test --project=chromium --headed --reporter=list",
-        "test:ui:port": "cross-env PORT=$PORT PWTEST_WATCH=1 npx playwright test --project=chromium --headed --reporter=list",
+        "test:ui": "node tests/utils/setupPort.js npx playwright test --project=chromium --headed",
+        "test:ui:single": "node tests/utils/setupPort.js npx playwright test --project=chromium --headed -g",
+        "test:ui:debug": "node tests/utils/setupPort.js npx playwright test --project=chromium --headed --debug=pw:api",
+        "test:ui:update": "node tests/utils/setupPort.js npx playwright test --project=chromium --headed --update-snapshots",
+        "test:run": "node tests/utils/testRunner.js",
         "test:all": "npx concurrently \"npm run test:unit\" \"npm run test:ui\""
     },
     "dependencies": {

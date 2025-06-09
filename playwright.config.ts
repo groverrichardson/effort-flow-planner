@@ -1,10 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 import path, { dirname } from 'path'; // Updated import for dirname
 import { fileURLToPath } from 'url'; // Added for ESM __dirname equivalent
+import { findAvailablePort } from './tests/utils/portUtils'; // Import the port utility
 
 // Get port from environment or use default
 const PORT = process.env.PORT || process.env.VITE_PORT || 8080;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+
+// Default port for HTML reporter - will be overridden at runtime
+const HTML_REPORT_PORT = 9323;
 
 // Define __filename and __dirname for ES Module scope
 const __filename = fileURLToPath(import.meta.url);
@@ -13,6 +17,10 @@ const __dirname = dirname(__filename);
 // Define the path to the authentication state file
 const AUTH_FILE_PATH = path.resolve(__dirname, './playwright/.auth/user.json');
 
+// Create a function to find an available port (will be used by reporter on startup)
+process.env.PLAYWRIGHT_HTML_PORT = process.env.PLAYWRIGHT_HTML_PORT || HTML_REPORT_PORT.toString();
+
+// Export the config directly as Playwright requires
 export default defineConfig({
   testDir: './tests',
   timeout: 30 * 1000,
@@ -30,7 +38,13 @@ export default defineConfig({
   // Use a single worker for watch mode to make it easier to follow
   workers: process.env.PWTEST_WATCH ? 1 : (process.env.CI ? 1 : undefined),
   // Generate both HTML and list reporters for better visibility
-  reporter: [['html'], ['list']],
+  reporter: [
+    ['html', { 
+      open: process.env.CI ? 'never' : 'always',
+      port: parseInt(process.env.PLAYWRIGHT_HTML_PORT) 
+    }], 
+    ['list']
+  ],
 
   // Global setup to run before all tests
   globalSetup: path.resolve(__dirname, './tests/global.setup.ts'), // Use path.resolve with ESM-compatible __dirname
