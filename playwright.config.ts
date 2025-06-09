@@ -7,6 +7,9 @@ import { findAvailablePort } from './tests/utils/portUtils'; // Import the port 
 const PORT = process.env.PORT || process.env.VITE_PORT || 8080;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
+// Default to headless mode, but allow headed mode with HEADED=1
+const HEADLESS = process.env.HEADED !== '1';
+
 // Default port for HTML reporter - will be overridden at runtime
 const HTML_REPORT_PORT = 9323;
 
@@ -50,6 +53,8 @@ export default defineConfig({
   globalSetup: path.resolve(__dirname, './tests/global.setup.ts'), // Use path.resolve with ESM-compatible __dirname
   use: {
     baseURL: BASE_URL,
+    // Run in headless mode by default (no browser windows)
+    headless: HEADLESS,
     // Always capture traces in watch mode
     trace: process.env.PWTEST_WATCH ? 'on' : 'on-first-retry',
     // Take screenshots of everything in watch mode
