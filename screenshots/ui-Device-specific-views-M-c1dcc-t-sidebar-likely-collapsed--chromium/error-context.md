@@ -1,14 +1,14 @@
 # Test info
 
 - Name: Device-specific views >> Mobile viewport >> mobile layout (sidebar likely collapsed)
-- Location: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:669:9
+- Location: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:663:9
 
 # Error details
 
 ```
 Error: expect(page).toHaveScreenshot(expected)
 
-  111 pixels (ratio 0.01 of all image pixels) are different.
+  104 pixels (ratio 0.01 of all image pixels) are different.
 
 Expected: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts-snapshots/mobile-with-sidebar-open-chromium-darwin.png
 Received: /Users/freedommarketing/Desktop/effort-flow-planner/screenshots/ui-Device-specific-views-M-c1dcc-t-sidebar-likely-collapsed--chromium/mobile-with-sidebar-open-actual.png
@@ -21,16 +21,16 @@ Call log:
     - disabled all CSS animations
   - waiting for fonts to load...
   - fonts loaded
-  - 111 pixels (ratio 0.01 of all image pixels) are different.
+  - 104 pixels (ratio 0.01 of all image pixels) are different.
   - waiting 100ms before taking screenshot
   - taking page screenshot
     - disabled all CSS animations
   - waiting for fonts to load...
   - fonts loaded
   - captured a stable screenshot
-  - 111 pixels (ratio 0.01 of all image pixels) are different.
+  - 104 pixels (ratio 0.01 of all image pixels) are different.
 
-    at /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:698:44
+    at /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:692:44
 ```
 
 # Page snapshot
@@ -70,7 +70,7 @@ Call log:
     - text: New Note
   - heading "View Options" [level=4]
   - button "All Active"
-  - button "Completed Today (24)"
+  - button "Completed Today (27)"
   - button "Archived (0)"
   - heading "Filters" [level=4]
   - button "Filter Tasks":
@@ -100,6 +100,12 @@ Call log:
 # Test source
 
 ```ts
+  592 |         } catch (e) {
+  593 |             console.error('Task creation form test failed:', e);
+  594 |             // Take screenshot of current state for debugging
+  595 |             await expect(page).toHaveScreenshot(
+  596 |                 'task-creation-test-failed.png'
+  597 |             );
   598 |             throw e;
   599 |         }
   600 |     });
@@ -194,14 +200,14 @@ Call log:
   689 |                     ) {
   690 |                         await toggle.click();
   691 |                         await page.waitForTimeout(1000); // Wait for animation
-  692 |                         await expect(page).toHaveScreenshot(
+> 692 |                         await expect(page).toHaveScreenshot(
+      |                                            ^ Error: expect(page).toHaveScreenshot(expected)
   693 |                             'mobile-with-sidebar-open.png'
   694 |                         );
   695 |                         toggleFound = true;
   696 |                         break; // Stop after first successful toggle
   697 |                     }
-> 698 |                 }
-      |                  ^ Error: expect(page).toHaveScreenshot(expected)
+  698 |                 }
   699 |
   700 |                 if (!toggleFound) {
   701 |                     console.log(
@@ -296,10 +302,4 @@ Call log:
   790 |                             // Take a very brief pause to ensure page is stable
   791 |                             await page.waitForTimeout(300);
   792 |                             
-  793 |                             // Take screenshot with consistent naming and attach diffs to report
-  794 |                             try {
-  795 |                                 const screenshotResult = await compareScreenshotAndAttachToReport(
-  796 |                                     page, 
-  797 |                                     testInfo, 
-  798 |                                     `${device.name}-${route.id}-page`,
 ```

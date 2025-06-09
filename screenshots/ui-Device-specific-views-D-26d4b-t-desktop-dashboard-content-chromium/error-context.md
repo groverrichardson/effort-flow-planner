@@ -1,14 +1,14 @@
 # Test info
 
 - Name: Device-specific views >> Desktop viewport >> desktop dashboard content
-- Location: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:634:9
+- Location: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:628:9
 
 # Error details
 
 ```
 Error: expect(page).toHaveScreenshot(expected)
 
-  112 pixels (ratio 0.01 of all image pixels) are different.
+  103 pixels (ratio 0.01 of all image pixels) are different.
 
 Expected: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts-snapshots/desktop-dashboard-content-chromium-darwin.png
 Received: /Users/freedommarketing/Desktop/effort-flow-planner/screenshots/ui-Device-specific-views-D-26d4b-t-desktop-dashboard-content-chromium/desktop-dashboard-content-actual.png
@@ -21,16 +21,16 @@ Call log:
     - disabled all CSS animations
   - waiting for fonts to load...
   - fonts loaded
-  - 112 pixels (ratio 0.01 of all image pixels) are different.
+  - 103 pixels (ratio 0.01 of all image pixels) are different.
   - waiting 100ms before taking screenshot
   - taking page screenshot
     - disabled all CSS animations
   - waiting for fonts to load...
   - fonts loaded
   - captured a stable screenshot
-  - 112 pixels (ratio 0.01 of all image pixels) are different.
+  - 103 pixels (ratio 0.01 of all image pixels) are different.
 
-    at /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:641:32
+    at /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:635:32
 ```
 
 # Page snapshot
@@ -72,7 +72,7 @@ Call log:
   - text: New Note
 - heading "View Options" [level=4]
 - button "All Active"
-- button "Completed Today (24)"
+- button "Completed Today (27)"
 - button "Archived (0)"
 - heading "Filters" [level=4]
 - button "Filter Tasks":
@@ -99,6 +99,12 @@ Call log:
 # Test source
 
 ```ts
+  535 |                     ) {
+  536 |                         dialogVisible = true;
+  537 |                         dialogDetails = `Dialog found using selector: ${dialog}`;
+  538 |                         console.log(dialogDetails);
+  539 |                         break;
+  540 |                     }
   541 |                 }
   542 |
   543 |                 if (dialogVisible) {
@@ -193,14 +199,14 @@ Call log:
   632 |
   633 |             // Screenshot main content area - avoiding precise element selection
   634 |             // Just give the app enough time to fully render
-  635 |             await expect(page).toHaveScreenshot(
+> 635 |             await expect(page).toHaveScreenshot(
+      |                                ^ Error: expect(page).toHaveScreenshot(expected)
   636 |                 'desktop-dashboard-content.png'
   637 |             );
   638 |         });
   639 |     });
   640 |
-> 641 |     // Mobile view tests
-      |                         ^ Error: expect(page).toHaveScreenshot(expected)
+  641 |     // Mobile view tests
   642 |     test.describe('Mobile viewport', () => {
   643 |         test.use({ viewport: devices.mobile });
   644 |
@@ -295,10 +301,4 @@ Call log:
   733 |
   734 |     // Define key routes to test instead of all routes to avoid timeouts
   735 |     const keyRoutesToTest = ['login', 'dashboard', 'tasks', 'notes'];
-  736 |
-  737 |     for (const device of deviceConfigs) {
-  738 |         test.describe(`${device.name} view`, () => {
-  739 |             // Set viewport for this test group
-  740 |             test.use({ viewport: { width: device.width, height: device.height } });
-  741 |             
 ```
