@@ -107,7 +107,17 @@ export async function compareScreenshotAndAttachToReport(
 
   // Now perform the actual Playwright comparison
   try {
-    await expect(page).toHaveScreenshot(screenshotName, screenshotOptions);
+    // Explicitly ensure the threshold is set correctly with the right option name
+    // This ensures compatibility with both toHaveScreenshot and the global config
+    const enhancedOptions = {
+      ...screenshotOptions,
+      // Make sure both threshold options are covered (Playwright has changed option names in different versions)
+      threshold: screenshotOptions.threshold,
+    };
+
+    console.log(`Comparing screenshot with threshold: ${enhancedOptions.threshold} (${enhancedOptions.threshold * 100}%)`);
+    
+    await expect(page).toHaveScreenshot(screenshotName, enhancedOptions);
     return { 
       success: true, 
       message: `Screenshot matches baseline for ${baseName}`

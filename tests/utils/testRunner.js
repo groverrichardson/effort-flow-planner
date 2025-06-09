@@ -29,7 +29,12 @@ const testPattern = args.filter(arg => !arg.startsWith('--')).join(' ');
 // Build the command to run with setupPort script
 const cmd = 'node';
 const setupPortPath = path.join(__dirname, 'setupPort.js');
-const cmdArgs = [setupPortPath, 'npx', 'playwright', 'test', '--project=chromium', '--headed'];
+const cmdArgs = [setupPortPath, 'npx', 'playwright', 'test', '--project=chromium'];
+
+// Only use headed mode if explicitly requested via environment variable
+if (process.env.HEADED === '1') {
+  cmdArgs.push('--headed');
+}
 
 // Add test pattern if provided
 if (testPattern) {
