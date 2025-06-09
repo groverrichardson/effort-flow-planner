@@ -1,0 +1,304 @@
+# Test info
+
+- Name: Device-specific views >> Desktop viewport >> desktop sidebar view
+- Location: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:620:9
+
+# Error details
+
+```
+Error: expect(page).toHaveScreenshot(expected)
+
+  103 pixels (ratio 0.01 of all image pixels) are different.
+
+Expected: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts-snapshots/desktop-with-sidebar-chromium-darwin.png
+Received: /Users/freedommarketing/Desktop/effort-flow-planner/screenshots/ui-Device-specific-views-D-31e3d-ewport-desktop-sidebar-view-chromium/desktop-with-sidebar-actual.png
+    Diff: /Users/freedommarketing/Desktop/effort-flow-planner/screenshots/ui-Device-specific-views-D-31e3d-ewport-desktop-sidebar-view-chromium/desktop-with-sidebar-diff.png
+
+Call log:
+  - expect.toHaveScreenshot(desktop-with-sidebar.png) with timeout 10000ms
+    - verifying given screenshot expectation
+  - taking page screenshot
+    - disabled all CSS animations
+  - waiting for fonts to load...
+  - fonts loaded
+  - 103 pixels (ratio 0.01 of all image pixels) are different.
+  - waiting 100ms before taking screenshot
+  - taking page screenshot
+    - disabled all CSS animations
+  - waiting for fonts to load...
+  - fonts loaded
+  - captured a stable screenshot
+  - 103 pixels (ratio 0.01 of all image pixels) are different.
+
+    at /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:625:32
+```
+
+# Page snapshot
+
+```yaml
+- region "Notifications (F8)":
+  - list
+- region "Notifications alt+T"
+- img "DoNext Logo"
+- button "Switch to dark mode":
+  - img
+- img "Flame icon"
+- text: "0"
+- paragraph
+- button "Create Task" [disabled]:
+  - img
+  - text: Create Task
+- text: "Pro tip: Use #tag for tags, @person for people, \"high priority\" or dates like \"due tomorrow\""
+- heading "Suggestions for Next Steps" [level=2]
+- paragraph: Future home of intelligent task suggestions. For now, consider what's most important or time-sensitive!
+- button "Owed to Others (Due Today or Past Due)" [expanded]:
+  - text: Owed to Others (Due Today or Past Due)
+  - img
+- paragraph: No tasks owed to others are due today or past due.
+- button "All My Tasks":
+  - text: All My Tasks
+  - img
+- button "Toggle sidebar":
+  - img
+  - text: Toggle sidebar
+- heading "Controls" [level=3]
+- img
+- textbox "Search tasks..."
+- button "New Task":
+  - img
+  - text: New Task
+- button "New Note":
+  - img
+  - text: New Note
+- heading "View Options" [level=4]
+- button "All Active"
+- button "Completed Today (27)"
+- button "Archived (0)"
+- heading "Filters" [level=4]
+- button "Filter Tasks":
+  - img
+  - text: Filter Tasks
+- button "Bulk Edit":
+  - img
+  - text: Bulk Edit
+- button "Manage Tags":
+  - img
+  - text: Manage Tags
+- button "Manage People":
+  - img
+  - text: Manage People
+- button "Import CSV":
+  - img
+  - text: Import CSV
+- link "All Notes":
+  - /url: /notes
+  - img
+  - text: All Notes
+```
+
+# Test source
+
+```ts
+  525 |                     page.locator('[data-testid="task-form"]'),
+  526 |                 ];
+  527 |
+  528 |                 let dialogVisible = false;
+  529 |                 let dialogDetails = '';
+  530 |
+  531 |                 for (const dialog of dialogSelectors) {
+  532 |                     if (
+  533 |                         (await dialog.count()) > 0 &&
+  534 |                         (await dialog.isVisible())
+  535 |                     ) {
+  536 |                         dialogVisible = true;
+  537 |                         dialogDetails = `Dialog found using selector: ${dialog}`;
+  538 |                         console.log(dialogDetails);
+  539 |                         break;
+  540 |                     }
+  541 |                 }
+  542 |
+  543 |                 if (dialogVisible) {
+  544 |                     console.log('Task creation dialog successfully opened');
+  545 |                     await expect(page).toHaveScreenshot(
+  546 |                         'task-create-form-page.png'
+  547 |                     );
+  548 |                 } else {
+  549 |                     console.error(
+  550 |                         'Button was clicked but dialog did not appear'
+  551 |                     );
+  552 |                     await expect(page).toHaveScreenshot(
+  553 |                         'task-dialog-not-visible.png'
+  554 |                     );
+  555 |                     throw new Error(
+  556 |                         'Task form dialog not found after clicking create button'
+  557 |                     );
+  558 |                 }
+  559 |             } else {
+  560 |                 console.log('No viable task creation button found, injecting a mock button for testing');
+  561 |                 
+  562 |                 // Inject a test button if none exists - this allows the test to continue
+  563 |                 await page.evaluate(() => {
+  564 |                     const mockButton = document.createElement('button');
+  565 |                     mockButton.id = 'mock-create-task-button';
+  566 |                     mockButton.textContent = '+ Create Task';
+  567 |                     mockButton.style.position = 'fixed';
+  568 |                     mockButton.style.bottom = '20px';
+  569 |                     mockButton.style.right = '20px';
+  570 |                     mockButton.style.zIndex = '1000';
+  571 |                     mockButton.style.padding = '10px';
+  572 |                     mockButton.style.backgroundColor = '#4CAF50';
+  573 |                     mockButton.style.color = 'white';
+  574 |                     mockButton.style.border = 'none';
+  575 |                     mockButton.style.borderRadius = '4px';
+  576 |                     document.body.appendChild(mockButton);
+  577 |                     console.log('Mock button injected for testing purposes');
+  578 |                 });
+  579 |                 
+  580 |                 await page.waitForTimeout(500);
+  581 |                 const mockButton = page.locator('#mock-create-task-button');
+  582 |                 
+  583 |                 if (await mockButton.isVisible()) {
+  584 |                     console.log('Successfully injected mock button for testing');
+  585 |                     await mockButton.click();
+  586 |                     clicked = true;
+  587 |                 } else {
+  588 |                     await expect(page).toHaveScreenshot('no-create-button-found.png');
+  589 |                     throw new Error('Failed to inject mock button for task creation test');
+  590 |                 }
+  591 |             }
+  592 |         } catch (e) {
+  593 |             console.error('Task creation form test failed:', e);
+  594 |             // Take screenshot of current state for debugging
+  595 |             await expect(page).toHaveScreenshot(
+  596 |                 'task-creation-test-failed.png'
+  597 |             );
+  598 |             throw e;
+  599 |         }
+  600 |     });
+  601 | });
+  602 |
+  603 | // Device-specific tests for responsive views
+  604 | test.describe('Device-specific views', () => {
+  605 |     // Authentication state for this group
+  606 |     authStates['Device-specific views'] = { isAuthenticated: false };
+  607 |
+  608 |     // Authenticate once before all tests in this group
+  609 |     test.beforeAll(async ({ browser }) => {
+  610 |         const page = await browser.newPage();
+  611 |         await bypassLogin(page);
+  612 |         authStates['Device-specific views'].isAuthenticated = true;
+  613 |         await page.close();
+  614 |     });
+  615 |
+  616 |     // Desktop view tests
+  617 |     test.describe('Desktop viewport', () => {
+  618 |         test.use({ viewport: devices.desktop });
+  619 |
+  620 |         test('desktop sidebar view', async ({ page }, testInfo: TestInfo) => {
+  621 |             await navigateToPage(page, '/', testInfo);
+  622 |
+  623 |             // For desktop, we expect the sidebar to be visible by default
+  624 |             // Take full page screenshot that will include the sidebar
+> 625 |             await expect(page).toHaveScreenshot('desktop-with-sidebar.png');
+      |                                ^ Error: expect(page).toHaveScreenshot(expected)
+  626 |         });
+  627 |
+  628 |         test('desktop dashboard content', async ({
+  629 |             page,
+  630 |         }, testInfo: TestInfo) => {
+  631 |             await navigateToPage(page, '/', testInfo);
+  632 |
+  633 |             // Screenshot main content area - avoiding precise element selection
+  634 |             // Just give the app enough time to fully render
+  635 |             await expect(page).toHaveScreenshot(
+  636 |                 'desktop-dashboard-content.png'
+  637 |             );
+  638 |         });
+  639 |     });
+  640 |
+  641 |     // Mobile view tests
+  642 |     test.describe('Mobile viewport', () => {
+  643 |         test.use({ viewport: devices.mobile });
+  644 |
+  645 |         // Authentication state for mobile tests
+  646 |         authStates['Mobile viewport'] = { isAuthenticated: false };
+  647 |
+  648 |         // Authenticate once before all tests in this group
+  649 |         test.beforeAll(async ({ browser }) => {
+  650 |             if (!authStates['Mobile viewport'].isAuthenticated) {
+  651 |                 const page = await browser.newPage();
+  652 |                 try {
+  653 |                     await authenticate(page);
+  654 |                     authStates['Mobile viewport'].isAuthenticated = true;
+  655 |                 } catch (e) {
+  656 |                     console.error('Mobile viewport authentication failed:', e);
+  657 |                 } finally {
+  658 |                     await page.close();
+  659 |                 }
+  660 |             }
+  661 |         });
+  662 |
+  663 |         test('mobile layout (sidebar likely collapsed)', async ({
+  664 |             page,
+  665 |         }, testInfo: TestInfo) => {
+  666 |             try {
+  667 |                 await navigateToPage(page, '/', testInfo);
+  668 |
+  669 |                 // On mobile, sidebar may be collapsed by default - this is expected
+  670 |                 await expect(page).toHaveScreenshot('mobile-default-view.png');
+  671 |
+  672 |                 // Try to find and click a hamburger menu or sidebar toggle if it exists
+  673 |                 const possibleToggles = [
+  674 |                     page.getByRole('button', {
+  675 |                         name: /menu|toggle|hamburger|sidebar/i,
+  676 |                     }),
+  677 |                     page.locator(
+  678 |                         '.hamburger, [data-testid="menu-button"], button.menu-toggle'
+  679 |                     ),
+  680 |                     page.locator('button').filter({ hasText: /☰|≡|menu/i }),
+  681 |                 ];
+  682 |
+  683 |                 // Try each possible toggle selector
+  684 |                 let toggleFound = false;
+  685 |                 for (const toggle of possibleToggles) {
+  686 |                     if (
+  687 |                         (await toggle.count()) > 0 &&
+  688 |                         (await toggle.isVisible())
+  689 |                     ) {
+  690 |                         await toggle.click();
+  691 |                         await page.waitForTimeout(1000); // Wait for animation
+  692 |                         await expect(page).toHaveScreenshot(
+  693 |                             'mobile-with-sidebar-open.png'
+  694 |                         );
+  695 |                         toggleFound = true;
+  696 |                         break; // Stop after first successful toggle
+  697 |                     }
+  698 |                 }
+  699 |
+  700 |                 if (!toggleFound) {
+  701 |                     console.log(
+  702 |                         'No visible sidebar toggle found on mobile view'
+  703 |                     );
+  704 |                 }
+  705 |             } catch (e) {
+  706 |                 console.error('Mobile layout test failed:', e);
+  707 |                 throw e;
+  708 |             }
+  709 |         });
+  710 |     });
+  711 | });
+  712 |
+  713 | // This is a utility to help generate visual tests for all routes efficiently
+  714 | test.describe('Automatic route testing', () => {
+  715 |     // Test timeout for entire routing tests
+  716 |     test.setTimeout(60000); // 1-minute timeout for these tests
+  717 |     
+  718 |     // Device configurations for testing
+  719 |     const deviceConfigs = [
+  720 |         {
+  721 |             name: 'desktop',
+  722 |             width: 1280,
+  723 |             height: 720,
+  724 |             checkSidebar: true,
+  725 |         },
+```
