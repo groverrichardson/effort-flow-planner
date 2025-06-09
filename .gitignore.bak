@@ -29,18 +29,3 @@ coverage/
 
 # Environment variables
 .env
-.env.*
-!.env.example
-
-# Test screenshots and results
-/tests/ui.spec.ts-snapshots/
-/test-results/
-
-# Playwright reports
-/playwright-report/
-/playwright-report.json
-
-# Build artifacts
-*.tsbuildinfo
-.eslintcache
-.nyc_output
