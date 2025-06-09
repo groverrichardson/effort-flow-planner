@@ -16,7 +16,7 @@
         "test:ui:single": "node tests/utils/setupPort.js npx playwright test --project=chromium --headed -g",
         "test:ui:debug": "node tests/utils/setupPort.js npx playwright test --project=chromium --headed --debug=pw:api",
         "test:ui:update": "node tests/utils/setupPort.js npx playwright test --project=chromium --headed --update-snapshots",
-        "test:report": "npx playwright show-report",
+        "test:report": "node tests/utils/showReport.js",
         "test:run": "node tests/utils/testRunner.js",
         "test:all": "npx concurrently \"npm run test:unit\" \"npm run test:ui\""
     },
