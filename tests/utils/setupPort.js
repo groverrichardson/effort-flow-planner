@@ -21,13 +21,22 @@ const MAX_ATTEMPTS = 20;
     const port = await findAvailablePort(START_PORT, MAX_ATTEMPTS);
     console.log(`Found available port: ${port}`);
     
-    // Set environment variable for the Playwright config to use
-    process.env.PLAYWRIGHT_HTML_PORT = port.toString();
-    // Always set watch mode for better debugging experience
-    process.env.PWTEST_WATCH = '1';
-    
     // Get the command to run from command line arguments
     const args = process.argv.slice(2);
+    
+    // Set environment variable for the Playwright config to use
+    process.env.PLAYWRIGHT_HTML_PORT = port.toString();
+    
+    // Only set watch mode if explicitly requested with --watch flag
+    const watchMode = args.includes('--watch');
+    if (watchMode) {
+      process.env.PWTEST_WATCH = '1';
+      // Remove the --watch flag from args since Playwright doesn't use it
+      const watchIndex = args.indexOf('--watch');
+      if (watchIndex > -1) {
+        args.splice(watchIndex, 1);
+      }
+    }
     
     if (args.length === 0) {
       console.log('No command provided. Usage: node setupPort.js [command]');
