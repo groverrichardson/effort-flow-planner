@@ -43,14 +43,20 @@ export default defineConfig({
   // Generate both HTML and list reporters for better visibility
   reporter: [
     ['html', { 
-      open: process.env.CI ? 'never' : 'always',
-      port: parseInt(process.env.PLAYWRIGHT_HTML_PORT) 
+      open: process.env.HTML_REPORT_OPEN || (process.env.CI ? 'never' : 'never'),
+      port: parseInt(process.env.PLAYWRIGHT_HTML_PORT || '0'),
+      host: process.env.HTML_REPORT_HOST || 'localhost',
+      // Add graceful shutdown to prevent port conflicts
+      outputFolder: './test-results/html-report'
     }], 
     ['list']
   ],
 
   // Global setup to run before all tests
   globalSetup: path.resolve(__dirname, './tests/global.setup.ts'), // Use path.resolve with ESM-compatible __dirname
+  
+  // Global teardown to run after all tests (for port cleanup)
+  globalTeardown: path.resolve(__dirname, './tests/global.teardown.mjs'),
   use: {
     baseURL: BASE_URL,
     // Run in headless mode by default (no browser windows)

@@ -19,3 +19,6 @@ export { bypassLogin } from './navigationHelperNew'; // Explicit re-export
 
 // Navigation Reporter
 export * from './navigationReporter';
+
+// Test Data Seeding
+export * from './testDataSeeder';
