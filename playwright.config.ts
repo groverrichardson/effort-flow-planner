@@ -29,7 +29,7 @@ export default defineConfig({
     // Less strict comparison for visual testing (allows for small rendering differences)
     toMatchSnapshot: { 
       maxDiffPixelRatio: 0.05,
-      threshold: 0.2, // Tolerates slightly more image difference
+      threshold: 0.02, // 2% threshold for visual differences
     },
   },
   fullyParallel: true,

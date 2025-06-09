@@ -27,7 +27,7 @@ export async function compareScreenshotAndAttachToReport(
   // Screenshot options
   const screenshotOptions = {
     timeout: options.timeout || 5000,
-    threshold: options.threshold || 0.2,
+    threshold: options.threshold || 0.02, // 2% threshold for visual differences
     maxDiffPixelRatio: options.maxDiffPixelRatio || 0.01
   };
 
