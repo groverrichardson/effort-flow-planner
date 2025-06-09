@@ -380,7 +380,12 @@ export class TestDataSeeder {
         // Link tag to task
         const { error: linkError } = await this.supabase
           .from('task_tags')
-          .insert({ task_id: taskId, tag_id: tagId, user_id: this.userId });
+          .insert({ 
+            task_id: taskId, 
+            tag_id: tagId, 
+            user_id: this.userId,
+            tag_name: tagName  // Adding the tag name field
+          });
         
         if (linkError) {
           throw new Error(`Failed to link tag ${tagName} to task: ${linkError.message}`);

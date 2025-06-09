@@ -1,3 +1,14 @@
+/**
+ * IMPORTANT: THIS IS A JEST/VITEST STYLE TEST FILE
+ * =============================================
+ * This file uses Jest/Vitest test syntax (describe, it, expect) and is meant to be run with:
+ * npm run test       - Run tests with Vitest
+ * npm run test:unit  - Run tests in watch mode
+ * 
+ * DO NOT run this file with Playwright test runner as it uses a different test format.
+ * For Playwright tests, use .spec.ts files instead.
+ */
+
 import { testDataSeeder, seedBasicTask } from './utils/testDataSeeder';
 import { Task } from '../src/types';
 

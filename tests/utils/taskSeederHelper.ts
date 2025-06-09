@@ -55,7 +55,10 @@ export class TaskSeederHelper {
   async setupTasksAndNavigate(page: Page): Promise<Task[]> {
     await this.setup();
     this.createdTasks = await templates.seedMixedTaskSet();
-    await page.goto('/tasks');
+    // Make sure we go to the base URL rather than a relative path
+    await page.goto('http://localhost:8080/tasks');
+    // Wait longer to ensure everything is loaded
+    await page.waitForTimeout(2000);
     await page.waitForLoadState('networkidle');
     return this.createdTasks;
   }
@@ -66,7 +69,8 @@ export class TaskSeederHelper {
   async setupPriorityTasksAndNavigate(page: Page, count = 3): Promise<Task[]> {
     await this.setup();
     this.createdTasks = await templates.seedPriorityTasks(count);
-    await page.goto('/tasks');
+    await page.goto('http://localhost:8080/tasks');
+    await page.waitForTimeout(2000);
     await page.waitForLoadState('networkidle');
     return this.createdTasks;
   }
@@ -77,7 +81,8 @@ export class TaskSeederHelper {
   async setupDueDateTasksAndNavigate(page: Page): Promise<Task[]> {
     await this.setup();
     this.createdTasks = await templates.seedDueDateTasks();
-    await page.goto('/tasks');
+    await page.goto('http://localhost:8080/tasks');
+    await page.waitForTimeout(2000);
     await page.waitForLoadState('networkidle');
     return this.createdTasks;
   }
@@ -88,7 +93,8 @@ export class TaskSeederHelper {
   async setupTaggedTasksAndNavigate(page: Page, count = 2): Promise<Task[]> {
     await this.setup();
     this.createdTasks = await templates.seedTaggedTasks(count);
-    await page.goto('/tasks');
+    await page.goto('http://localhost:8080/tasks');
+    await page.waitForTimeout(2000);
     await page.waitForLoadState('networkidle');
     return this.createdTasks;
   }
@@ -99,7 +105,8 @@ export class TaskSeederHelper {
   async setupCompletionTasksAndNavigate(page: Page): Promise<Task[]> {
     await this.setup();
     this.createdTasks = await templates.seedCompletionStatusTasks();
-    await page.goto('/tasks');
+    await page.goto('http://localhost:8080/tasks');
+    await page.waitForTimeout(2000);
     await page.waitForLoadState('networkidle');
     return this.createdTasks;
   }
