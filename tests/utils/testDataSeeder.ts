@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Priority, TaskStatus, EffortLevel, DueDateType, Task } from '../../src/types';
+import { Note } from '../../src/types/note';
 import { Database } from '../../src/types/supabase';
 import fs from 'fs';
 import path from 'path';
@@ -9,6 +10,7 @@ import { fileURLToPath } from 'url';
 const TEST_TAG_PREFIX = 'test_tag_';
 const TEST_PERSON_PREFIX = 'test_person_';
 const TEST_TASK_PREFIX = 'Test Task:';
+const TEST_NOTE_PREFIX = 'Test Note:';
 
 // Task data templates for different scenarios
 export enum TestTaskTemplate {
@@ -33,6 +35,31 @@ export interface RichTaskOptions {
   effortLevel?: EffortLevel;
   completed?: boolean;
   tags?: string[];
+}
+
+// Note data templates for different scenarios
+export enum TestNoteTemplate {
+  BASIC = 'basic',
+  RICH_TEXT = 'rich_text',
+  WITH_TASKS = 'with_tasks',
+  ARCHIVED = 'archived',
+  WITH_MARKDOWN = 'with_markdown',
+}
+
+// Interface for creating rich test notes
+export interface RichNoteOptions {
+  name?: string;
+  body?: string;
+  taggedTaskIds?: string[];
+  is_archived?: boolean;
+}
+
+// Mixed data creation options
+export interface TaskWithNotesOptions {
+  taskOptions: RichTaskOptions;
+  noteCount?: number;
+  noteTemplate?: TestNoteTemplate;
+  customNoteOptions?: RichNoteOptions;
 }
 
 // Generate a random date between two dates
@@ -401,13 +428,336 @@ export class TestDataSeeder {
    * Delete all test tasks created by the seeder
    * Should be called after tests to clean up
    */
-  async cleanupTestTasks(): Promise<void> {
+  /**
+   * Create a basic note with minimal required fields
+   * @param name Optional custom name for the note (default is generated)
+   * @returns The created note object
+   */
+  async createBasicNote(name?: string): Promise<Note> {
     if (!this.initialized || !this.userId) {
       await this.initialize();
     }
     
+    const noteName = name || `${TEST_NOTE_PREFIX} Basic Note ${new Date().toISOString().substring(0, 19)}`;
+    const noteBody = 'This is a test note body created by the test data seeder.';
+    
     try {
-      // Delete tasks that match our test prefix
+      return await this.createNote({
+        name: noteName,
+        body: noteBody,
+        taggedTaskIds: [],
+        userId: this.userId,
+        is_archived: false
+      });
+    } catch (error) {
+      console.error('Failed to create basic note:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Create a rich note with custom options
+   * @param options Configuration options for the note
+   * @returns The created note object
+   */
+  async createRichNote(options: RichNoteOptions): Promise<Note> {
+    if (!this.initialized || !this.userId) {
+      await this.initialize();
+    }
+    
+    const name = options.name || `${TEST_NOTE_PREFIX} Rich Note ${new Date().toISOString().substring(0, 19)}`;
+    const body = options.body || 'This is a rich test note with custom options.';
+    
+    try {
+      return await this.createNote({
+        name,
+        body,
+        taggedTaskIds: options.taggedTaskIds || [],
+        userId: this.userId,
+        is_archived: options.is_archived || false
+      });
+    } catch (error) {
+      console.error('Failed to create rich note:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Create a note using a predefined template
+   * @param template The template type to use
+   * @param customName Optional custom name for the note
+   * @returns The created note object
+   */
+  async createTemplateNote(template: TestNoteTemplate, customName?: string): Promise<Note> {
+    if (!this.initialized || !this.userId) {
+      await this.initialize();
+    }
+    
+    let noteOptions: RichNoteOptions = {};
+    const timestamp = new Date().toISOString().substring(0, 19);
+    
+    switch (template) {
+      case TestNoteTemplate.BASIC:
+        noteOptions = {
+          name: customName || `${TEST_NOTE_PREFIX} Basic Template ${timestamp}`,
+          body: 'This is a basic test note created from a template.',
+        };
+        break;
+        
+      case TestNoteTemplate.RICH_TEXT:
+        noteOptions = {
+          name: customName || `${TEST_NOTE_PREFIX} Rich Text ${timestamp}`,
+          body: '<h1>Rich Text Note</h1><p>This note contains <strong>rich text</strong> with <em>formatting</em>.</p><ul><li>List item 1</li><li>List item 2</li></ul>',
+        };
+        break;
+        
+      case TestNoteTemplate.WITH_MARKDOWN:
+        noteOptions = {
+          name: customName || `${TEST_NOTE_PREFIX} Markdown ${timestamp}`,
+          body: '# Markdown Note\n\nThis is a **markdown** formatted note.\n\n- Item 1\n- Item 2\n\n```\ncode block\n```',
+        };
+        break;
+        
+      case TestNoteTemplate.ARCHIVED:
+        noteOptions = {
+          name: customName || `${TEST_NOTE_PREFIX} Archived ${timestamp}`,
+          body: 'This note has been archived.',
+          is_archived: true,
+        };
+        break;
+        
+      case TestNoteTemplate.WITH_TASKS:
+        // Create a task first, then link it
+        try {
+          const linkedTask = await this.createBasicTask(`${TEST_TASK_PREFIX} Linked to Note ${timestamp}`);
+          
+          noteOptions = {
+            name: customName || `${TEST_NOTE_PREFIX} With Tasks ${timestamp}`,
+            body: `This note is linked to task ID: ${linkedTask.id}`,
+            taggedTaskIds: [linkedTask.id],
+          };
+        } catch (error) {
+          console.error('Error creating linked task for note template:', error);
+          throw error;
+        }
+        break;
+        
+      default:
+        throw new Error(`Unknown note template type: ${template}`);
+    }
+    
+    return this.createRichNote(noteOptions);
+  }
+  
+  /**
+   * Base method to create a note and handle errors
+   * @param noteData The note data to be created
+   * @returns The created note object
+   */
+  private async createNote(noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note> {
+    // Ensure we're initialized and have user context
+    await this.initialize();
+
+    if (!this.userId) {
+      throw new Error('User ID not found. Make sure to initialize the seeder first.');
+    }
+
+    try {
+      const { name, body, taggedTaskIds, is_archived } = noteData;
+      
+      const { data, error } = await this.supabase
+        .from('notes')
+        .insert({
+          name,
+          body,
+          user_id: this.userId,
+          tagged_task_ids: taggedTaskIds || [],
+          is_archived: is_archived || false,
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error(`Failed to create note: ${error.message}`);
+      }
+      
+      if (!data) {
+        throw new Error('Failed to create note: No data returned');
+      }
+      
+      const note: Note = {
+        id: data.id,
+        name: data.name,
+        body: data.body,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at),
+        taggedTaskIds: data.tagged_task_ids || [],
+        userId: data.user_id,
+        is_archived: data.is_archived || false,
+      };
+      
+      return note;
+    } catch (error) {
+      console.error('Error creating note:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create multiple notes efficiently in a batch
+   * @param count Number of notes to create
+   * @param options Custom options for the notes
+   * @returns Array of created notes
+   */
+  async createMultipleNotes(count = 1, options?: RichNoteOptions): Promise<Note[]> {
+    await this.initialize();
+    
+    if (!this.userId) {
+      throw new Error('User ID not found. Make sure to initialize the seeder first.');
+    }
+    
+    try {
+      const notes: Note[] = [];
+      const noteInserts = [];
+      
+      // Prepare batch inserts for better performance
+      for (let i = 0; i < count; i++) {
+        const name = options?.name || `${TEST_NOTE_PREFIX} Batch Note #${i+1}`;
+        const body = options?.body || `This is test note #${i+1} created for automated testing.`;
+        
+        noteInserts.push({
+          name,
+          body, 
+          user_id: this.userId,
+          tagged_task_ids: options?.taggedTaskIds || [],
+          is_archived: options?.is_archived || false,
+        });
+      }
+      
+      // Insert all notes in a single operation for efficiency
+      const { data, error } = await this.supabase
+        .from('notes')
+        .insert(noteInserts)
+        .select();
+      
+      if (error) {
+        throw new Error(`Failed to create batch notes: ${error.message}`);
+      }
+      
+      // Map returned data to Note objects
+      if (data) {
+        for (const item of data) {
+          notes.push({
+            id: item.id,
+            name: item.name,
+            body: item.body,
+            createdAt: new Date(item.created_at),
+            updatedAt: new Date(item.updated_at),
+            taggedTaskIds: item.tagged_task_ids || [],
+            userId: item.user_id,
+            is_archived: item.is_archived || false,
+          });
+        }
+      }
+      
+      return notes;
+    } catch (error) {
+      console.error('Error creating multiple notes:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a task with linked notes in one operation
+   * @param options Configuration options for task and notes
+   * @returns Object containing the created task and its linked notes
+   */
+  async createTaskWithNotes(options: TaskWithNotesOptions): Promise<{task: Task; notes: Note[]}> {
+    await this.initialize();
+    
+    if (!this.userId) {
+      throw new Error('User ID not found. Make sure to initialize the seeder first.');
+    }
+    
+    try {
+      // First create the task
+      const task = await this.createRichTask(options.taskOptions);
+      
+      // Then create notes linked to that task
+      const noteCount = options.noteCount || 1;
+      const notes: Note[] = [];
+      
+      if (options.noteTemplate) {
+        // Create notes using the specified template
+        for (let i = 0; i < noteCount; i++) {
+          const noteName = `${TEST_NOTE_PREFIX} For ${task.title} #${i+1}`;
+          const noteOptions: RichNoteOptions = {
+            ...options.customNoteOptions,
+            name: noteName,
+            taggedTaskIds: [task.id],
+          };
+          
+          if (options.noteTemplate === TestNoteTemplate.BASIC) {
+            notes.push(await this.createBasicNote(noteName));
+          } else {
+            const templatedNote = await this.createTemplateNote(options.noteTemplate, noteName);
+            // Update the tagged task IDs to link to our task
+            const updatedNote = await this.supabase
+              .from('notes')
+              .update({ tagged_task_ids: [task.id] })
+              .eq('id', templatedNote.id)
+              .select()
+              .single();
+              
+            if (updatedNote.data) {
+              notes.push({
+                id: updatedNote.data.id,
+                name: updatedNote.data.name,
+                body: updatedNote.data.body,
+                createdAt: new Date(updatedNote.data.created_at),
+                updatedAt: new Date(updatedNote.data.updated_at),
+                taggedTaskIds: updatedNote.data.tagged_task_ids || [],
+                userId: updatedNote.data.user_id,
+                is_archived: updatedNote.data.is_archived || false,
+              });
+            }
+          }
+        }
+      } else if (options.customNoteOptions) {
+        // Create notes with custom options
+        for (let i = 0; i < noteCount; i++) {
+          const noteOptions = {
+            ...options.customNoteOptions,
+            name: options.customNoteOptions.name || `${TEST_NOTE_PREFIX} For ${task.title} #${i+1}`,
+            taggedTaskIds: [...(options.customNoteOptions.taggedTaskIds || []), task.id],
+          };
+          notes.push(await this.createRichNote(noteOptions));
+        }
+      } else {
+        // Create basic notes linked to the task
+        notes.push(...await this.createMultipleNotes(noteCount, { 
+          taggedTaskIds: [task.id],
+          name: `${TEST_NOTE_PREFIX} For ${task.title}` 
+        }));
+      }
+      
+      return { task, notes };
+    } catch (error) {
+      console.error('Error creating task with notes:', error);
+      throw error;
+    }
+  }
+
+  async cleanupTestTasks(): Promise<void> {
+    // Ensure we're initialized and have user context
+    await this.initialize();
+
+    if (!this.userId) {
+      throw new Error('User ID not found. Make sure to initialize the seeder first.');
+    }
+
+    try {
+      // Clean up test tasks
       const { error } = await this.supabase
         .from('tasks')
         .delete()
@@ -415,10 +765,9 @@ export class TestDataSeeder {
       
       if (error) {
         console.error(`Error cleaning up test tasks: ${error.message}`);
-        throw error;
       }
       
-      // Clean up test tags
+      // Clean up any test tags
       const { error: tagError } = await this.supabase
         .from('tags')
         .delete()
@@ -428,7 +777,17 @@ export class TestDataSeeder {
         console.error(`Error cleaning up test tags: ${tagError.message}`);
       }
       
-      console.log('Test tasks and tags cleaned up successfully');
+      // Clean up test notes
+      const { error: noteError } = await this.supabase
+        .from('notes')
+        .delete()
+        .like('name', `${TEST_NOTE_PREFIX}%`);
+      
+      if (noteError) {
+        console.error(`Error cleaning up test notes: ${noteError.message}`);
+      }
+      
+      console.log('Test tasks, tags, and notes cleaned up successfully');
     } catch (error) {
       console.error('Failed to clean up test data:', error);
       throw error;
@@ -446,6 +805,14 @@ export async function seedBasicTask(title?: string): Promise<Task> {
 }
 
 /**
+ * Create a basic test note
+ * @param name Optional custom note name
+ */
+export async function seedBasicNote(name?: string): Promise<Note> {
+  return testDataSeeder.createBasicNote(name);
+}
+
+/**
  * Clean up all test tasks - use in afterAll() test hooks
  */
 export async function cleanupTestTasks(): Promise<void> {
@@ -457,6 +824,58 @@ export async function cleanupTestTasks(): Promise<void> {
  */
 export async function seedRichTask(options: RichTaskOptions): Promise<Task> {
   return testDataSeeder.createRichTask(options);
+}
+
+/**
+ * Create a rich test note with custom options
+ */
+export async function seedRichNote(options: RichNoteOptions): Promise<Note> {
+  return testDataSeeder.createRichNote(options);
+}
+
+/**
+ * Create a note from a predefined template
+ */
+export async function seedTemplateNote(template: TestNoteTemplate, customName?: string): Promise<Note> {
+  return testDataSeeder.createTemplateNote(template, customName);
+}
+
+/**
+ * Create multiple notes from a template
+ */
+export async function seedTemplateNotes(template: TestNoteTemplate, count = 1): Promise<Note[]> {
+  await testDataSeeder.initialize();
+  
+  const notes: Note[] = [];
+  for (let i = 0; i < count; i++) {
+    const note = await testDataSeeder.createTemplateNote(template, `${TEST_NOTE_PREFIX} ${template} #${i + 1}`);
+    notes.push(note);
+  }
+  
+  return notes;
+}
+
+/**
+ * Use this in Playwright tests to seed notes
+ * Example usage:
+ * 
+ * import { test } from '@playwright/test';
+ * import { seedTestNotes } from './utils/testDataSeeder';
+ * 
+ * test.beforeEach(async () => {
+ *   await seedTestNotes(3); // Creates 3 test notes
+ * });
+ */
+export async function seedTestNotes(count = 1): Promise<Note[]> {
+  await testDataSeeder.initialize();
+  
+  const notes: Note[] = [];
+  for (let i = 0; i < count; i++) {
+    const note = await testDataSeeder.createBasicNote(`${TEST_NOTE_PREFIX} UI Test #${i + 1}`);
+    notes.push(note);
+  }
+  
+  return notes;
 }
 
 /**
@@ -502,4 +921,43 @@ export async function seedTestTasks(count = 1): Promise<Task[]> {
   }
   
   return tasks;
+}
+
+/**
+ * Create multiple notes in a single batch operation for better performance
+ * Example usage:
+ * 
+ * import { test } from '@playwright/test';
+ * import { seedMultipleNotes } from './utils/testDataSeeder';
+ * 
+ * test.beforeEach(async () => {
+ *   await seedMultipleNotes(10); // Creates 10 notes efficiently in one batch
+ * });
+ */
+export async function seedMultipleNotes(count = 5, options?: RichNoteOptions): Promise<Note[]> {
+  await testDataSeeder.initialize();
+  return testDataSeeder.createMultipleNotes(count, options);
+}
+
+/**
+ * Create a task with linked notes in one operation
+ * This is useful for testing task-note relationships
+ * 
+ * Example usage:
+ * 
+ * import { test } from '@playwright/test';
+ * import { seedTaskWithNotes, TestNoteTemplate } from './utils/testDataSeeder';
+ * 
+ * test.beforeEach(async () => {
+ *   // Create a high priority task with 3 markdown notes linked to it
+ *   await seedTaskWithNotes({
+ *     taskOptions: { priority: Priority.HIGH },
+ *     noteCount: 3,
+ *     noteTemplate: TestNoteTemplate.WITH_MARKDOWN
+ *   });
+ * });
+ */
+export async function seedTaskWithNotes(options: TaskWithNotesOptions): Promise<{task: Task; notes: Note[]}> {
+  await testDataSeeder.initialize();
+  return testDataSeeder.createTaskWithNotes(options);
 }

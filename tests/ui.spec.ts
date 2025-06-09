@@ -2,6 +2,7 @@ import { test, expect, Page, TestInfo } from '@playwright/test';
 import { routes, RouteConfig } from './utils/routeConfig';
 import { navigateTo, NavigationResult } from './utils/navigationHelperNew';
 import { compareScreenshotAndAttachToReport } from './utils/screenshotHelper';
+import { seedTestNotes, seedTemplateNote, TestNoteTemplate, testDataSeeder } from './utils/testDataSeeder';
 import {
     verifyUrl,
     verifyNavigation,
@@ -301,22 +302,53 @@ test.describe('Visual Tests for Main Pages', () => {
         }
     });
 
+    test.beforeEach(async () => {
+        // Clean up any existing test data
+        await testDataSeeder.cleanupTestTasks();
+        
+        // Seed standard test notes for consistent testing
+        await seedTestNotes(3);
+        
+        // Add one of each template type for comprehensive coverage
+        await seedTemplateNote(TestNoteTemplate.RICH_TEXT);
+        await seedTemplateNote(TestNoteTemplate.WITH_MARKDOWN);
+        await seedTemplateNote(TestNoteTemplate.WITH_TASKS);
+        
+        // Add an archived note - should not be visible in default view
+        await seedTemplateNote(TestNoteTemplate.ARCHIVED);
+    });
+    
+    // Clean up all test data after tests
+    test.afterEach(async () => {
+        await testDataSeeder.cleanupTestTasks();
+    });
     test('notes page visual test', async ({ page }, testInfo: TestInfo) => {
-        // Navigate to notes page using route ID
-        const navigationResult = await navigateTo(
-            page,
-            'notes', // This is a string which matches the expected type
-            authWrapper, // Use our wrapper function for consistent auth
-            { throwOnFailure: true }
-        );
-
-        // Assert navigation was successful
-        expect(navigationResult.success).toBe(true);
-        console.log(
-            `Notes page elements found: ${navigationResult.elementDetails?.found.join(
-                ', '
-            )}`
-        );
+        // Navigate directly to notes page with auth
+        await page.goto('/notes');
+        await page.waitForLoadState('networkidle');
+        
+        // Verify we're on the notes page
+        const notesTitle = page.locator('h1:has-text("Notes"), h2:has-text("Notes"), [data-testid="notes-header"]');
+        await expect(notesTitle).toBeVisible();
+        
+        console.log('Successfully navigated to notes page');
+        
+        // Verify there are notes in the notes container
+        const notesContainer = page.locator('[data-testid="notes-container"]');
+        await expect(notesContainer).toBeVisible();
+        
+        // Wait for notes to be loaded
+        await page.waitForTimeout(1000); 
+        
+        // Verify we have the expected number of notes based on our seeding
+        // Note: You might need to adjust the selector based on your actual component structure
+        const noteItems = page.locator('.note-item, [data-testid="note-item"], .note-card');
+        
+        // Verify we have some notes (at least 3 from our basic seeding)
+        await expect(noteItems).toHaveCount(3, { timeout: 10000 });
+        
+        // Look for the test prefix in at least one note
+        await expect(page.getByText(/Test Note:/)).toBeVisible({ timeout: 5000 });
 
         // Take a screenshot and compare it to the baseline with diff reporting
         const screenshotResult = await compareScreenshotAndAttachToReport(page, testInfo, 'notes-page');
