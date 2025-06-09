@@ -136,6 +136,24 @@ export const routes: AppRoutes = {
         required: true
       },
       {
+        id: 'task_groups_container',
+        name: 'Task Groups Container',
+        selector: (page: Page) => page.locator('#task-groups-container'),
+        required: false
+      },
+      {
+        id: 'task_group_headers',
+        name: 'Task Group Headers',
+        selector: (page: Page) => page.locator('button[id^="task-group-header-"]'),
+        required: false
+      },
+      {
+        id: 'task_cards',
+        name: 'Task Cards',
+        selector: (page: Page) => page.locator('.task-card, [data-testid^="task-item-"]'),
+        required: false
+      },
+      {
         id: 'date_display',
         name: 'Date Display',
         selector: selectors.byClass('date-display'),

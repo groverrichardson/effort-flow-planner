@@ -228,16 +228,66 @@ test.describe('Visual Tests for Main Pages', () => {
     });
 
     test('tasks page visual test', async ({ page }, testInfo: TestInfo) => {
-        // Navigate to tasks page using route ID
+        // Navigate to dashboard (home) page where tasks are actually displayed
         const navigationResult = await navigateTo(
             page,
-            'tasks', // This is a string which matches the expected type
+            'dashboard', // Navigate to dashboard instead of tasks since tasks are on the home page
             authWrapper, // Use our wrapper function for consistent auth
             { throwOnFailure: true }
         );
 
         // Assert navigation was successful
         expect(navigationResult.success).toBe(true);
+        
+        // Allow page to fully stabilize
+        await waitForPageStability(page);
+        
+        // Wait for all-tasks-section to be visible
+        await page.waitForSelector('#all-tasks-section', { state: 'visible', timeout: 10000 });
+        console.log('Found all-tasks-section, checking for collapsed sections');
+        
+        // Check for the all-tasks toggle button and expand if collapsed
+        const allTasksButton = page.locator('#all-tasks-header-button');
+        if (await allTasksButton.isVisible()) {
+            const isExpanded = await allTasksButton.getAttribute('aria-expanded') === 'true';
+            if (!isExpanded) {
+                console.log('All tasks section is collapsed, expanding it');
+                await allTasksButton.click();
+                await page.waitForTimeout(300); // Wait for animation
+            } else {
+                console.log('All tasks section is already expanded');
+            }
+        }
+        
+        // Check for the owed-to-others toggle button and expand if collapsed
+        const owedToOthersButton = page.locator('#owed-to-others-header-button');
+        if (await owedToOthersButton.isVisible()) {
+            const isExpanded = await owedToOthersButton.getAttribute('aria-expanded') === 'true';
+            if (!isExpanded) {
+                console.log('Owed to others section is collapsed, expanding it');
+                await owedToOthersButton.click();
+                await page.waitForTimeout(300); // Wait for animation
+            } else {
+                console.log('Owed to others section is already expanded');
+            }
+        }
+        
+        // Wait for task lists to be visible after expansion
+        await page.waitForTimeout(1000); // Give time for content to render
+        
+        // Check for task items using data-testid attributes
+        const taskLists = [
+            page.locator('[data-testid="all-my-tasks-list"]'),
+            page.locator('[data-testid="owed-to-others-task-list"]')
+        ];
+        
+        for (const list of taskLists) {
+            if (await list.count() > 0) {
+                console.log(`Found task list: ${await list.getAttribute('data-testid')}`);
+            }
+        }
+        
+        // Log what elements were found for debugging
         console.log(
             `Task page elements found: ${navigationResult.elementDetails?.found.join(
                 ', '
@@ -245,7 +295,7 @@ test.describe('Visual Tests for Main Pages', () => {
         );
 
         // Take a screenshot and compare it to the baseline with diff reporting
-        const screenshotResult = await compareScreenshotAndAttachToReport(page, testInfo, 'tasks-page');
+        const screenshotResult = await compareScreenshotAndAttachToReport(page, testInfo, 'tasks-view');
         if (!screenshotResult.success) {
             console.warn(`Screenshot comparison failed: ${screenshotResult.message}`);
         }
