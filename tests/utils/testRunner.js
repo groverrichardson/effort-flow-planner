@@ -57,8 +57,8 @@ console.log(`Running: ${cmd} ${cmdArgs.join(' ')}`);
 // Run the command
 const testProcess = spawn(cmd, cmdArgs, { 
   env,
-  stdio: 'inherit',
-  shell: true
+  stdio: 'inherit'
+  // Removed shell: true for security - prevents command injection
 });
 
 // Handle process completion

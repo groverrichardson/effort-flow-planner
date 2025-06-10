@@ -37,6 +37,12 @@ coverage/
 /tests/ui.spec.ts-snapshots/
 /test-results/
 
+# All test-related PNG files
+*.png
+!src/**/*.png
+!public/**/*.png
+!assets/**/*.png
+
 # Playwright reports
 /playwright-report/
 /playwright-report.json

@@ -4,7 +4,7 @@
 import { expect, Page, TestInfo } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 
 /**
  * Takes a screenshot, compares it with baseline, and attaches all images to the test report
@@ -84,8 +84,20 @@ export async function compareScreenshotAndAttachToReport(
       
       // Check if ImageMagick is installed
       try {
-        // Use ImageMagick to generate a diff visualization
-        execSync(`convert ${baselineImagePath} ${actualImagePath} -compose difference -composite ${diffImagePath}`);
+        // Use ImageMagick to generate a diff visualization with safer parameter passing
+        const result = spawnSync('convert', [
+          baselineImagePath,
+          actualImagePath,
+          '-compose',
+          'difference',
+          '-composite',
+          diffImagePath
+        ]);
+        
+        // Check if the command was successful
+        if (result.status !== 0) {
+          console.log(`⚠️ ImageMagick diff generation failed: ${result.stderr?.toString() || 'Unknown error'}`);
+        }
         
         // Attach the diff to the report
         if (fs.existsSync(diffImagePath)) {
