@@ -3,8 +3,12 @@ import { Priority, TaskStatus, EffortLevel, DueDateType, Task } from '../../src/
 import { Note } from '../../src/types/note';
 import { Database } from '../../src/types/supabase';
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// Import shared auth constants
+import {
+  AUTH_FILE_PATH,
+  checkAuthFile,
+  verifyEnvironmentVariables
+} from './authConstants';
 
 // Constants for test data generation
 const TEST_TAG_PREFIX = 'test_tag_';
@@ -67,19 +71,7 @@ function randomDate(start: Date, end: Date): Date {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 }
 
-// Convert import.meta.url to path for ES modules compatibility
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Path to Playwright auth state file
-const AUTH_FILE_PATH = path.join(
-  __dirname,
-  '..',
-  '..',
-  'playwright',
-  '.auth',
-  'user.json'
-);
+// Auth file path is now imported from authConstants.ts
 
 /**
  * TestDataSeeder - Utility to seed test data for UI tests
@@ -124,53 +116,95 @@ export class TestDataSeeder {
     }
 
     try {
-      // Check if the auth file exists
-      if (!fs.existsSync(AUTH_FILE_PATH)) {
-        throw new Error(`Authentication state file not found at ${AUTH_FILE_PATH}. Run Playwright global setup first.`);
+      // Verify environment variables first
+      const envStatus = verifyEnvironmentVariables();
+      if (!envStatus.valid) {
+        console.error('====== ENVIRONMENT VARIABLE ERROR ======');
+        console.error(envStatus.message);
+        console.error('Please check your .env file or environment configuration');
+        console.error('========================================');
+        throw new Error(`TestDataSeeder: ${envStatus.message}`);
+      }
+
+      // Check auth file status
+      const authFileStatus = checkAuthFile();
+      if (!authFileStatus.exists || !authFileStatus.valid) {
+        console.error('====== AUTHENTICATION FILE ERROR ======');
+        console.error(authFileStatus.message);
+        console.error(`Auth file path: ${AUTH_FILE_PATH}`);
+        console.error('Run Playwright global setup first: npx playwright test --global-setup');
+        console.error('========================================');
+        throw new Error(`TestDataSeeder: ${authFileStatus.message}`);
       }
 
       // Read the auth file
       const authFileContent = fs.readFileSync(AUTH_FILE_PATH, 'utf-8');
       const storageState = JSON.parse(authFileContent);
 
+      console.log(`TestDataSeeder: Auth file loaded successfully from ${AUTH_FILE_PATH}`);
+      
       // Extract the Supabase session from the storage state
       const supabaseOrigin = storageState.origins.find(origin => {
-        return origin.origin.includes('supabase') || origin.localStorage?.some(item => item.name.includes('supabase'));
+        return origin.localStorage.some(item => item.name.includes('auth-token'));
       });
 
       if (!supabaseOrigin) {
-        throw new Error('Could not find Supabase origin in storage state');
+        console.error('====== SUPABASE TOKEN ERROR ======');
+        console.error('Could not find Supabase auth token in storage state.');
+        console.error('Origins in storage state:', storageState.origins.map(o => o.origin));
+        console.error('====================================');
+        throw new Error('TestDataSeeder: Could not find Supabase auth token in storage state.');
       }
 
-      // Find the Supabase session in localStorage
-      const supabaseSessionItem = supabaseOrigin.localStorage?.find(item => item.name.includes('auth-token'));
-      
-      if (!supabaseSessionItem) {
-        throw new Error('Could not find Supabase session in storage state');
+      const supabaseAuthItem = supabaseOrigin.localStorage.find(item => item.name.includes('auth-token'));
+
+      if (!supabaseAuthItem) {
+        console.error('====== SUPABASE TOKEN ERROR ======');
+        console.error('Could not find Supabase auth token item.');
+        console.error('Available localStorage items:', supabaseOrigin.localStorage.map(i => i.name));
+        console.error('====================================');
+        throw new Error('TestDataSeeder: Could not find Supabase auth token item.');
       }
 
-      // Parse the session
-      const session = JSON.parse(supabaseSessionItem.value);
+      console.log('TestDataSeeder: Successfully found auth token in storage state');
+      const parsedToken = JSON.parse(supabaseAuthItem.value);
 
-      // Set the session in the Supabase client
-      await this.supabase.auth.setSession({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
+      // Check if the token might be expired
+      const tokenExpiry = new Date(parsedToken.expires_at * 1000);
+      const now = new Date();
+      if (tokenExpiry <= now) {
+        console.warn('====== TOKEN EXPIRY WARNING ======');
+        console.warn('Supabase token appears to be expired. Will attempt refresh.');
+        console.warn(`Expired at: ${tokenExpiry.toISOString()}`);
+        console.warn('==================================');
+      }
+
+      // Set up the supabase client with the session
+      const { error, data } = await this.supabase.auth.setSession({
+        access_token: parsedToken.access_token,
+        refresh_token: parsedToken.refresh_token,
       });
 
-      // Get the user ID
-      const { data, error } = await this.supabase.auth.getUser();
+      if (error) {
+        console.error('====== SESSION ERROR ======');
+        console.error(`Failed to set session: ${error.message}`);
+        console.error('Running with test user credentials instead of stored token may help.');
+        console.error('============================');
+        throw new Error(`TestDataSeeder: Failed to set session: ${error.message}`);
+      }
       
-      if (error || !data.user) {
-        throw new Error(`Failed to get user: ${error?.message || 'User not found'}`);
+      if (!data.user) {
+        console.error('====== USER ERROR ======');
+        console.error('Auth session exists but no user data found!');
+        console.error('============================');
+        throw new Error(`TestDataSeeder: Auth session exists but no user data found!`);
       }
 
       this.userId = data.user.id;
       this.initialized = true;
-
-      console.log('TestDataSeeder initialized for user ID:', this.userId);
+      console.log(`TestDataSeeder initialized for user: ${this.userId}`);
     } catch (error) {
-      console.error('Failed to initialize TestDataSeeder:', error);
+      console.error('TestDataSeeder initialization failed:', error);
       throw error;
     }
   }
@@ -199,394 +233,75 @@ export class TestDataSeeder {
       is_archived: false,
       user_id: this.userId,
     };
-    
-    return this.createTask(taskData);
   }
   
-  /**
-   * Create a rich test task with custom options
-   */
-  async createRichTask(options: RichTaskOptions): Promise<Task> {
-    if (!this.initialized || !this.userId) {
-      await this.initialize();
-    }
-    
-    const timestamp = new Date().toISOString();
-    
-    // Base task data with defaults
-    const taskData: any = {
-      title: options.title || `${TEST_TASK_PREFIX} Rich Task ${timestamp}`,
-      description: options.description || 'This is a rich test task with custom options',
-      status: options.status || TaskStatus.PENDING,
-      priority: options.priority || Priority.NORMAL,
-      due_date_type: options.dueDateType || DueDateType.NONE,
-      due_date: options.dueDate || null,
-      target_deadline: null,
-      scheduled_date: null,
-      go_live_date: null,
-      effort_level: options.effortLevel || EffortLevel.M,
-      completed: options.completed || false,
-      completed_date: options.completed ? new Date() : null,
-      is_archived: false,
-      user_id: this.userId,
-    };
-    
-    // Create the task
-    const task = await this.createTask(taskData);
-    
-    // Add tags if provided
-    if (options.tags && options.tags.length > 0) {
-      await this.addTagsToTask(task.id, options.tags);
-    }
-    
-    return task;
+  const title = options.title || `${TEST_TASK_PREFIX}${getRandomString(8)}`;
+  const due_date = options.due_date || getRandomFutureDate().toISOString();
+  
+  // Generate a task with random properties
+  const newTask = {
+    title,
+    description: options.description || `Description for ${title}`,
+    priority: options.priority || getRandomPriority(),
+    status: options.status || getRandomStatus(),
+    effort_level: options.effort_level || getRandomEffortLevel(),
+    due_date,
+    due_date_type: options.due_date_type || getRandomDueDateType(),
+    is_archived: options.is_archived ?? false,
+    user_id: this.userId,
+  };
+  
+  // Create the task
+  const { data, error } = await this.supabase
+    .from('tasks')
+    .insert(newTask)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Error creating test task:', error);
+    return null;
   }
   
-  /**
-   * Create a task using a predefined template
-   */
-  async createTemplateTask(template: TestTaskTemplate, customTitle?: string): Promise<Task> {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
+  const task = data;
+  
+  if (!task || !task.id) {
+    console.error('No valid task data returned from insert operation');
+    return null;
+  }
+  
+  // If tags are specified, create tag connections
+  if (options.tags && options.tags.length > 0) {
+    const tagConnections = options.tags.map(tagId => ({
+      task_id: task.id,
+      tag_id: tagId,
+      user_id: this.userId as string // Type assertion to fix TypeScript error
+    }));
     
-    const title = customTitle || `${TEST_TASK_PREFIX} ${template} ${now.toISOString()}`;
+    const { error: tagError } = await this.supabase
+      .from('task_tags')
+      .insert(tagConnections);
     
-    switch (template) {
-      case TestTaskTemplate.HIGH_PRIORITY:
-        return this.createRichTask({
-          title,
-          priority: Priority.HIGH,
-          description: 'High priority test task',
-        });
-        
-      case TestTaskTemplate.COMPLETED:
-        return this.createRichTask({
-          title,
-          completed: true,
-          status: TaskStatus.COMPLETED,
-          description: 'Completed test task',
-        });
-        
-      case TestTaskTemplate.DUE_TODAY:
-        return this.createRichTask({
-          title,
-          dueDate: now,
-          dueDateType: DueDateType.SPECIFIC,
-          description: 'Test task due today',
-        });
-        
-      case TestTaskTemplate.DUE_TOMORROW:
-        return this.createRichTask({
-          title,
-          dueDate: tomorrow,
-          dueDateType: DueDateType.SPECIFIC,
-          description: 'Test task due tomorrow',
-        });
-        
-      case TestTaskTemplate.OVERDUE:
-        return this.createRichTask({
-          title,
-          dueDate: yesterday,
-          dueDateType: DueDateType.SPECIFIC,
-          description: 'Overdue test task',
-        });
-        
-      case TestTaskTemplate.WITH_TAGS:
-        return this.createRichTask({
-          title,
-          tags: ['test-tag-1', 'test-tag-2', 'test-tag-3'],
-          description: 'Test task with tags',
-        });
-        
-      case TestTaskTemplate.WITH_EFFORT:
-        return this.createRichTask({
-          title,
-          effortLevel: EffortLevel.XL,
-          description: 'Test task with high effort level',
-        });
-        
-      case TestTaskTemplate.BASIC:
-      default:
-        return this.createBasicTask(title);
+    if (tagError) {
+      console.error('Error connecting tags to task:', tagError);
     }
   }
   
-  /**
-   * Base method to create a task and handle errors
-   */
-  private async createTask(taskData: any): Promise<Task> {
-    const { data, error } = await this.supabase
-      .from('tasks')
-      .insert(taskData)
-      .select()
-      .single();
-    
-    if (error) {
-      throw new Error(`Failed to create test task: ${error.message}`);
-    }
-    
-    if (!data) {
-      throw new Error('No data returned after creating test task');
-    }
-    
-    // Convert database record to Task type
-    // Note: This is a simplified version - in a real implementation
-    // we would map all fields correctly and include relationships
-    // Ensure user_id is not null - if somehow it is, use the authenticated user's ID
-    if (!data.user_id) {
-      console.warn('Task data has null user_id, using authenticated user ID instead');
-      if (!this.userId) {
-        throw new Error('Cannot create task: both database user_id and authenticated user ID are null');
-      }
-    }
-    
-    return {
-      id: data.id,
-      title: data.title,
-      description: data.description,
-      status: data.status as TaskStatus,
-      priority: data.priority as Priority,
-      dueDate: data.due_date ? new Date(data.due_date) : null,
-      dueDateType: data.due_date_type as DueDateType,
-      targetDeadline: data.target_deadline ? new Date(data.target_deadline) : null,
-      scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : null,
-      goLiveDate: data.go_live_date ? new Date(data.go_live_date) : null,
-      effortLevel: data.effort_level as EffortLevel,
-      completed: data.completed,
-      completedDate: data.completed_date ? new Date(data.completed_date) : null,
-      tags: [], // We'll implement this in Phase 2
-      people: [], // We'll implement this in Phase 2
-      dependencies: [], // We'll implement this in Phase 2
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at),
-      is_archived: data.is_archived || false,
-      userId: (data.user_id || this.userId)!,
-    };
-  }
-  
-  /**
-   * Add tags to a task
-   */
-  private async addTagsToTask(taskId: string, tagNames: string[]): Promise<void> {
-    if (!this.initialized || !this.userId) {
-      await this.initialize();
-    }
-    
-    try {
-      // First, create the tags if they don't exist
-      for (const tagName of tagNames) {
-        // Check if tag exists
-        const { data: existingTags } = await this.supabase
-          .from('tags')
-          .select('id')
-          .eq('name', tagName)
-          .eq('user_id', this.userId);
-        
-        let tagId: string;
-        
-        if (!existingTags || existingTags.length === 0) {
-          // Create the tag
-          const { data: newTag, error: tagError } = await this.supabase
-            .from('tags')
-            .insert({ name: tagName, user_id: this.userId })
-            .select('id')
-            .single();
-          
-          if (tagError || !newTag) {
-            throw new Error(`Failed to create tag ${tagName}: ${tagError?.message || 'No data returned'}`);
-          }
-          
-          tagId = newTag.id;
-        } else {
-          tagId = existingTags[0].id;
-        }
-        
-        // Link tag to task
-        const { error: linkError } = await this.supabase
-          .from('task_tags')
-          .insert({ 
-            task_id: taskId, 
-            tag_id: tagId, 
-            user_id: this.userId,
-            tag_name: tagName  // Adding the tag name field
-          });
-        
-        if (linkError) {
-          throw new Error(`Failed to link tag ${tagName} to task: ${linkError.message}`);
-        }
-      }
-    } catch (error) {
-      console.error('Error adding tags to task:', error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Delete all test tasks created by the seeder
-   * Should be called after tests to clean up
-   */
-  /**
-   * Create a basic note with minimal required fields
-   * @param name Optional custom name for the note (default is generated)
-   * @returns The created note object
-   */
-  async createBasicNote(name?: string): Promise<Note> {
-    if (!this.initialized || !this.userId) {
-      await this.initialize();
-    }
-    
-    const noteName = name || `${TEST_NOTE_PREFIX} Basic Note ${new Date().toISOString().substring(0, 19)}`;
-    const noteBody = 'This is a test note body created by the test data seeder.';
-    
-    try {
-      return await this.createNote({
-        name: noteName,
-        body: noteBody,
-        taggedTaskIds: [],
-        userId: this.userId,
-        is_archived: false
-      });
-    } catch (error) {
-      console.error('Failed to create basic note:', error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Create a rich note with custom options
-   * @param options Configuration options for the note
-   * @returns The created note object
-   */
-  async createRichNote(options: RichNoteOptions): Promise<Note> {
-    if (!this.initialized || !this.userId) {
-      await this.initialize();
-    }
-    
-    const name = options.name || `${TEST_NOTE_PREFIX} Rich Note ${new Date().toISOString().substring(0, 19)}`;
-    const body = options.body || 'This is a rich test note with custom options.';
-    
-    try {
-      return await this.createNote({
-        name,
-        body,
-        taggedTaskIds: options.taggedTaskIds || [],
-        userId: this.userId,
-        is_archived: options.is_archived || false
-      });
-    } catch (error) {
-      console.error('Failed to create rich note:', error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Create a note using a predefined template
-   * @param template The template type to use
-   * @param customName Optional custom name for the note
-   * @returns The created note object
-   */
-  async createTemplateNote(template: TestNoteTemplate, customName?: string): Promise<Note> {
-    if (!this.initialized || !this.userId) {
-      await this.initialize();
-    }
-    
-    let noteOptions: RichNoteOptions = {};
-    const timestamp = new Date().toISOString().substring(0, 19);
-    
-    switch (template) {
-      case TestNoteTemplate.BASIC:
-        noteOptions = {
-          name: customName || `${TEST_NOTE_PREFIX} Basic Template ${timestamp}`,
-          body: 'This is a basic test note created from a template.',
-        };
-        break;
-        
-      case TestNoteTemplate.RICH_TEXT:
-        noteOptions = {
-          name: customName || `${TEST_NOTE_PREFIX} Rich Text ${timestamp}`,
-          body: '<h1>Rich Text Note</h1><p>This note contains <strong>rich text</strong> with <em>formatting</em>.</p><ul><li>List item 1</li><li>List item 2</li></ul>',
-        };
-        break;
-        
-      case TestNoteTemplate.WITH_MARKDOWN:
-        noteOptions = {
-          name: customName || `${TEST_NOTE_PREFIX} Markdown ${timestamp}`,
-          body: '# Markdown Note\n\nThis is a **markdown** formatted note.\n\n- Item 1\n- Item 2\n\n```\ncode block\n```',
-        };
-        break;
-        
-      case TestNoteTemplate.ARCHIVED:
-        noteOptions = {
-          name: customName || `${TEST_NOTE_PREFIX} Archived ${timestamp}`,
-          body: 'This note has been archived.',
-          is_archived: true,
-        };
-        break;
-        
-      case TestNoteTemplate.WITH_TASKS:
-        // Create a task first, then link it
-        try {
-          const linkedTask = await this.createBasicTask(`${TEST_TASK_PREFIX} Linked to Note ${timestamp}`);
-          
-          noteOptions = {
-            name: customName || `${TEST_NOTE_PREFIX} With Tasks ${timestamp}`,
-            body: `This note is linked to task ID: ${linkedTask.id}`,
-            taggedTaskIds: [linkedTask.id],
-          };
-        } catch (error) {
-          console.error('Error creating linked task for note template:', error);
-          throw error;
-        }
-        break;
-        
-      default:
-        throw new Error(`Unknown note template type: ${template}`);
-    }
-    
-    return this.createRichNote(noteOptions);
-  }
-  
-  /**
-   * Base method to create a note and handle errors
-   * @param noteData The note data to be created
-   * @returns The created note object
-   */
-  private async createNote(noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note> {
-    // Ensure we're initialized and have user context
-    await this.initialize();
+  return task;
+}
 
-    if (!this.userId) {
-      throw new Error('User ID not found. Make sure to initialize the seeder first.');
-    }
+// ... (rest of the code remains the same)
 
-    try {
-      const { name, body, taggedTaskIds, is_archived } = noteData;
-      
-      const { data, error } = await this.supabase
-        .from('notes')
-        .insert({
-          name,
-          body,
-          user_id: this.userId,
-          tagged_task_ids: taggedTaskIds || [],
-          is_archived: is_archived || false,
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        throw new Error(`Failed to create note: ${error.message}`);
-      }
-      
-      if (!data) {
-        throw new Error('Failed to create note: No data returned');
-      }
-      
-      const note: Note = {
-        id: data.id,
+async createTestTags(count: number = 3): Promise<string[]> {
+  await this.initialize();
+  await this.refreshAuthTokenIfNeeded();
+  
+  const tagIds: string[] = [];
+  
+  // Ensure we have a userId
+  if (!this.userId) {
+    console.error('User ID is missing when creating test tags');
+    return tagIds;
         name: data.name,
         body: data.body,
         createdAt: new Date(data.created_at),
@@ -748,49 +463,143 @@ export class TestDataSeeder {
     }
   }
 
-  async cleanupTestTasks(): Promise<void> {
-    // Ensure we're initialized and have user context
-    await this.initialize();
-
-    if (!this.userId) {
-      throw new Error('User ID not found. Make sure to initialize the seeder first.');
-    }
-
+  /**
+   * Refreshes the authentication token if needed
+   * This helps overcome token expiration issues
+   * @returns True if refresh was successful or not needed, false if it failed
+   */
+  async refreshAuthTokenIfNeeded(): Promise<boolean> {
     try {
-      // Clean up test tasks
-      const { error } = await this.supabase
-        .from('tasks')
-        .delete()
-        .like('title', `${TEST_TASK_PREFIX}%`);
+      const { data, error } = await this.supabase.auth.getSession();
       
       if (error) {
-        console.error(`Error cleaning up test tasks: ${error.message}`);
+        console.error('Error getting current session:', error.message);
+        return false;
       }
       
-      // Clean up any test tags
-      const { error: tagError } = await this.supabase
-        .from('tags')
-        .delete()
-        .like('name', 'test-tag-%');
-      
-      if (tagError) {
-        console.error(`Error cleaning up test tags: ${tagError.message}`);
+      if (!data.session) {
+        console.warn('No active session found, attempting to refresh');
+        // Try to refresh using refresh token from auth file
+        const authFileStatus = checkAuthFile();
+        if (!authFileStatus.exists || !authFileStatus.valid) {
+          return false;
+        }
+        
+        const authFileContent = fs.readFileSync(AUTH_FILE_PATH, 'utf-8');
+        const storageState = JSON.parse(authFileContent);
+        
+        const supabaseOrigin = storageState.origins.find((origin: any) => 
+          origin.localStorage?.some((item: any) => item.name.includes('auth-token'))
+        );
+        
+        if (!supabaseOrigin) return false;
+        
+        const authItem = supabaseOrigin.localStorage.find((item: any) => 
+          item.name.includes('auth-token')
+        );
+        
+        if (!authItem) return false;
+        
+        const parsedToken = JSON.parse(authItem.value);
+        
+        const refreshResult = await this.supabase.auth.setSession({
+          access_token: parsedToken.access_token,
+          refresh_token: parsedToken.refresh_token,
+        });
+        
+        return !refreshResult.error;
       }
       
-      // Clean up test notes
-      const { error: noteError } = await this.supabase
-        .from('notes')
-        .delete()
-        .like('name', `${TEST_NOTE_PREFIX}%`);
+      // Check if token will expire soon (within 5 minutes)
+      const expiresAt = data.session?.expires_at ? new Date(data.session.expires_at * 1000) : null;
+      const now = new Date();
+      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
       
-      if (noteError) {
-        console.error(`Error cleaning up test notes: ${noteError.message}`);
+      if (expiresAt && expiresAt < fiveMinutesFromNow) {
+        console.log('Session token expires soon, refreshing...');
+        const { error: refreshError } = await this.supabase.auth.refreshSession();
+        if (refreshError) {
+          console.error('Failed to refresh session:', refreshError.message);
+          return false;
+        }
+        console.log('Session refreshed successfully');
       }
       
-      console.log('Test tasks, tags, and notes cleaned up successfully');
+      return true;
     } catch (error) {
-      console.error('Failed to clean up test data:', error);
-      throw error;
+      console.error('Error in refreshAuthTokenIfNeeded:', error);
+      return false;
+    }
+  }
+
+  async cleanupTestTasks(): Promise<void> {
+    try {
+      await this.initialize();
+      
+      // Refresh token if needed before cleanup
+      await this.refreshAuthTokenIfNeeded();
+      
+      // Get all test tasks created by this utility
+      const { data: tasks, error: taskError } = await this.supabase
+        .from('tasks')
+        .select('id')
+        .like('title', `%${TEST_TASK_PREFIX}%`);
+
+      if (taskError) {
+        console.error('Error fetching test tasks for cleanup:', taskError);
+        return;
+      }
+
+      // Get all test notes created by this utility
+      const { data: notes, error: noteError } = await this.supabase
+        .from('notes')
+        .select('id')
+        .like('name', `%${TEST_NOTE_PREFIX}%`);
+
+      if (noteError) {
+        console.error('Error fetching test notes for cleanup:', noteError);
+        return;
+      }
+
+      // Delete test task tags
+      if (tasks && tasks.length > 0) {
+        const { error: deleteTagsError } = await this.supabase
+          .from('task_tags')
+          .delete()
+          .in('task_id', tasks.map(task => task.id));
+
+        if (deleteTagsError) {
+          console.error('Error deleting test task tags:', deleteTagsError);
+        }
+
+        // Delete test tasks
+        const { error: deleteTasksError } = await this.supabase
+          .from('tasks')
+          .delete()
+          .in('id', tasks.map(task => task.id));
+
+        if (deleteTasksError) {
+          console.error('Error deleting test tasks:', deleteTasksError);
+        } else {
+          console.log(`Cleaned up ${tasks.length} test tasks`);
+        }
+      }
+
+      // Delete test notes
+      if (notes && notes.length > 0) {
+        const { error: deleteNotesError } = await this.supabase
+          .from('notes')
+          .delete()
+          .in('id', notes.map(note => note.id));
+
+        if (deleteNotesError) {
+          console.error('Error deleting test notes:', deleteNotesError);
+        } else {
+          console.log(`Cleaned up ${notes.length} test notes`);
+        }
+      }
+    } catch (error) {
+      console.error('Error during test data cleanup:', error);
     }
   }
 

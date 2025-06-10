@@ -3,53 +3,38 @@ import 'dotenv/config'; // Load environment variables from .env file
 import { FullConfig } from '@playwright/test';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import fs from 'fs';
-import path, { dirname } from 'path'; // Updated import for dirname
-import { fileURLToPath } from 'url'; // Added for ESM __dirname equivalent
-
-// Define __filename and __dirname for ES Module scope
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Define the path where the authentication state will be saved
-// Playwright recommends a directory like playwright/.auth/
-const AUTH_FILE_PATH = path.join(
-    __dirname,
-    '..',
-    'playwright',
-    '.auth',
-    'user.json'
-);
+// Import shared auth constants and utilities
+import {
+  AUTH_FILE_PATH,
+  ensureAuthDirectoryExists,
+  verifyEnvironmentVariables,
+  REQUIRED_ENV_VARS
+} from './utils/authConstants';
 
 async function globalSetup(config: FullConfig) {
     console.log('Starting global setup: Authenticating user...');
 
-    // 1. Retrieve Supabase URL, Anon Key, and Test User Credentials
-    // IMPORTANT: Use environment variables for sensitive data in a real setup.
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-    const testUserEmail = process.env.PLAYWRIGHT_TEST_USER_EMAIL;
-    const testUserPassword = process.env.PLAYWRIGHT_TEST_USER_PASSWORD;
-
-    if (
-        !supabaseUrl ||
-        !supabaseAnonKey ||
-        !testUserEmail ||
-        !testUserPassword
-    ) {
-        console.error(
-            'Missing Supabase credentials or test user details in environment variables.'
-        );
-        console.error(
-            'Required: SUPABASE_URL, SUPABASE_ANON_KEY, PLAYWRIGHT_TEST_USER_EMAIL, PLAYWRIGHT_TEST_USER_PASSWORD'
-        );
-        // If running in CI or a context where tests shouldn't proceed without auth,
-        // you might want to throw an error here to stop the test run.
-        // For local development, you might proceed if tests can run unauthenticated,
-        // or if you have a fallback. For this setup, we'll assume auth is required.
-        throw new Error(
-            'Authentication credentials not found in environment variables. Halting test run.'
-        );
+    // Verify environment variables
+    const envStatus = verifyEnvironmentVariables();
+    if (!envStatus.valid) {
+        console.error('====== ENVIRONMENT VARIABLE ERROR ======');
+        console.error(envStatus.message);
+        console.error(`Required variables: ${REQUIRED_ENV_VARS.join(', ')}`);
+        console.error('Please check your .env file or environment configuration');
+        console.error('========================================');
+        throw new Error(envStatus.message);
     }
+
+    console.log('Environment variables verified successfully.');
+    
+    // Extract environment variables
+    const supabaseUrl = process.env.SUPABASE_URL!;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
+    const testUserEmail = process.env.PLAYWRIGHT_TEST_USER_EMAIL!;
+    const testUserPassword = process.env.PLAYWRIGHT_TEST_USER_PASSWORD!;
+    
+    // Ensure auth directory exists
+    ensureAuthDirectoryExists();
 
     // 2. Initialize Supabase Client
     const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
@@ -85,11 +70,7 @@ async function globalSetup(config: FullConfig) {
     console.log('Successfully signed in to Supabase.');
 
     // 4. Save the authentication state (session) to a file
-    // Ensure the directory exists
-    const authDir = path.dirname(AUTH_FILE_PATH);
-    if (!fs.existsSync(authDir)) {
-        fs.mkdirSync(authDir, { recursive: true });
-    }
+    // Auth directory is ensured to exist already through ensureAuthDirectoryExists()
 
     // The session object contains tokens and user info.
     // Playwright's storageState expects an object with 'cookies' and 'origins'.
