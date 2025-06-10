@@ -188,9 +188,30 @@ export async function verifyRouteElements(
     throw new Error(errorMessage);
   }
 
-  // Always log for debugging the login page test issue
-  console.log(`[verifyRouteElements DEBUG] Received route object: ${JSON.stringify(route, null, 2)}`);
-  console.log(`[verifyRouteElements DEBUG] Route: ${route?.title || 'UNKNOWN'}, Success: ${success}, Missing: ${JSON.stringify(missing)}, Found: ${JSON.stringify(found)}, Optional Not Found: ${JSON.stringify(notFound)}`);
+  // Enhanced debug logging for element verification
+  console.log(`[verifyRouteElements DEBUG] Route: ${route?.id || route?.title || 'UNKNOWN'} (${route?.path || 'no-path'})`);
+  console.log(`[verifyRouteElements DEBUG] Success: ${success}`);
+  console.log(`[verifyRouteElements DEBUG] Found elements: ${found.join(', ')}`);
+  
+  if (missing.length > 0) {
+    console.log(`[verifyRouteElements DEBUG] ❌ MISSING REQUIRED elements: ${missing.join(', ')}`);
+    
+    // For each missing element, log the selector used to try to find it
+    for (const elementId of missing) {
+      const element = route.elements.find(e => e.id === elementId || e.name === elementId);
+      if (element) {
+        console.log(`[verifyRouteElements DEBUG] Missing element "${elementId}" used selector: ${element.selector.toString()}`);
+      }
+    }
+  } else {
+    console.log(`[verifyRouteElements DEBUG] ✅ All required elements found`);
+  }
+  
+  if (notFound.length > 0) {
+    console.log(`[verifyRouteElements DEBUG] Optional elements not found: ${notFound.join(', ')}`);
+  }
+  
+  console.log(`[verifyRouteElements DEBUG] Full route object: ${JSON.stringify(route, null, 2)}`);
   return result;
 }
 

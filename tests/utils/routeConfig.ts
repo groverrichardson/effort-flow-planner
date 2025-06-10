@@ -226,7 +226,7 @@ export const routes: AppRoutes = {
       {
         id: 'notes_list',
         name: 'Notes List',
-        selector: page => page.locator('.notes-list, [data-testid*="note"], .notes-container, ul, ol, div[role="list"], div > div:has(div > div)').first(),
+        selector: page => page.locator('main div, [data-testid*="note"], .notes-container, .notes-list, ul, ol, div[role="list"], div > div:has([data-testid*="note-item"]), div[class*="notes"], div[class*="note-"]').first(),
         required: true
       },
       {

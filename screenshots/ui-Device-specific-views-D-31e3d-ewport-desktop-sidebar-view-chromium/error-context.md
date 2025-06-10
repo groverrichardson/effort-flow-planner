@@ -1,14 +1,14 @@
 # Test info
 
 - Name: Device-specific views >> Desktop viewport >> desktop sidebar view
-- Location: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:620:9
+- Location: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:695:9
 
 # Error details
 
 ```
 Error: expect(page).toHaveScreenshot(expected)
 
-  103 pixels (ratio 0.01 of all image pixels) are different.
+  65 pixels (ratio 0.01 of all image pixels) are different.
 
 Expected: /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts-snapshots/desktop-with-sidebar-chromium-darwin.png
 Received: /Users/freedommarketing/Desktop/effort-flow-planner/screenshots/ui-Device-specific-views-D-31e3d-ewport-desktop-sidebar-view-chromium/desktop-with-sidebar-actual.png
@@ -21,16 +21,16 @@ Call log:
     - disabled all CSS animations
   - waiting for fonts to load...
   - fonts loaded
-  - 103 pixels (ratio 0.01 of all image pixels) are different.
+  - 65 pixels (ratio 0.01 of all image pixels) are different.
   - waiting 100ms before taking screenshot
   - taking page screenshot
     - disabled all CSS animations
   - waiting for fonts to load...
   - fonts loaded
   - captured a stable screenshot
-  - 103 pixels (ratio 0.01 of all image pixels) are different.
+  - 65 pixels (ratio 0.01 of all image pixels) are different.
 
-    at /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:625:32
+    at /Users/freedommarketing/Desktop/effort-flow-planner/tests/ui.spec.ts:700:32
 ```
 
 # Page snapshot
@@ -72,7 +72,7 @@ Call log:
   - text: New Note
 - heading "View Options" [level=4]
 - button "All Active"
-- button "Completed Today (27)"
+- button "Completed Today (0)"
 - button "Archived (0)"
 - heading "Filters" [level=4]
 - button "Filter Tasks":
@@ -99,206 +99,206 @@ Call log:
 # Test source
 
 ```ts
-  525 |                     page.locator('[data-testid="task-form"]'),
-  526 |                 ];
-  527 |
-  528 |                 let dialogVisible = false;
-  529 |                 let dialogDetails = '';
-  530 |
-  531 |                 for (const dialog of dialogSelectors) {
-  532 |                     if (
-  533 |                         (await dialog.count()) > 0 &&
-  534 |                         (await dialog.isVisible())
-  535 |                     ) {
-  536 |                         dialogVisible = true;
-  537 |                         dialogDetails = `Dialog found using selector: ${dialog}`;
-  538 |                         console.log(dialogDetails);
-  539 |                         break;
-  540 |                     }
-  541 |                 }
-  542 |
-  543 |                 if (dialogVisible) {
-  544 |                     console.log('Task creation dialog successfully opened');
-  545 |                     await expect(page).toHaveScreenshot(
-  546 |                         'task-create-form-page.png'
-  547 |                     );
-  548 |                 } else {
-  549 |                     console.error(
-  550 |                         'Button was clicked but dialog did not appear'
-  551 |                     );
-  552 |                     await expect(page).toHaveScreenshot(
-  553 |                         'task-dialog-not-visible.png'
-  554 |                     );
-  555 |                     throw new Error(
-  556 |                         'Task form dialog not found after clicking create button'
-  557 |                     );
-  558 |                 }
-  559 |             } else {
-  560 |                 console.log('No viable task creation button found, injecting a mock button for testing');
-  561 |                 
-  562 |                 // Inject a test button if none exists - this allows the test to continue
-  563 |                 await page.evaluate(() => {
-  564 |                     const mockButton = document.createElement('button');
-  565 |                     mockButton.id = 'mock-create-task-button';
-  566 |                     mockButton.textContent = '+ Create Task';
-  567 |                     mockButton.style.position = 'fixed';
-  568 |                     mockButton.style.bottom = '20px';
-  569 |                     mockButton.style.right = '20px';
-  570 |                     mockButton.style.zIndex = '1000';
-  571 |                     mockButton.style.padding = '10px';
-  572 |                     mockButton.style.backgroundColor = '#4CAF50';
-  573 |                     mockButton.style.color = 'white';
-  574 |                     mockButton.style.border = 'none';
-  575 |                     mockButton.style.borderRadius = '4px';
-  576 |                     document.body.appendChild(mockButton);
-  577 |                     console.log('Mock button injected for testing purposes');
-  578 |                 });
-  579 |                 
-  580 |                 await page.waitForTimeout(500);
-  581 |                 const mockButton = page.locator('#mock-create-task-button');
-  582 |                 
-  583 |                 if (await mockButton.isVisible()) {
-  584 |                     console.log('Successfully injected mock button for testing');
-  585 |                     await mockButton.click();
-  586 |                     clicked = true;
-  587 |                 } else {
-  588 |                     await expect(page).toHaveScreenshot('no-create-button-found.png');
-  589 |                     throw new Error('Failed to inject mock button for task creation test');
-  590 |                 }
-  591 |             }
-  592 |         } catch (e) {
-  593 |             console.error('Task creation form test failed:', e);
-  594 |             // Take screenshot of current state for debugging
-  595 |             await expect(page).toHaveScreenshot(
-  596 |                 'task-creation-test-failed.png'
-  597 |             );
-  598 |             throw e;
-  599 |         }
-  600 |     });
-  601 | });
-  602 |
-  603 | // Device-specific tests for responsive views
-  604 | test.describe('Device-specific views', () => {
-  605 |     // Authentication state for this group
-  606 |     authStates['Device-specific views'] = { isAuthenticated: false };
-  607 |
-  608 |     // Authenticate once before all tests in this group
-  609 |     test.beforeAll(async ({ browser }) => {
-  610 |         const page = await browser.newPage();
-  611 |         await bypassLogin(page);
-  612 |         authStates['Device-specific views'].isAuthenticated = true;
-  613 |         await page.close();
-  614 |     });
-  615 |
-  616 |     // Desktop view tests
-  617 |     test.describe('Desktop viewport', () => {
-  618 |         test.use({ viewport: devices.desktop });
-  619 |
-  620 |         test('desktop sidebar view', async ({ page }, testInfo: TestInfo) => {
-  621 |             await navigateToPage(page, '/', testInfo);
-  622 |
-  623 |             // For desktop, we expect the sidebar to be visible by default
-  624 |             // Take full page screenshot that will include the sidebar
-> 625 |             await expect(page).toHaveScreenshot('desktop-with-sidebar.png');
-      |                                ^ Error: expect(page).toHaveScreenshot(expected)
-  626 |         });
-  627 |
-  628 |         test('desktop dashboard content', async ({
-  629 |             page,
-  630 |         }, testInfo: TestInfo) => {
-  631 |             await navigateToPage(page, '/', testInfo);
-  632 |
-  633 |             // Screenshot main content area - avoiding precise element selection
-  634 |             // Just give the app enough time to fully render
-  635 |             await expect(page).toHaveScreenshot(
-  636 |                 'desktop-dashboard-content.png'
-  637 |             );
-  638 |         });
-  639 |     });
-  640 |
-  641 |     // Mobile view tests
-  642 |     test.describe('Mobile viewport', () => {
-  643 |         test.use({ viewport: devices.mobile });
-  644 |
-  645 |         // Authentication state for mobile tests
-  646 |         authStates['Mobile viewport'] = { isAuthenticated: false };
-  647 |
-  648 |         // Authenticate once before all tests in this group
-  649 |         test.beforeAll(async ({ browser }) => {
-  650 |             if (!authStates['Mobile viewport'].isAuthenticated) {
-  651 |                 const page = await browser.newPage();
-  652 |                 try {
-  653 |                     await authenticate(page);
-  654 |                     authStates['Mobile viewport'].isAuthenticated = true;
-  655 |                 } catch (e) {
-  656 |                     console.error('Mobile viewport authentication failed:', e);
-  657 |                 } finally {
-  658 |                     await page.close();
-  659 |                 }
-  660 |             }
-  661 |         });
-  662 |
-  663 |         test('mobile layout (sidebar likely collapsed)', async ({
-  664 |             page,
-  665 |         }, testInfo: TestInfo) => {
-  666 |             try {
-  667 |                 await navigateToPage(page, '/', testInfo);
-  668 |
-  669 |                 // On mobile, sidebar may be collapsed by default - this is expected
-  670 |                 await expect(page).toHaveScreenshot('mobile-default-view.png');
-  671 |
-  672 |                 // Try to find and click a hamburger menu or sidebar toggle if it exists
-  673 |                 const possibleToggles = [
-  674 |                     page.getByRole('button', {
-  675 |                         name: /menu|toggle|hamburger|sidebar/i,
-  676 |                     }),
-  677 |                     page.locator(
-  678 |                         '.hamburger, [data-testid="menu-button"], button.menu-toggle'
-  679 |                     ),
-  680 |                     page.locator('button').filter({ hasText: /☰|≡|menu/i }),
-  681 |                 ];
+  600 |                         (await dialog.count()) > 0 &&
+  601 |                         (await dialog.isVisible())
+  602 |                     ) {
+  603 |                         dialogVisible = true;
+  604 |                         dialogDetails = `Dialog found using selector: ${dialog}`;
+  605 |                         console.log(dialogDetails);
+  606 |                         break;
+  607 |                     }
+  608 |                 }
+  609 |
+  610 |                 if (dialogVisible) {
+  611 |                     console.log('Task creation dialog successfully opened');
+  612 |                     await expect(page).toHaveScreenshot(
+  613 |                         'task-create-form-page.png'
+  614 |                     );
+  615 |                 } else {
+  616 |                     console.error(
+  617 |                         'Button was clicked but dialog did not appear'
+  618 |                     );
+  619 |                     await expect(page).toHaveScreenshot(
+  620 |                         'task-dialog-not-visible.png'
+  621 |                     );
+  622 |                     throw new Error(
+  623 |                         'Task form dialog not found after clicking create button'
+  624 |                     );
+  625 |                 }
+  626 |             } else {
+  627 |                 console.log(
+  628 |                     'No viable task creation button found, injecting a mock button for testing'
+  629 |                 );
+  630 |
+  631 |                 // Inject a test button if none exists - this allows the test to continue
+  632 |                 await page.evaluate(() => {
+  633 |                     const mockButton = document.createElement('button');
+  634 |                     mockButton.id = 'mock-create-task-button';
+  635 |                     mockButton.textContent = '+ Create Task';
+  636 |                     mockButton.style.position = 'fixed';
+  637 |                     mockButton.style.bottom = '20px';
+  638 |                     mockButton.style.right = '20px';
+  639 |                     mockButton.style.zIndex = '1000';
+  640 |                     mockButton.style.padding = '10px';
+  641 |                     mockButton.style.backgroundColor = '#4CAF50';
+  642 |                     mockButton.style.color = 'white';
+  643 |                     mockButton.style.border = 'none';
+  644 |                     mockButton.style.borderRadius = '4px';
+  645 |                     document.body.appendChild(mockButton);
+  646 |                     console.log('Mock button injected for testing purposes');
+  647 |                 });
+  648 |
+  649 |                 await page.waitForTimeout(500);
+  650 |                 const mockButton = page.locator('#mock-create-task-button');
+  651 |
+  652 |                 if (await mockButton.isVisible()) {
+  653 |                     console.log(
+  654 |                         'Successfully injected mock button for testing'
+  655 |                     );
+  656 |                     await mockButton.click();
+  657 |                     clicked = true;
+  658 |                 } else {
+  659 |                     await expect(page).toHaveScreenshot(
+  660 |                         'no-create-button-found.png'
+  661 |                     );
+  662 |                     throw new Error(
+  663 |                         'Failed to inject mock button for task creation test'
+  664 |                     );
+  665 |                 }
+  666 |             }
+  667 |         } catch (e) {
+  668 |             console.error('Task creation form test failed:', e);
+  669 |             // Take screenshot of current state for debugging
+  670 |             await expect(page).toHaveScreenshot(
+  671 |                 'task-creation-test-failed.png'
+  672 |             );
+  673 |             throw e;
+  674 |         }
+  675 |     });
+  676 | });
+  677 |
+  678 | // Device-specific tests for responsive views
+  679 | test.describe('Device-specific views', () => {
+  680 |     // Authentication state for this group
+  681 |     authStates['Device-specific views'] = { isAuthenticated: false };
   682 |
-  683 |                 // Try each possible toggle selector
-  684 |                 let toggleFound = false;
-  685 |                 for (const toggle of possibleToggles) {
-  686 |                     if (
-  687 |                         (await toggle.count()) > 0 &&
-  688 |                         (await toggle.isVisible())
-  689 |                     ) {
-  690 |                         await toggle.click();
-  691 |                         await page.waitForTimeout(1000); // Wait for animation
-  692 |                         await expect(page).toHaveScreenshot(
-  693 |                             'mobile-with-sidebar-open.png'
-  694 |                         );
-  695 |                         toggleFound = true;
-  696 |                         break; // Stop after first successful toggle
-  697 |                     }
-  698 |                 }
-  699 |
-  700 |                 if (!toggleFound) {
-  701 |                     console.log(
-  702 |                         'No visible sidebar toggle found on mobile view'
-  703 |                     );
-  704 |                 }
-  705 |             } catch (e) {
-  706 |                 console.error('Mobile layout test failed:', e);
-  707 |                 throw e;
-  708 |             }
-  709 |         });
-  710 |     });
-  711 | });
-  712 |
-  713 | // This is a utility to help generate visual tests for all routes efficiently
-  714 | test.describe('Automatic route testing', () => {
-  715 |     // Test timeout for entire routing tests
-  716 |     test.setTimeout(60000); // 1-minute timeout for these tests
-  717 |     
-  718 |     // Device configurations for testing
-  719 |     const deviceConfigs = [
-  720 |         {
-  721 |             name: 'desktop',
-  722 |             width: 1280,
-  723 |             height: 720,
-  724 |             checkSidebar: true,
-  725 |         },
+  683 |     // Authenticate once before all tests in this group
+  684 |     test.beforeAll(async ({ browser }) => {
+  685 |         const page = await browser.newPage();
+  686 |         await bypassLogin(page);
+  687 |         authStates['Device-specific views'].isAuthenticated = true;
+  688 |         await page.close();
+  689 |     });
+  690 |
+  691 |     // Desktop view tests
+  692 |     test.describe('Desktop viewport', () => {
+  693 |         test.use({ viewport: devices.desktop });
+  694 |
+  695 |         test('desktop sidebar view', async ({ page }, testInfo: TestInfo) => {
+  696 |             await navigateToPage(page, '/', testInfo);
+  697 |
+  698 |             // For desktop, we expect the sidebar to be visible by default
+  699 |             // Take full page screenshot that will include the sidebar
+> 700 |             await expect(page).toHaveScreenshot('desktop-with-sidebar.png');
+      |                                ^ Error: expect(page).toHaveScreenshot(expected)
+  701 |         });
+  702 |
+  703 |         test('desktop dashboard content', async ({
+  704 |             page,
+  705 |         }, testInfo: TestInfo) => {
+  706 |             await navigateToPage(page, '/', testInfo);
+  707 |
+  708 |             // Screenshot main content area - avoiding precise element selection
+  709 |             // Just give the app enough time to fully render
+  710 |             await expect(page).toHaveScreenshot(
+  711 |                 'desktop-dashboard-content.png'
+  712 |             );
+  713 |         });
+  714 |     });
+  715 |
+  716 |     // Mobile view tests
+  717 |     test.describe('Mobile viewport', () => {
+  718 |         test.use({ viewport: devices.mobile });
+  719 |
+  720 |         // Authentication state for mobile tests
+  721 |         authStates['Mobile viewport'] = { isAuthenticated: false };
+  722 |
+  723 |         // Authenticate once before all tests in this group
+  724 |         test.beforeAll(async ({ browser }) => {
+  725 |             if (!authStates['Mobile viewport'].isAuthenticated) {
+  726 |                 const page = await browser.newPage();
+  727 |                 try {
+  728 |                     await authenticate(page);
+  729 |                     authStates['Mobile viewport'].isAuthenticated = true;
+  730 |                 } catch (e) {
+  731 |                     console.error('Mobile viewport authentication failed:', e);
+  732 |                 } finally {
+  733 |                     await page.close();
+  734 |                 }
+  735 |             }
+  736 |         });
+  737 |
+  738 |         test('mobile layout (sidebar likely collapsed)', async ({
+  739 |             page,
+  740 |         }, testInfo: TestInfo) => {
+  741 |             try {
+  742 |                 await navigateToPage(page, '/', testInfo);
+  743 |
+  744 |                 // On mobile, sidebar may be collapsed by default - this is expected
+  745 |                 await expect(page).toHaveScreenshot('mobile-default-view.png');
+  746 |
+  747 |                 // Try to find and click a hamburger menu or sidebar toggle if it exists
+  748 |                 const possibleToggles = [
+  749 |                     page.getByRole('button', {
+  750 |                         name: /menu|toggle|hamburger|sidebar/i,
+  751 |                     }),
+  752 |                     page.locator(
+  753 |                         '.hamburger, [data-testid="menu-button"], button.menu-toggle'
+  754 |                     ),
+  755 |                     page.locator('button').filter({ hasText: /☰|≡|menu/i }),
+  756 |                 ];
+  757 |
+  758 |                 // Try each possible toggle selector
+  759 |                 let toggleFound = false;
+  760 |                 for (const toggle of possibleToggles) {
+  761 |                     if (
+  762 |                         (await toggle.count()) > 0 &&
+  763 |                         (await toggle.isVisible())
+  764 |                     ) {
+  765 |                         await toggle.click();
+  766 |                         await page.waitForTimeout(1000); // Wait for animation
+  767 |                         await expect(page).toHaveScreenshot(
+  768 |                             'mobile-with-sidebar-open.png'
+  769 |                         );
+  770 |                         toggleFound = true;
+  771 |                         break; // Stop after first successful toggle
+  772 |                     }
+  773 |                 }
+  774 |
+  775 |                 if (!toggleFound) {
+  776 |                     console.log(
+  777 |                         'No visible sidebar toggle found on mobile view'
+  778 |                     );
+  779 |                 }
+  780 |             } catch (e) {
+  781 |                 console.error('Mobile layout test failed:', e);
+  782 |                 throw e;
+  783 |             }
+  784 |         });
+  785 |     });
+  786 | });
+  787 |
+  788 | // This is a utility to help generate visual tests for all routes efficiently
+  789 | test.describe('Automatic route testing', () => {
+  790 |     // Test timeout for entire routing tests
+  791 |     test.setTimeout(60000); // 1-minute timeout for these tests
+  792 |
+  793 |     // Device configurations for testing
+  794 |     const deviceConfigs = [
+  795 |         {
+  796 |             name: 'desktop',
+  797 |             width: 1280,
+  798 |             height: 720,
+  799 |             checkSidebar: true,
+  800 |         },
 ```

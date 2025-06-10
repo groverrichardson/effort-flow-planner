@@ -196,6 +196,12 @@ export async function navigateWithVerification(
         // Add detailed debug logging before calling verifyRouteElements
         console.log(`[navigateWithVerification DEBUG] RouteConfig for element verification: ${JSON.stringify(routeConfig, null, 2)}`);
         
+        // Enhanced debug logging for element verification
+        if (routeConfig?.elements?.length > 0) {
+          console.log(`[navigateWithVerification DEBUG] Route ${routeConfig.id}: About to verify ${routeConfig.elements.length} elements on page...`);
+          console.log(`[navigateWithVerification DEBUG] Required elements: ${routeConfig.elements.filter(e => e.required).map(e => e.id).join(', ')}`);
+        }
+        
         elementResult = await verifyRouteElements(page, routeConfig, {
           ...verificationOptions,
           screenshotPath,
@@ -289,6 +295,15 @@ export async function navigateWithVerification(
         try {
           const timestamp = new Date().toISOString().replace(/:/g, '-');
           screenshotPath = `navigation-failure-${routeConfig.id}-${timestamp}.png`;
+          // Verify that required elements are present on the page
+          if (routeConfig?.elements?.length > 0) {
+            console.log(`[navigateWithVerification DEBUG] Route ${routeConfig.id}: Verifying ${routeConfig.elements.length} elements on page...`);
+            console.log(`[navigateWithVerification DEBUG] Required elements: ${routeConfig.elements.filter(e => e.required).map(e => e.id).join(', ')}`);
+            
+            if (verbose) {
+              console.log(`🔍 Verifying ${routeConfig.elements.length} elements on page...`);
+            }
+          }
           await page.screenshot({ path: screenshotPath });
           
           if (verbose) {
@@ -458,6 +473,43 @@ export async function navigateTo(
   
   // Either no authentication needed or already on the right page
   return result;
+}
+
+/**
+ * Authenticate the user using Supabase credentials
+ * 
+ * @param page Playwright page object
+ * @returns Promise resolving to void
+ */
+export async function authenticate(page: Page): Promise<void> {
+  console.log('Authenticating with Supabase credentials...');
+  
+  // Get the login page elements
+  const emailInput = page.locator('input[type="email"]');
+  const passwordInput = page.locator('input[type="password"]');
+  const submitButton = page.locator('button[type="submit"]');
+  
+  // Get credentials from environment
+  const email = process.env.PLAYWRIGHT_TEST_USER_EMAIL;
+  const password = process.env.PLAYWRIGHT_TEST_USER_PASSWORD;
+  
+  if (!email || !password) {
+    throw new Error('Missing test user credentials in environment variables');
+  }
+  
+  try {
+    // Fill in and submit the login form
+    await emailInput.fill(email);
+    await passwordInput.fill(password);
+    await submitButton.click();
+    
+    // Wait for redirect after login
+    await page.waitForURL('**/*', { timeout: 10000 });
+    console.log(`Authentication completed. Current URL: ${page.url()}`);
+  } catch (error) {
+    console.error(`Authentication error: ${error.message}`);
+    throw error;
+  }
 }
 
 export async function bypassLogin(page: Page, options: { verbose?: boolean } = {}): Promise<boolean> {

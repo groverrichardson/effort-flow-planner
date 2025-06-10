@@ -40,6 +40,9 @@ coverage/
 /playwright-report/
 /playwright-report.json
 
+# Playwright authentication state
+/playwright/.auth/
+
 # Build artifacts
 *.tsbuildinfo
 .eslintcache
