@@ -33,6 +33,7 @@ coverage/
 !.env.example
 
 # Test screenshots and results
+/screenshots/
 /tests/ui.spec.ts-snapshots/
 /test-results/
 
