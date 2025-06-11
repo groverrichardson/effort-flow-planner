@@ -49,7 +49,12 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        {/* Tasks Page Route */}
+        {/* Dashboard/Tasks Routes */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        } />
         <Route path="/tasks" element={
           <ProtectedRoute>
             <Index />

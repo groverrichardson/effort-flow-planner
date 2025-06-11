@@ -87,9 +87,29 @@ export async function navigateTo(page: Page, route: string, options: NavigationO
   const { maxRetries = 1, timeout = 15000, throwOnFailure = false, verificationOptions } = options;
 
   let routeConfig = getRouteById(route) || getRouteByPath(route);
+  // Set default options for routes not found in configuration
   if (!routeConfig) {
-    routeConfig = { id: route, path: route, title: route, elements: [] }; // Fallback for dynamic routes
+    routeConfig = {
+      id: route,
+      path: route,
+      title: route,
+      elements: [],
+      requiresAuth: false
+    };
   }
+  
+  // Generate the result object with default values (will be updated below)
+  const result: NavigationResult = {
+    success: false,
+    targetRoute: routeConfig.id,
+    routeConfig: routeConfig,
+    actualUrl: '',
+    urlVerified: false,
+    elementsVerified: false,
+    elementDetails: { found: [], notFound: [], missing: [] },
+    timestamp: Date.now(),
+    duration: 0
+  };
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -98,17 +118,14 @@ export async function navigateTo(page: Page, route: string, options: NavigationO
       const urlVerified = await verifyUrl(page, routeConfig.path);
       const elementResult = await verifyRouteElements(page, routeConfig, verificationOptions);
 
-      const result: NavigationResult = {
-        success: urlVerified && elementResult.success,
-        targetRoute: route,
-        routeConfig,
-        actualUrl: page.url(),
-        urlVerified,
-        elementsVerified: elementResult.success,
-        elementDetails: elementResult.details,
-        timestamp: Date.now(),
-        duration: Date.now() - startTime,
-      };
+      // Update result with actual values
+      result.actualUrl = page.url();
+      result.urlVerified = urlVerified;
+      result.elementsVerified = elementResult.success;
+      result.elementDetails = elementResult.details;
+      result.timestamp = Date.now();
+      result.duration = Date.now() - startTime;
+      result.success = urlVerified && elementResult.success;
 
       if (result.success) {
         return result;
@@ -230,84 +247,87 @@ export async function authenticate(page: Page): Promise<void> {
     'button.login-button'
   ];
 
-  // Try to find elements using each selector strategy
-  let emailInput, passwordInput, submitButton;
+// Try to find elements using each selector strategy
+let emailInput, passwordInput, submitButton;
 
-  // Find email input
-  for (const selector of emailSelectors) {
-    try {
-      console.log(`[Auth] Trying email selector: ${selector}`);
-      emailInput = page.locator(selector).first();
-      const isVisible = await emailInput.isVisible({ timeout: 2000 }).catch(() => false);
-      if (isVisible) {
-        console.log(`[Auth] Found visible email input with selector: ${selector}`);
-        break;
-      }
-    } catch (e) {
-      console.log(`[Auth] Selector ${selector} failed: ${e.message}`);
-    }
-  }
+// Find email input
+for (const selector of emailSelectors) {
+try {
+console.log(`[Auth] Trying email selector: ${selector}`);
+const tempEmailInput = page.locator(selector).first();
+const isVisible = await tempEmailInput.isVisible({ timeout: 2000 }).catch(() => false);
+if (isVisible) {
+console.log(`[Auth] Found visible email input with selector: ${selector}`);
+emailInput = tempEmailInput; // Only assign if visible
+break;
+}
+} catch (e) {
+console.log(`[Auth] Selector ${selector} failed: ${e.message}`);
+}
+}
 
-  // Find password input
-  for (const selector of passwordSelectors) {
-    try {
-      console.log(`[Auth] Trying password selector: ${selector}`);
-      passwordInput = page.locator(selector).first();
-      const isVisible = await passwordInput.isVisible({ timeout: 2000 }).catch(() => false);
-      if (isVisible) {
-        console.log(`[Auth] Found visible password input with selector: ${selector}`);
-        break;
-      }
-    } catch (e) {
-      console.log(`[Auth] Selector ${selector} failed: ${e.message}`);
-    }
-  }
+// Find password input
+for (const selector of passwordSelectors) {
+try {
+console.log(`[Auth] Trying password selector: ${selector}`);
+const tempPasswordInput = page.locator(selector).first();
+const isVisible = await tempPasswordInput.isVisible({ timeout: 2000 }).catch(() => false);
+if (isVisible) {
+console.log(`[Auth] Found visible password input with selector: ${selector}`);
+passwordInput = tempPasswordInput; // Only assign if visible
+break;
+}
+} catch (e) {
+console.log(`[Auth] Selector ${selector} failed: ${e.message}`);
+}
+}
 
-  // Find submit button
-  for (const selector of submitSelectors) {
-    try {
-      console.log(`[Auth] Trying submit button selector: ${selector}`);
-      submitButton = page.locator(selector).first();
-      const isVisible = await submitButton.isVisible({ timeout: 2000 }).catch(() => false);
-      if (isVisible) {
-        console.log(`[Auth] Found visible submit button with selector: ${selector}`);
-        break;
-      }
-    } catch (e) {
-      console.log(`[Auth] Selector ${selector} failed: ${e.message}`);
-    }
-  }
+// Find submit button
+for (const selector of submitSelectors) {
+try {
+console.log(`[Auth] Trying submit button selector: ${selector}`);
+const tempSubmitButton = page.locator(selector).first();
+const isVisible = await tempSubmitButton.isVisible({ timeout: 2000 }).catch(() => false);
+if (isVisible) {
+console.log(`[Auth] Found visible submit button with selector: ${selector}`);
+submitButton = tempSubmitButton; // Only assign if visible
+break;
+}
+} catch (e) {
+console.log(`[Auth] Selector ${selector} failed: ${e.message}`);
+}
+}
 
-  // Take screenshot of what we found (or didn't find)
-  await page.screenshot({ path: 'debug-login-form-elements.png' });
-  console.log('[Auth] Screenshot saved: debug-login-form-elements.png');
+// Take screenshot of what we found (or didn't find)
+await page.screenshot({ path: 'debug-login-form-elements.png' });
+console.log('[Auth] Screenshot saved: debug-login-form-elements.png');
 
-  // Check if we found all elements
-  if (!emailInput || !passwordInput || !submitButton) {
-    console.error('[Auth] Could not find all login form elements');
-    throw new Error('Login form elements not found. Check screenshot for details.');
-  }
-  
-  try {
-    // Fill in and submit the login form
-    console.log('[Auth] Filling email...');
-    await emailInput.fill(email);
-    console.log('[Auth] Filling password...');
-    await passwordInput.fill(password);
-    
-    console.log('[Auth] Clicking submit button...');
-    await submitButton.click();
-    console.log('[Auth] Submit button clicked.');
-    
-    // Wait for redirect after login
-    console.log('[Auth] Waiting for redirect to dashboard...');
-    await page.waitForURL('**/(dashboard|home|tasks|/)**', { timeout: 15000 });
-    console.log(`[Auth] Authentication successful. Redirected to: ${page.url()}`);
-    
+// Check if we found all elements
+if (!emailInput || !passwordInput || !submitButton) {
+console.error('[Auth] Could not find all login form elements');
+throw new Error('Login form elements not found. Check screenshot for details.');
+}
+
+try {
+// Fill in and submit the login form
+console.log('[Auth] Filling email...');
+await emailInput.fill(email);
+console.log('[Auth] Filling password...');
+await passwordInput.fill(password);
+
+console.log('[Auth] Clicking submit button...');
+await submitButton.click();
+console.log('[Auth] Submit button clicked.');
+
+// Wait for redirect after login
+console.log('[Auth] Waiting for redirect to dashboard...');
+await page.waitForURL('**/(dashboard|home|tasks|/)**', { timeout: 15000 });
+console.log(`[Auth] Authentication successful. Redirected to: ${page.url()}`);
+
     // Verify we can access protected content
     console.log('[Auth] Verifying access to protected content...');
     await page.goto('/dashboard');
-    
+
     // Wait briefly for the dashboard to load
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(e => {
       console.log('[Auth] Network idle timeout (expected), continuing verification')
