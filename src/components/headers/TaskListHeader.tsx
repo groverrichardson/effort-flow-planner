@@ -35,7 +35,8 @@ const TaskListHeader = ({
                         : 'outline'
                 }
                 size="sm"
-                onClick={onShowAllActive}>
+                onClick={onShowAllActive}
+                data-testid="show-all-active-tasks-button">
                 All Active
             </Button>
             <Button

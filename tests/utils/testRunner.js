@@ -29,7 +29,12 @@ const testPattern = args.filter(arg => !arg.startsWith('--')).join(' ');
 // Build the command to run with setupPort script
 const cmd = 'node';
 const setupPortPath = path.join(__dirname, 'setupPort.js');
-const cmdArgs = [setupPortPath, 'npx', 'playwright', 'test', '--project=chromium'];
+// Set up command to only run .spec.ts files (Playwright tests)
+const cmdArgs = [setupPortPath, 'npx', 'playwright', 'test'];
+
+// Explicitly target only .spec.ts files
+cmdArgs.push('**/*.spec.ts');
+cmdArgs.push('--project=chromium');
 
 // Only use headed mode if explicitly requested via environment variable
 if (process.env.HEADED === '1') {

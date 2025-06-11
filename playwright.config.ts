@@ -26,6 +26,8 @@ process.env.PLAYWRIGHT_HTML_PORT = process.env.PLAYWRIGHT_HTML_PORT || HTML_REPO
 // Export the config directly as Playwright requires
 export default defineConfig({
   testDir: './tests',
+  // Only run .spec.ts files, exclude .test.ts files
+  testMatch: '**/*.spec.ts',
   timeout: 30 * 1000,
   expect: {
     timeout: 10000,

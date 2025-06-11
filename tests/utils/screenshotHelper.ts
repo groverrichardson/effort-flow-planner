@@ -12,16 +12,55 @@ import { spawnSync } from 'child_process';
  */
 export async function compareScreenshotAndAttachToReport(
   page: Page,
-  testInfo: TestInfo,
-  name: string,
+  nameOrTestInfo: string | TestInfo,
+  nameOrOptions?: string | { 
+    timeout?: number, 
+    threshold?: number, 
+    maxDiffPixelRatio?: number 
+  },
   options: { 
     timeout?: number, 
     threshold?: number, 
     maxDiffPixelRatio?: number 
   } = {}
 ) {
-  // Ensure the name doesn't already end with .png
-  const baseName = name.endsWith('.png') ? name.slice(0, -4) : name;
+  // Handle different argument patterns for backward compatibility
+  let testInfo: TestInfo;
+  let name: string;
+  
+  if (typeof nameOrTestInfo === 'string') {
+    // Old format: (page, name) or (page, name, options)
+    name = nameOrTestInfo;
+    // Get testInfo from the fixture via the test runner
+    // For backward compatibility, use a default output directory if testInfo is not available
+    try {
+      // @ts-ignore - accessing internal test runner property
+      testInfo = page._browserContext._browser._options.playwright.config.projects[0].testDir;
+    } catch (e) {
+      console.warn('Could not get testInfo from page context, using fallback');
+      // Create a minimal testInfo-like object with outputDir property and attach method
+      testInfo = { 
+        outputDir: path.join(process.cwd(), 'test-results/screenshots'),
+        // Add a fallback attach method that just logs
+        attach: async (title: string, options: any) => {
+          console.log(`Would attach ${title} from ${options.path || 'unknown path'}`);
+          return Promise.resolve();
+        }
+      } as TestInfo;
+    }
+    
+    if (nameOrOptions && typeof nameOrOptions !== 'string') {
+      options = nameOrOptions;
+    }
+  } else {
+    // New format: (page, testInfo, name, options)
+    testInfo = nameOrTestInfo;
+    name = (nameOrOptions as string) || 'screenshot';
+  }
+  
+  // Ensure the name doesn't already end with .png and is defined
+  // Add null/undefined check before calling endsWith
+  const baseName = name && typeof name === 'string' && name.endsWith('.png') ? name.slice(0, -4) : (name || 'screenshot');
   const screenshotName = `${baseName}.png`;
   
   // Screenshot options
@@ -40,17 +79,22 @@ export async function compareScreenshotAndAttachToReport(
   await page.screenshot({ path: actualImagePath });
   
   // Attach the actual screenshot to the report
-  await testInfo.attach(`${baseName} (Actual)`, {
-    path: actualImagePath,
-    contentType: 'image/png'
-  });
-  console.log(`✅ Attached actual screenshot: ${actualImagePath}`);
+  try {
+    await testInfo.attach(`${baseName} (Actual)`, {
+      path: actualImagePath,
+      contentType: 'image/png'
+    });
+    console.log(`✅ Attached actual screenshot: ${actualImagePath}`);
+  } catch (err) {
+    console.warn(`⚠️ Could not attach actual screenshot: ${err.message}`);
+  }
 
   // Playwright stores snapshots in [testfile]-snapshots directory
   const snapshotDir = path.join(process.cwd(), 'tests', 'ui.spec.ts-snapshots');
   
   // Format should be [name]-[browser]-[platform].png
-  const browserName = testInfo.project.name; // chromium, firefox, or webkit
+  // Add fallback for testInfo.project.name in case it's undefined
+  const browserName = testInfo.project?.name || 'chromium'; // Default to chromium if project name is undefined
   const platform = process.platform; // darwin, win32, linux
   
   // Try multiple naming formats to find the baseline
@@ -71,11 +115,15 @@ export async function compareScreenshotAndAttachToReport(
   
   // If we have a baseline, attach it to the report
   if (fs.existsSync(baselineImagePath)) {
-    await testInfo.attach(`${baseName} (Expected)`, {
-      path: baselineImagePath,
-      contentType: 'image/png'
-    });
-    console.log(`✅ Attached baseline screenshot: ${baselineImagePath}`);
+    try {
+      await testInfo.attach(`${baseName} (Expected)`, {
+        path: baselineImagePath,
+        contentType: 'image/png'
+      });
+      console.log(`✅ Attached baseline screenshot: ${baselineImagePath}`);
+    } catch (err) {
+      console.warn(`⚠️ Could not attach baseline screenshot: ${err.message}`);
+    }
     
     // Generate a diff image using ImageMagick (if available)
     try {
@@ -101,11 +149,15 @@ export async function compareScreenshotAndAttachToReport(
         
         // Attach the diff to the report
         if (fs.existsSync(diffImagePath)) {
-          await testInfo.attach(`${baseName} (Diff)`, {
-            path: diffImagePath,
-            contentType: 'image/png'
-          });
-          console.log(`✅ Created and attached diff image: ${diffImagePath}`);
+          try {
+            await testInfo.attach(`${baseName} (Diff)`, {
+              path: diffImagePath,
+              contentType: 'image/png'
+            });
+            console.log(`✅ Created and attached diff image: ${diffImagePath}`);
+          } catch (err) {
+            console.warn(`⚠️ Could not attach diff image: ${err.message}`);
+          }
         }
       } catch (imgError) {
         console.log(`⚠️ ImageMagick not available, skipping diff generation`);

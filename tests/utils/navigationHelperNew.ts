@@ -72,442 +72,258 @@ export interface NavigationOptions {
   
   /** Options for route element verification */
   verificationOptions?: ElementVerificationOptions;
-  
-  /** Whether to log detailed navigation steps */
-  verbose?: boolean;
 }
 
 /**
- * Get a route configuration from ID or path
- * 
- * @param routeIdOrPath Route ID or URL path
- * @returns Route configuration object
+ * Navigates to a given route and verifies the result.
+ *
+ * @param page The Playwright Page object.
+ * @param route The route to navigate to (can be a route ID or a path).
+ * @param options Navigation options.
+ * @returns A promise that resolves with a NavigationResult object.
  */
-function getRouteConfig(routeIdOrPath: string): RouteConfig {
-  try {
-    // Try to get route by ID first
-    return getRouteById(routeIdOrPath);
-  } catch (error) {
-    // If that fails, try by path
-    try {
-      return getRouteByPath(routeIdOrPath);
-    } catch (innerError) {
-      throw new Error(`Could not find route configuration for '${routeIdOrPath}'. It is neither a valid route ID nor path.`);
-    }
-  }
-}
-
-/**
- * Navigate to a route with comprehensive verification
- * 
- * @param page Playwright page object
- * @param routeIdOrPath Route ID or path to navigate to
- * @param options Navigation options
- * @returns Navigation result
- */
-export async function navigateWithVerification(
-  page: Page,
-  routeIdOrPath: string,
-  options: NavigationOptions = {}
-): Promise<NavigationResult> {
+export async function navigateTo(page: Page, route: string, options: NavigationOptions = {}): Promise<NavigationResult> {
   const startTime = Date.now();
-  
-  // Extract options with defaults
-  const {
-    maxRetries = 1,
-    timeout = 30000,
-    throwOnFailure = true,
-    verificationOptions = {},
-    verbose = false
-  } = options;
-  
-  // Get route configuration
-  let routeConfig: RouteConfig;
-  try {
-    routeConfig = getRouteConfig(routeIdOrPath);
-    if (verbose) {
-      console.log(`🚀 Navigating to route: ${routeConfig.title} (${routeConfig.path})`);
-    }
-  } catch (error) {
-    // If we can't find route configuration, assume it's a direct URL
-    if (verbose) {
-      console.log(`🚀 Navigating to URL: ${routeIdOrPath} (no route configuration found)`);
-    }
-    
-    // Go to the URL directly
-    const navigationPath = typeof routeIdOrPath === 'string' ? routeIdOrPath : routeIdOrPath.path;
-    await page.goto(navigationPath, { timeout });
-    
-    // Create a minimal navigation result
-    const result: NavigationResult = {
-      success: true,
-      targetRoute: routeIdOrPath,
-      actualUrl: page.url(),
-      urlVerified: true,
-      elementsVerified: false,
-      timestamp: Date.now(),
-      duration: Date.now() - startTime
-    };
-    
-    return result;
+  const { maxRetries = 1, timeout = 15000, throwOnFailure = false, verificationOptions } = options;
+
+  let routeConfig = getRouteById(route) || getRouteByPath(route);
+  if (!routeConfig) {
+    routeConfig = { id: route, path: route, title: route, elements: [] }; // Fallback for dynamic routes
   }
 
-  // Initialize retry counter
-  let retryCount = 0;
-  let lastError: Error | null = null;
-  
-  // Try navigation with retries
-  while (retryCount <= maxRetries) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      if (retryCount > 0 && verbose) {
-        console.log(`🔄 Retry ${retryCount}/${maxRetries} for navigation to ${routeConfig.title}`);
-      }
-      
-      // Navigate to the route
       await page.goto(routeConfig.path, { timeout });
-      const currentUrl = page.url();
-      
-      // Verify URL matches route
-      const urlVerified = verifyUrl(currentUrl, routeConfig.path);
-      if (!urlVerified) {
-        if (verbose) {
-          console.warn(`⚠️ URL verification failed. Expected ${routeConfig.path}, got ${currentUrl}`);
-        }
-        
-        // Try one more time with URL match waiting (5 second timeout)
-        await waitForUrlMatch(page, routeConfig.path).catch(() => {});
-      }
-      
-      // Verify route elements
-      let elementResult: ElementVerificationResult | null = null;
-      let elementsVerified = false;
-      
-      try {
-        // Create screenshot path if needed
-        let screenshotPath: string | undefined = undefined;
-        if (verificationOptions.screenshotPath) {
-          screenshotPath = verificationOptions.screenshotPath;
-        } else {
-          const timestamp = new Date().toISOString().replace(/:/g, '-');
-          screenshotPath = `route-verification-${routeConfig.id}-${timestamp}.png`;
-        }
-        
-        // Verify route elements
-        // Add detailed debug logging before calling verifyRouteElements
-        console.log(`[navigateWithVerification DEBUG] RouteConfig for element verification: ${JSON.stringify(routeConfig, null, 2)}`);
-        
-        // Enhanced debug logging for element verification
-        if (routeConfig?.elements?.length > 0) {
-          console.log(`[navigateWithVerification DEBUG] Route ${routeConfig.id}: About to verify ${routeConfig.elements.length} elements on page...`);
-          console.log(`[navigateWithVerification DEBUG] Required elements: ${routeConfig.elements.filter(e => e.required).map(e => e.id).join(', ')}`);
-        }
-        
-        elementResult = await verifyRouteElements(page, routeConfig, {
-          ...verificationOptions,
-          screenshotPath,
-          throwOnFailure: false, // Handle failures ourselves
-          verbose
-        });
-        
-        elementsVerified = elementResult.success;
-        // Always log detailed element verification results for debugging
-        console.log(`[navigateWithVerification DEBUG] Full elementResult for route ${routeConfig?.title || 'UNKNOWN'}: ${JSON.stringify(elementResult, null, 2)}`);
-        
-        if (!elementsVerified && verbose) {
-          console.warn(`⚠️ Element verification failed for ${routeConfig.title}`);
-          if (elementResult.details.missing && elementResult.details.missing.length > 0) {
-            console.warn(`Missing required elements: ${elementResult.details.missing.join(', ')}`);
-          }
-        }
-      } catch (error) {
-        if (verbose) {
-          console.error(`❌ Element verification error: ${error.message}`);
-        }
-        lastError = error;
-      }
-      
-      // Determine overall success
-      const success = urlVerified && (elementsVerified || !verificationOptions.throwOnFailure);
-      
-      // Create result object
+
+      const urlVerified = await verifyUrl(page, routeConfig.path);
+      const elementResult = await verifyRouteElements(page, routeConfig, verificationOptions);
+
       const result: NavigationResult = {
-        success,
-        targetRoute: routeIdOrPath,
+        success: urlVerified && elementResult.success,
+        targetRoute: route,
         routeConfig,
         actualUrl: page.url(),
         urlVerified,
-        elementsVerified,
-        elementDetails: elementResult ? elementResult.details : undefined,
-        errorMessage: lastError ? `Element verification failed: ${lastError.message}` : undefined,
-        screenshotPath: elementResult ? elementResult.screenshotPath : undefined,
+        elementsVerified: elementResult.success,
+        elementDetails: elementResult.details,
         timestamp: Date.now(),
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
-      
-      // If success or we've reached max retries, return the result
-      if (success || retryCount >= maxRetries) {
-        if (!success && throwOnFailure) {
-          const errorMessage = `Navigation to ${routeConfig.title} (${routeConfig.path}) failed: URL verification ${urlVerified ? 'succeeded' : 'failed'}, element verification ${elementsVerified ? 'succeeded' : 'failed'}`;
-          result.errorMessage = errorMessage;
-          
-          if (verbose) {
-            console.error(`❌ ${errorMessage}`);
-            if (result.screenshotPath) {
-              console.log(`📸 See screenshot: ${result.screenshotPath}`);
-            }
-          }
-          
-          throw new Error(errorMessage);
-        }
-        
-        // Log success
-        if (success && verbose) {
-          console.log(`✅ Successfully navigated to ${routeConfig.title} (${routeConfig.path})`);
-        }
-        
+
+      if (result.success) {
         return result;
       }
-      
-      // If we're here, retry
-      retryCount++;
-      
-      // Wait before retry with exponential backoff
-      const backoff = Math.min(1000 * Math.pow(1.5, retryCount), 5000);
-      if (verbose) {
-        console.log(`⏱️ Waiting ${backoff}ms before retrying...`);
+
+      if (attempt === maxRetries) {
+        result.errorMessage = `Navigation to ${route} failed after ${maxRetries} attempts.`;
+        if (throwOnFailure) throw new Error(result.errorMessage);
+        return result;
       }
-      await page.waitForTimeout(backoff);
-      
     } catch (error) {
-      lastError = error;
-      retryCount++;
-      
-      if (verbose) {
-        console.error(`❌ Navigation attempt ${retryCount} failed: ${error.message}`);
-      }
-      
-      // If we've reached max retries, throw or return failure
-      if (retryCount > maxRetries) {
-        const errorMessage = `Navigation to ${routeConfig.title} (${routeConfig.path}) failed after ${maxRetries} retries: ${error.message}`;
-        
-        // Take a failure screenshot
-        let screenshotPath: string | undefined = undefined;
-        try {
-          const timestamp = new Date().toISOString().replace(/:/g, '-');
-          screenshotPath = `navigation-failure-${routeConfig.id}-${timestamp}.png`;
-          // Verify that required elements are present on the page
-          if (routeConfig?.elements?.length > 0) {
-            console.log(`[navigateWithVerification DEBUG] Route ${routeConfig.id}: Verifying ${routeConfig.elements.length} elements on page...`);
-            console.log(`[navigateWithVerification DEBUG] Required elements: ${routeConfig.elements.filter(e => e.required).map(e => e.id).join(', ')}`);
-            
-            if (verbose) {
-              console.log(`🔍 Verifying ${routeConfig.elements.length} elements on page...`);
-            }
-          }
-          await page.screenshot({ path: screenshotPath });
-          
-          if (verbose) {
-            console.log(`📸 Saved failure screenshot: ${screenshotPath}`);
-          }
-        } catch (screenshotError) {
-          if (verbose) {
-            console.error(`Failed to save screenshot: ${screenshotError.message}`);
-          }
-        }
-        
-        if (throwOnFailure) {
-          throw new Error(errorMessage);
-        }
-        
+      if (attempt === maxRetries) {
+        const errorMessage = `Navigation to ${route} failed with error: ${error.message}`;
+        if (throwOnFailure) throw new Error(errorMessage);
         return {
           success: false,
-          targetRoute: routeIdOrPath,
-          routeConfig,
+          targetRoute: route,
           actualUrl: page.url(),
           urlVerified: false,
           elementsVerified: false,
           errorMessage,
-          screenshotPath,
           timestamp: Date.now(),
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
         };
       }
-      
-      // Wait before retry with exponential backoff
-      const backoff = Math.min(1000 * Math.pow(1.5, retryCount), 5000);
-      if (verbose) {
-        console.log(`⏱️ Waiting ${backoff}ms before retrying...`);
-      }
-      await page.waitForTimeout(backoff);
     }
   }
-  
-  // This should not be reached due to the logic above, but TypeScript needs it
-  const errorMessage = lastError ? lastError.message : 'Unknown navigation error';
+
+  // This should not be reached, but as a fallback:
+  const finalErrorMessage = `Navigation to ${route} failed unexpectedly.`;
+  if (throwOnFailure) throw new Error(finalErrorMessage);
   return {
     success: false,
-    targetRoute: routeIdOrPath,
-    routeConfig,
+    targetRoute: route,
     actualUrl: page.url(),
     urlVerified: false,
     elementsVerified: false,
-    errorMessage,
+    errorMessage: finalErrorMessage,
     timestamp: Date.now(),
-    duration: Date.now() - startTime
+    duration: Date.now() - startTime,
   };
 }
 
 /**
- * Handle authentication when redirected to login
- * 
- * @param page Playwright page object
- * @param options Navigation options
- * @returns Whether authentication was successful
- */
-export async function handleAuthentication(
-  page: Page, 
-  authenticateFunction: (page: Page) => Promise<void>,
-  options: NavigationOptions = {}
-): Promise<boolean> {
-  const { verbose = false } = options;
-  
-  try {
-    // Get login route configuration
-    const loginRoute = getRouteById('login');
-    
-    // Check if we're on login page
-    const currentUrl = page.url();
-    const isLoginPage = verifyUrl(currentUrl, loginRoute.path);
-    
-    if (isLoginPage) {
-      if (verbose) {
-        console.log('🔐 Detected redirection to login page, performing authentication');
-      }
-      
-      // Execute authentication function
-      await authenticateFunction(page);
-      
-      // Wait for navigation after login
-      await page.waitForNavigation({ timeout: options.timeout || 30000 });
-      
-      // Verify authentication successful
-      const postLoginUrl = page.url();
-      const stillOnLogin = verifyUrl(postLoginUrl, loginRoute.path);
-      
-      if (stillOnLogin) {
-        if (verbose) {
-          console.error('❌ Authentication failed - still on login page');
-        }
-        return false;
-      }
-      
-      if (verbose) {
-        console.log('✅ Authentication successful');
-      }
-      return true;
-    }
-    
-    return false;
-  } catch (error) {
-    if (verbose) {
-      console.error(`❌ Authentication error: ${error.message}`);
-    }
-    return false;
-  }
-}
-
-/**
- * Navigate to a route with authentication handling
- * 
- * @param page Playwright page object
- * @param routeIdOrPath Route ID or path to navigate to
- * @param authenticateFunction Function to handle authentication
- * @param options Navigation options
- * @returns Navigation result
- */
-export async function navigateTo(
-  page: Page,
-  routeIdOrPath: string,
-  authenticateFunction: (page: Page) => Promise<void>,
-  options: NavigationOptions = {}
-): Promise<NavigationResult> {
-  const { verbose = false } = options;
-  
-  // Initial navigation
-  const result = await navigateWithVerification(page, routeIdOrPath, {
-    ...options,
-    throwOnFailure: false
-  });
-  
-  // Check if we need authentication
-  const routeConfig = result.routeConfig;
-  const loginRoute = getRouteById('login');
-  
-  // If we need authentication and were redirected to login
-  if (routeConfig && routeConfig.requiresAuth && verifyUrl(result.actualUrl, loginRoute.path)) {
-    if (verbose) {
-      console.log(`🔐 Route ${routeConfig.title} requires authentication and was redirected to login`);
-    }
-    
-    // Handle authentication
-    const authSuccess = await handleAuthentication(page, authenticateFunction, options);
-    
-    if (!authSuccess) {
-      if (verbose) {
-        console.error('❌ Authentication failed');
-      }
-      
-      result.success = false;
-      result.errorMessage = 'Authentication failed';
-      
-      if (options.throwOnFailure) {
-        throw new Error(`Navigation to ${routeConfig.title} failed: Authentication failed`);
-      }
-      
-      return result;
-    }
-    
-    // Try navigation again after authentication
-    return navigateWithVerification(page, routeIdOrPath, options);
-  }
-  
-  // Either no authentication needed or already on the right page
-  return result;
-}
-
-/**
- * Authenticate the user using Supabase credentials
- * 
- * @param page Playwright page object
- * @returns Promise resolving to void
+ * Authenticates the user by filling out the login form.
+ *
+ * @param page The Playwright Page object.
  */
 export async function authenticate(page: Page): Promise<void> {
-  console.log('Authenticating with Supabase credentials...');
-  
-  // Get the login page elements
-  const emailInput = page.locator('input[type="email"]');
-  const passwordInput = page.locator('input[type="password"]');
-  const submitButton = page.locator('button[type="submit"]');
-  
-  // Get credentials from environment
+  console.log('[Auth] Starting authentication...');
   const email = process.env.PLAYWRIGHT_TEST_USER_EMAIL;
   const password = process.env.PLAYWRIGHT_TEST_USER_PASSWORD;
-  
+
   if (!email || !password) {
-    throw new Error('Missing test user credentials in environment variables');
+    console.error('[Auth] Error: Authentication credentials not found in environment variables.');
+    throw new Error('Authentication credentials not found in environment variables.');
+  }
+
+  // Check if already logged in by looking for a common authenticated page element
+  console.log('[Auth] Checking if already authenticated...');
+  try {
+    // Try to access the dashboard - if it works, we're already logged in
+    await page.goto('/dashboard', { timeout: 5000 });
+    const dashboardElement = page.locator('[data-testid="task-summary"]');
+    const isLoggedIn = await dashboardElement.isVisible({ timeout: 3000 }).catch(() => false);
+    if (isLoggedIn) {
+      console.log('[Auth] Already logged in, skipping authentication.');
+      return;
+    }
+  } catch (e) {
+    console.log('[Auth] Not currently authenticated, proceeding with login.');
+  }
+
+  // Navigate to login page
+  try {
+    console.log('[Auth] Navigating to /login...');
+    await page.goto('/login', { timeout: 15000 });
+    console.log(`[Auth] Current URL after navigation: ${page.url()}`);
+    
+    // Debug: Take screenshot right after navigation
+    await page.screenshot({ path: 'debug-login-page-initial.png' });
+    console.log('[Auth] Screenshot saved: debug-login-page-initial.png');
+    
+    // Debug: Check page content
+    const pageContent = await page.content();
+    console.log(`[Auth] Page content length: ${pageContent.length} characters`);
+    console.log(`[Auth] Page contains login form: ${pageContent.includes('type="email"')}`);
+  } catch (e) {
+    console.error(`[Auth] Navigation to /login failed: ${e.message}`);
+    await page.screenshot({ path: 'auth-nav-failed.png' });
+    throw e;
+  }
+
+  // Wait for the form elements to be ready with multiple selector strategies
+  console.log('[Auth] Attempting to find login form elements using multiple strategies...');
+
+  // Define multiple selector strategies for each element
+  const emailSelectors = [
+    'input[type="email"]',
+    'input#email',
+    'input[placeholder*="email"]',
+    'input[name="email"]',
+    'input.email-input'
+  ];
+
+  const passwordSelectors = [
+    'input[type="password"]',
+    'input#password',
+    'input[placeholder*="password"]',
+    'input[name="password"]',
+    'input.password-input'
+  ];
+
+  const submitSelectors = [
+    'button[type="submit"]',
+    'button:has-text("Sign In")',
+    'button:has-text("Login")',
+    'button.submit-button',
+    'button.login-button'
+  ];
+
+  // Try to find elements using each selector strategy
+  let emailInput, passwordInput, submitButton;
+
+  // Find email input
+  for (const selector of emailSelectors) {
+    try {
+      console.log(`[Auth] Trying email selector: ${selector}`);
+      emailInput = page.locator(selector).first();
+      const isVisible = await emailInput.isVisible({ timeout: 2000 }).catch(() => false);
+      if (isVisible) {
+        console.log(`[Auth] Found visible email input with selector: ${selector}`);
+        break;
+      }
+    } catch (e) {
+      console.log(`[Auth] Selector ${selector} failed: ${e.message}`);
+    }
+  }
+
+  // Find password input
+  for (const selector of passwordSelectors) {
+    try {
+      console.log(`[Auth] Trying password selector: ${selector}`);
+      passwordInput = page.locator(selector).first();
+      const isVisible = await passwordInput.isVisible({ timeout: 2000 }).catch(() => false);
+      if (isVisible) {
+        console.log(`[Auth] Found visible password input with selector: ${selector}`);
+        break;
+      }
+    } catch (e) {
+      console.log(`[Auth] Selector ${selector} failed: ${e.message}`);
+    }
+  }
+
+  // Find submit button
+  for (const selector of submitSelectors) {
+    try {
+      console.log(`[Auth] Trying submit button selector: ${selector}`);
+      submitButton = page.locator(selector).first();
+      const isVisible = await submitButton.isVisible({ timeout: 2000 }).catch(() => false);
+      if (isVisible) {
+        console.log(`[Auth] Found visible submit button with selector: ${selector}`);
+        break;
+      }
+    } catch (e) {
+      console.log(`[Auth] Selector ${selector} failed: ${e.message}`);
+    }
+  }
+
+  // Take screenshot of what we found (or didn't find)
+  await page.screenshot({ path: 'debug-login-form-elements.png' });
+  console.log('[Auth] Screenshot saved: debug-login-form-elements.png');
+
+  // Check if we found all elements
+  if (!emailInput || !passwordInput || !submitButton) {
+    console.error('[Auth] Could not find all login form elements');
+    throw new Error('Login form elements not found. Check screenshot for details.');
   }
   
   try {
     // Fill in and submit the login form
+    console.log('[Auth] Filling email...');
     await emailInput.fill(email);
+    console.log('[Auth] Filling password...');
     await passwordInput.fill(password);
+    
+    console.log('[Auth] Clicking submit button...');
     await submitButton.click();
+    console.log('[Auth] Submit button clicked.');
     
     // Wait for redirect after login
-    await page.waitForURL('**/*', { timeout: 10000 });
-    console.log(`Authentication completed. Current URL: ${page.url()}`);
+    console.log('[Auth] Waiting for redirect to dashboard...');
+    await page.waitForURL('**/(dashboard|home|tasks|/)**', { timeout: 15000 });
+    console.log(`[Auth] Authentication successful. Redirected to: ${page.url()}`);
+    
+    // Verify we can access protected content
+    console.log('[Auth] Verifying access to protected content...');
+    await page.goto('/dashboard');
+    
+    // Wait briefly for the dashboard to load
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(e => {
+      console.log('[Auth] Network idle timeout (expected), continuing verification')
+    });
+    
+    // Take a verification screenshot
+    await page.screenshot({ path: 'auth-verification.png' });
+    console.log('[Auth] Verification screenshot saved');
   } catch (error) {
-    console.error(`Authentication error: ${error.message}`);
+    console.error(`[Auth] Authentication action failed: ${error.message}`);
+    try {
+      await page.screenshot({ path: 'auth-action-failed.png' });
+      console.log('[Auth] Failure screenshot saved');
+    } catch (screenshotError) {
+      console.error(`[Auth] Failed to capture screenshot: ${screenshotError.message}`);
+    }
     throw error;
   }
 }

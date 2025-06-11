@@ -49,6 +49,13 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
+        {/* Tasks Page Route */}
+        <Route path="/tasks" element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        } />
+
         {/* Note Editor Routes */}
         <Route 
           path="/tasks/:taskId/notes/new" 

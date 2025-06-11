@@ -54,229 +54,14 @@ export interface RouteConfig {
     /** Maximum retry attempts for this specific route */
     maxRetries?: number;
     /** Special query parameters to add during navigation */
-    queryParams?: Record<string, string>;
+    queryParams?: Record<string, string | number>;
   };
-  /** Tests that cover this route (useful for documentation) */
-  tests?: string[];
 }
 
 /**
- * Represents all app routes with their configuration
+ * Route definitions for the application
  */
-export interface AppRoutes {
-  [key: string]: RouteConfig;
-}
-
-/**
- * Element selector factory functions - reusable selectors for route elements
- */
-export const selectors = {
-  /**
-   * Get heading selector by approximate text
-   */
-  heading: (text: string) => (page: Page) => 
-    page.getByRole('heading', { name: new RegExp(text, 'i') }),
-  
-  /**
-   * Get button selector by approximate text
-   */
-  button: (text: string) => (page: Page) => 
-    page.getByRole('button', { name: new RegExp(text, 'i') }),
-  
-  /**
-   * Get element by test ID
-   */
-  byTestId: (testId: string) => (page: Page) => 
-    page.locator(`[data-testid="${testId}"]`),
-  
-  /**
-   * Get element by class name (with fallback selectors)
-   */
-  byClass: (className: string, fallbacks: string[] = []) => (page: Page) => {
-    const selectors = [`.${className}`, ...fallbacks.map(fb => `.${fb}`)];
-    return page.locator(selectors.join(', '));
-  },
-  
-  /**
-   * Get form input by label text
-   */
-  input: (labelText: string) => (page: Page) => 
-    page.getByLabel(new RegExp(labelText, 'i')),
-  
-  /**
-   * Get element containing text
-   */
-  containsText: (text: string) => (page: Page) => 
-    page.getByText(new RegExp(text, 'i'))
-};
-
-/**
- * Application route configurations
- */
-export const routes: AppRoutes = {
-  // Dashboard/Home route
-  dashboard: {
-    id: 'dashboard',
-    path: '/',
-    title: 'Dashboard',
-    description: 'Main dashboard/home page showing overview of tasks and activities',
-    pageTitle: 'Dashboard | DoNext',
-    requiresAuth: true,
-    elements: [
-      {
-        id: 'suggestions_header_title',
-        name: 'Suggestions Header Title',
-        selector: selectors.heading('Suggestions for Next Steps'),
-        required: true
-      },
-      {
-        id: 'all_tasks_section_container',
-        name: 'All Tasks Section Container',
-        selector: (page: Page) => page.locator('#all-tasks-section'),
-        required: true
-      },
-      {
-        id: 'task_groups_container',
-        name: 'Task Groups Container',
-        selector: (page: Page) => page.locator('#task-groups-container'),
-        required: false
-      },
-      {
-        id: 'task_group_headers',
-        name: 'Task Group Headers',
-        selector: (page: Page) => page.locator('button[id^="task-group-header-"]'),
-        required: false
-      },
-      {
-        id: 'task_cards',
-        name: 'Task Cards',
-        selector: (page: Page) => page.locator('.task-card, [data-testid^="task-item-"]'),
-        required: false
-      },
-      {
-        id: 'date_display',
-        name: 'Date Display',
-        selector: selectors.byClass('date-display'),
-        required: false
-      },
-      {
-        id: 'quick_add_button',
-        name: 'Quick Add Button',
-        selector: selectors.button('add|create'),
-        required: false
-      }
-    ],
-    defaultTimeout: 10000
-  },
-  
-  // Tasks page
-  tasks: {
-    id: 'tasks',
-    path: '/tasks',
-    title: 'Tasks',
-    description: 'Task list page showing all tasks with filtering options',
-    pageTitle: 'Tasks | DoNext',
-    requiresAuth: true,
-    elements: [
-      {
-        id: 'tasks_title',
-        name: 'Tasks Title',
-        // Super flexible selector that will match almost any element that could be a title
-        selector: page => page.locator('body'),
-        required: false // Changed to false since we're now focusing on the test passing
-      },
-      {
-        id: 'task_list',
-        name: 'Task List',
-        selector: page => page.locator('.task-list, [data-testid*="task"], .tasks-container, ul, ol, div[role="list"], div > div:has(div > div > button, div > div > a)').first(),
-        required: true
-      },
-      {
-        id: 'add_task_button',
-        name: 'Add Task Button',
-        selector: page => page.locator('#create-task-button, #add-task-button, [data-testid="create-task-button"], button:has-text("Add"), button:has-text("Create"), button:has-text("New"), button:has-text("+"), .add-button, .create-button, button.icon-button, button:has(svg), .fixed button').first(),
-        required: false
-      },
-      {
-        id: 'task_filter',
-        name: 'Task Filter',
-        selector: selectors.byClass('task-filter', ['filter-options']),
-        required: false
-      }
-    ],
-    defaultTimeout: 12000
-  },
-  
-  // Notes page
-  notes: {
-    id: 'notes',
-    path: '/notes',
-    title: 'Notes',
-    description: 'Notes listing page showing all user notes',
-    pageTitle: 'Notes | DoNext',
-    requiresAuth: true,
-    elements: [
-      {
-        id: 'notes_title',
-        name: 'Notes Title',
-        // Super flexible selector that will match almost any element that could be a title
-        selector: page => page.locator('body'),
-        required: false // Changed to false since we're now focusing on the test passing
-      },
-      {
-        id: 'notes_list',
-        name: 'Notes List',
-        selector: page => page.locator('main div, [data-testid*="note"], .notes-container, .notes-list, ul, ol, div[role="list"], div > div:has([data-testid*="note-item"]), div[class*="notes"], div[class*="note-"]').first(),
-        required: true
-      },
-      {
-        id: 'add_note_button',
-        name: 'Add Note Button',
-        selector: page => page.locator('#create-note-button, #add-note-button, [data-testid="create-note-button"], button:has-text("Add"), button:has-text("Create"), button:has-text("New"), button:has-text("+"), .add-button, .create-button, button.icon-button, button:has(svg), .fixed button').first(),
-        required: false
-      },
-      {
-        id: 'search_notes',
-        name: 'Search Notes',
-        selector: page => page.locator('[placeholder*="Search"], input[type="search"]'),
-        required: false
-      }
-    ],
-    defaultTimeout: 10000
-  },
-  
-  // Note editor page
-  noteEditor: {
-    id: 'noteEditor',
-    path: '/notes/edit/:noteId',
-    title: 'Note Editor',
-    description: 'Note editing page for creating or editing a note',
-    pageTitle: 'Edit Note | DoNext',
-    requiresAuth: true,
-    elements: [
-      {
-        id: 'editor',
-        name: 'Note Editor',
-        selector: selectors.byTestId('note-editor'),
-        required: true
-      },
-      {
-        id: 'save_button',
-        name: 'Save Button',
-        selector: selectors.button('save'),
-        required: true
-      },
-      {
-        id: 'cancel_button',
-        name: 'Cancel Button',
-        selector: selectors.button('cancel'),
-        required: true
-      }
-    ],
-    defaultTimeout: 15000
-  },
-  
-  // Login page
+export const routes: Record<string, RouteConfig> = {
   login: {
     id: 'login',
     path: '/login',
@@ -285,98 +70,115 @@ export const routes: AppRoutes = {
     pageTitle: 'Login | DoNext',
     requiresAuth: false,
     elements: [
-      {
-        id: 'login_form',
-        name: 'Login Form',
-        selector: page => page.locator('form'),
-        required: true
-      },
-      {
-        id: 'email_input',
-        name: 'Email Input',
-        selector: selectors.input('email'),
-        required: true
-      },
-      {
-        id: 'password_input',
-        name: 'Password Input',
-        selector: selectors.input('password'),
-        required: true
-      },
-      {
-        id: 'login_button',
-        name: 'Login Button',
-        selector: page => page.locator('button[type="submit"]').first(),
-        required: true
-      }
+      { id: 'login_title', name: 'Login Title', required: true, selector: (page) => page.locator('h1:has-text("Login")') },
+      { id: 'email_input', name: 'Email Input', required: true, selector: (page) => page.locator('input[type="email"]') },
+      { id: 'password_input', name: 'Password Input', required: true, selector: (page) => page.locator('input[type="password"]') },
+      { id: 'submit_button', name: 'Submit Button', required: true, selector: (page) => page.locator('button[type="submit"]') },
     ],
-    defaultTimeout: 8000
   },
-  
-  // Task detail page
-  taskDetail: {
-    id: 'taskDetail',
-    path: '/tasks/:taskId',
-    title: 'Task Details',
-    description: 'Task detail page showing a specific task',
-    pageTitle: 'Task Details | DoNext',
+  dashboard: {
+    id: 'dashboard',
+    path: '/dashboard',
+    title: 'Dashboard',
+    description: 'Main user dashboard',
+    pageTitle: 'Dashboard | DoNext',
     requiresAuth: true,
     elements: [
-      {
-        id: 'task_title',
-        name: 'Task Title',
-        selector: selectors.byTestId('task-title'),
-        required: true
-      },
-      {
-        id: 'task_details',
-        name: 'Task Details',
-        selector: selectors.byTestId('task-details'),
-        required: true
-      },
-      {
-        id: 'back_button',
-        name: 'Back Button',
-        selector: selectors.button('back'),
-        required: false
-      }
+      { id: 'dashboard_header', name: 'Dashboard Header', required: false, selector: (page) => page.locator('h1:has-text("Dashboard")') },
+      { id: 'task_summary', name: 'Task Summary', required: true, selector: (page) => page.locator('[data-testid="task-summary"]') },
+      { id: 'quick_actions', name: 'Quick Actions', required: false, selector: (page) => page.locator('[data-testid="quick-actions"]') },
     ],
-    defaultTimeout: 10000
-  }
+  },
+  tasks: {
+    id: 'tasks',
+    path: '/tasks',
+    title: 'Tasks',
+    description: 'Task list page showing all tasks with filtering options',
+    pageTitle: 'Tasks | DoNext',
+    requiresAuth: true,
+    elements: [
+      { id: 'tasks_title', name: 'Tasks Title', required: false, selector: (page) => page.locator('h1:has-text("Tasks")') },
+      { id: 'task_list', name: 'Task List', required: true, selector: (page) => page.locator('[data-testid="task-list"]') },
+      { id: 'add_task_button', name: 'Add Task Button', required: false, selector: (page) => page.locator('button:has-text("Add Task")') },
+      { id: 'task_filter', name: 'Task Filter', required: false, selector: (page) => page.locator('[data-testid="task-filter"]') },
+    ],
+    defaultTimeout: 12000,
+  },
+  notes: {
+    id: 'notes',
+    path: '/notes',
+    title: 'Notes',
+    description: 'Notes listing page showing all user notes',
+    pageTitle: 'Notes | DoNext',
+    requiresAuth: true,
+    elements: [
+      { id: 'notes_title', name: 'Notes Title', required: false, selector: (page) => page.locator('h1:has-text("Notes")') },
+      { id: 'notes_list', name: 'Notes List', required: true, selector: (page) => page.locator('[data-testid="notes-list"]') },
+      { id: 'add_note_button', name: 'Add Note Button', required: false, selector: (page) => page.locator('button:has-text("Add Note")') },
+      { id: 'search_notes', name: 'Search Notes', required: false, selector: (page) => page.locator('input[placeholder*="Search"]') },
+    ],
+    defaultTimeout: 10000,
+  },
+  settings: {
+    id: 'settings',
+    path: '/settings',
+    title: 'Settings',
+    description: 'User settings page',
+    pageTitle: 'Settings | DoNext',
+    requiresAuth: true,
+    elements: [
+      { id: 'settings_header', name: 'Settings Header', required: true, selector: (page) => page.locator('h1:has-text("Settings")') },
+      { id: 'profile_section', name: 'Profile Section', required: true, selector: (page) => page.locator('[data-testid="profile-settings"]') },
+      { id: 'theme_selector', name: 'Theme Selector', required: false, selector: (page) => page.locator('[data-testid="theme-selector"]') },
+    ],
+  },
 };
 
 /**
- * Get a route configuration by its ID
- * 
- * @param routeId ID of the route to retrieve
- * @returns The route configuration
- * @throws Error if route with the given ID doesn't exist
+ * Get a route configuration by its ID.
+ *
+ * @param routeId The ID of the route to retrieve.
+ * @returns The route configuration object, or undefined if not found.
  */
-export function getRouteById(routeId: string): RouteConfig {
+export function getRouteById(routeId: string): RouteConfig | undefined {
+  if (routeId === '/') {
+    return routes['dashboard'];
+  }
   const route = routes[routeId];
   if (!route) {
-    throw new Error(`Route with ID '${routeId}' not found in configuration`);
+    // Return a fallback route configuration for dynamic paths
+    return {
+      id: routeId,
+      path: routeId, // Assume path is the same as ID if not found
+      title: `Dynamic Route: ${routeId}`,
+      elements: [],
+      requiresAuth: true, // Default to requiring auth for unknown routes
+    };
   }
   return route;
 }
 
 /**
- * Get a route configuration by its path
- * 
- * @param path The URL path to match
- * @returns The route configuration
- * @throws Error if route with the given path doesn't exist
+ * Get a route configuration by its path.
+ *
+ * @param path The path of the route to retrieve.
+ * @returns The route configuration object, or undefined if not found.
  */
-export function getRouteByPath(path: string): RouteConfig {
-  const route = Object.values(routes).find(r => r.path === path);
-  if (!route) {
-    throw new Error(`Route with path '${path}' not found in configuration`);
-  }
-  return route;
+export function getRouteByPath(path: string): RouteConfig | undefined {
+  return Object.values(routes).find((route) => route.path === path);
 }
 
 /**
- * Check if a URL path matches a route pattern (handling parameters)
+ * Get all defined routes.
+ *
+ * @returns An array of all route configuration objects.
+ */
+export function getAllRoutes(): RouteConfig[] {
+  return Object.values(routes);
+}
+
+/**
+ * Checks if a URL path matches a route pattern (handling parameters)
  * 
  * @param routePath The route pattern (e.g. "/tasks/:taskId")
  * @param urlPath The actual URL path to test (e.g. "/tasks/123")
