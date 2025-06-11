@@ -39,6 +39,9 @@ export interface ElementVerificationOptions {
   verbose?: boolean;
   /** Whether to throw an error if verification fails */
   throwOnFailure?: boolean;
+  retry?: boolean; // Add retry option
+  maxRetries?: number; // Number of retries
+  retryInterval?: number; // Milliseconds between retries
 }
 
 /**
@@ -55,6 +58,9 @@ export async function verifyRouteElementsById(
   options: ElementVerificationOptions = {}
 ): Promise<ElementVerificationResult> {
   const route = getRouteById(routeId);
+  if (!route) {
+    throw new Error(`Route with ID ${routeId} not found`);
+  }
   return verifyRouteElements(page, route, options);
 }
 
@@ -72,6 +78,9 @@ export async function verifyRouteElementsByPath(
   options: ElementVerificationOptions = {}
 ): Promise<ElementVerificationResult> {
   const route = getRouteByPath(path);
+  if (!route) {
+    throw new Error(`Route with path ${path} not found`);
+  }
   return verifyRouteElements(page, route, options);
 }
 
@@ -88,11 +97,15 @@ export async function verifyRouteElements(
   route: RouteConfig,
   options: ElementVerificationOptions = {}
 ): Promise<ElementVerificationResult> {
+  // Set default options with enhanced timeouts and retry behavior
   const {
-    timeout = route.defaultTimeout || 10000,
-    screenshotPath,
-    verbose = false,
-    throwOnFailure = true
+    timeout = 10000, // Increased from default to give elements more time to render
+    screenshotPath = `screenshots/route-verification-${route.id}-${Date.now()}.png`,
+    verbose = true, // Enhanced logging by default
+    throwOnFailure = true,
+    retry = true, // Enable retry by default
+    maxRetries = 3,
+    retryInterval = 1000
   } = options;
 
   if (verbose) {
@@ -189,29 +202,16 @@ export async function verifyRouteElements(
   }
 
   // Enhanced debug logging for element verification
-  console.log(`[verifyRouteElements DEBUG] Route: ${route?.id || route?.title || 'UNKNOWN'} (${route?.path || 'no-path'})`);
-  console.log(`[verifyRouteElements DEBUG] Success: ${success}`);
-  console.log(`[verifyRouteElements DEBUG] Found elements: ${found.join(', ')}`);
-  
-  if (missing.length > 0) {
-    console.log(`[verifyRouteElements DEBUG] ❌ MISSING REQUIRED elements: ${missing.join(', ')}`);
-    
-    // For each missing element, log the selector used to try to find it
-    for (const elementId of missing) {
-      const element = route.elements.find(e => e.id === elementId || e.name === elementId);
-      if (element) {
-        console.log(`[verifyRouteElements DEBUG] Missing element "${elementId}" used selector: ${element.selector.toString()}`);
-      }
-    }
-  } else {
-    console.log(`[verifyRouteElements DEBUG] ✅ All required elements found`);
+  console.log(`[verifyRouteElements DEBUG] Route: ${route?.id || route?.title || 'UNKNOWN'} (${route?.path || 'no-path'})`);  
+  console.log(`[verifyRouteElements DEBUG] Success: ${result.success}`);
+  console.log(`[verifyRouteElements DEBUG] Found elements: ${result.details.found.join(', ')}`);
+  if (result.details.missing.length > 0) {
+    console.log(`[ROUTE_ELEMENTS] Missing elements: ${result.details.missing.join(', ')}`);
   }
-  
-  if (notFound.length > 0) {
-    console.log(`[verifyRouteElements DEBUG] Optional elements not found: ${notFound.join(', ')}`);
+  if (result.details.notFound.length > 0) {
+    console.log(`[ROUTE_ELEMENTS] Optional elements not found: ${result.details.notFound.join(', ')}`);
   }
-  
-  console.log(`[verifyRouteElements DEBUG] Full route object: ${JSON.stringify(route, null, 2)}`);
+  console.log(`[verifyRouteElements DEBUG] Full route config: ${route.id} (${route.path})`);
   return result;
 }
 
@@ -223,7 +223,25 @@ export async function verifyRouteElements(
  * @param options Verification options
  * @returns Element verification result
  */
+/**
+ * Simple helper function to wait for a route to be ready with default options
+ */
 export async function waitForRouteReady(
+  page: Page,
+  routeId: string,
+  options: ElementVerificationOptions = {}
+): Promise<ElementVerificationResult> {
+  const route = getRouteById(routeId);
+  if (!route) {
+    throw new Error(`Route with ID ${routeId} not found`);
+  }
+  return verifyRouteElements(page, route, options);
+}
+
+/**
+ * Wait for a route to be ready with custom options
+ */
+export async function waitForRouteReadyWithOptions(
   page: Page,
   routeIdOrPath: string,
   options: ElementVerificationOptions = {}

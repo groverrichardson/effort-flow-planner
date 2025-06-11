@@ -296,8 +296,7 @@ describe('SchedulingService', () => {
       const taskToSchedule = createMockTask({ 
         id: 'task-fits', 
         effortLevel: EffortLevel.M, // 4 EPs
-        targetDeadline: null, // Explicitly null for this test if not set
-        targetDeadline: null // Explicitly null initially
+        targetDeadline: null // Explicitly null for this test
       }); 
       const specificTestDate = startOfDay(new Date('2024-06-10T00:00:00.000Z'));
       vi.setSystemTime(specificTestDate); // Set system time specifically for this test's date context

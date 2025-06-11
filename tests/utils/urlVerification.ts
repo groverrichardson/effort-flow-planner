@@ -34,13 +34,13 @@ export interface UrlVerificationOptions {
 /**
  * Verifies if the current URL matches the expected URL
  * 
- * @param currentUrl - The current URL to verify
+ * @param currentUrlOrPage - The current URL or Page object to verify
  * @param expectedPath - The expected path to match against
  * @param options - Options for URL verification behavior
  * @returns True if the URL matches the expected path according to options, false otherwise
  */
 export function verifyUrl(
-  currentUrl: string,
+  currentUrlOrPage: string | any, // Accept string or Page object
   expectedPath: string,
   options: UrlVerificationOptions = {}
 ): boolean {
@@ -51,6 +51,18 @@ export function verifyUrl(
   } = options;
 
   try {
+    // Handle if currentUrlOrPage is a Playwright Page object
+    let currentUrl: string;
+    if (typeof currentUrlOrPage === 'string') {
+      currentUrl = currentUrlOrPage;
+    } else if (currentUrlOrPage && typeof currentUrlOrPage.url === 'function') {
+      // It's a Playwright Page object
+      currentUrl = currentUrlOrPage.url();
+    } else {
+      console.error('Invalid currentUrlOrPage parameter:', currentUrlOrPage);
+      return false;
+    }
+    
     // Parse the URLs
     const current = new URL(currentUrl);
     
@@ -153,8 +165,7 @@ export async function waitForUrlMatch(
   const startTime = Date.now();
   
   while (Date.now() - startTime < timeoutMs) {
-    const currentUrl = page.url();
-    if (verifyUrl(currentUrl, expectedPath, options)) {
+    if (verifyUrl(page, expectedPath, options)) {
       return true;
     }
     

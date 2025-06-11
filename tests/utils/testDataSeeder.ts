@@ -257,23 +257,48 @@ export class TestDataSeeder {
    * @returns The person_id of the created/assigned person
    */
   async assignPersonToTask(taskId: string, personName: string): Promise<string> {
+    if (!taskId) {
+      throw new Error('Task ID is required to assign a person');
+    }
+    if (!personName || personName.trim() === '') {
+      throw new Error('Person name is required and cannot be empty');
+    }
+    
     await this.initialize();
     const userId = await this.getUserId();
     
-    // First create or get a person
-    const { data: personData, error: personError } = await this.supabase
+    // First check if the person already exists to avoid unique constraint errors
+    const { data: existingPerson } = await this.supabase
       .from('people')
-      .insert({
-        name: personName,
-        // Let the database generate the UUID
-        user_id: userId
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', personName)
+      .maybeSingle();
       
-    if (personError || !personData) {
-      console.error('Error creating person:', personError);
-      throw new Error(`Failed to create person: ${personError?.message || 'Unknown error'}`);
+    let personId: string;
+    
+    if (existingPerson) {
+      // Person already exists, use their ID
+      personId = existingPerson.id;
+      console.log(`[TEST] Using existing person: ${personName} with ID: ${personId}`);
+    } else {
+      // Create a new person
+      const { data: personData, error: personError } = await this.supabase
+        .from('people')
+        .insert({
+          name: personName,
+          user_id: userId
+        })
+        .select()
+        .single();
+        
+      if (personError || !personData) {
+        console.error('[TEST] Error creating person:', personError);
+        throw new Error(`Failed to create person: ${personError?.message || 'Unknown error'}`);
+      }
+      
+      personId = personData.id;
+      console.log(`[TEST] Created new person: ${personName} with ID: ${personId}`);
     }
     
     // Then link the person to the task
@@ -281,16 +306,18 @@ export class TestDataSeeder {
       .from('task_people')
       .insert({
         task_id: taskId,
-        person_id: personData.id,
-        user_id: userId  // Add required user_id field
+        person_id: personId,
+        person_name: personName, // Explicitly set person_name to avoid null violations
+        user_id: userId
       });
       
     if (linkError) {
-      console.error('Error linking person to task:', linkError);
+      console.error('[TEST] Error linking person to task:', linkError);
       throw new Error(`Failed to link person to task: ${linkError.message}`);
     }
     
-    return personData.id;
+    console.log(`[TEST] Successfully linked person ${personName} to task ${taskId}`);
+    return personId;
   }
   
   /**

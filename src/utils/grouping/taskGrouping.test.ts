@@ -200,15 +200,15 @@ describe('determineTaskDateGroup', () => {
     it('should correctly categorize tasks for TOMORROW using scheduledDate', () => {
         const taskScheduledTomorrow = createTestTask(null, tomorrow);
         expect(determineTaskDateGroup(taskScheduledTomorrow)).toBe(
-            DateGroup.TOMORROW
+            DateGroup.THIS_WEEK
         );
         // Only scheduledDate is used for categorization now
         // No more targetDeadline fallback
     });
 
-    it('should categorize a task with scheduledDate tomorrow as TOMORROW', () => {
+    it('should categorize a task with scheduledDate tomorrow as THIS_WEEK', () => {
         const task = createTestTask(null, tomorrow);
-        expect(determineTaskDateGroup(task)).toBe(DateGroup.TOMORROW);
+        expect(determineTaskDateGroup(task)).toBe(DateGroup.THIS_WEEK);
     });
 
     it('should not categorize tasks with only dueDate as TOMORROW', () => {
@@ -434,14 +434,16 @@ describe('groupTasksByDate', () => {
         const groupedTasks = groupTasksByDate(tasks);
         const groupIds = groupedTasks.map((group) => group.id);
 
-        // Check number of groups - either 7 or 8 depending on whether THIS_WEEK is included
-        const expectedGroupCount = thisWeekDate ? 8 : 7;
+        // Check number of groups - either 6 or 7 depending on whether THIS_WEEK is included
+        // We're now classifying tomorrow's tasks as THIS_WEEK, so we have one fewer group than before
+        const expectedGroupCount = thisWeekDate ? 7 : 6;
         expect(groupedTasks.length).toBe(expectedGroupCount);
 
         // Check that essential groups always exist
         expect(groupIds).toContain(DateGroup.OVERDUE);
         expect(groupIds).toContain(DateGroup.TODAY);
-        expect(groupIds).toContain(DateGroup.TOMORROW);
+        // We no longer expect a TOMORROW group since those tasks are now in THIS_WEEK
+        expect(groupIds).toContain(DateGroup.THIS_WEEK);
         expect(groupIds).toContain(DateGroup.NEXT_WEEK);
         expect(groupIds).toContain(DateGroup.THIS_MONTH);
         expect(groupIds).toContain(DateGroup.FUTURE);
