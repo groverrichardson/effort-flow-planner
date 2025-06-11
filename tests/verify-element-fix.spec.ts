@@ -9,10 +9,8 @@ import {
     TestTaskTemplate,
     seedTemplateTask,
 } from './utils/testDataSeeder';
-import { navigateTo } from './utils/navigationHelperNew';
 import {
     navigateTo,
-    navigateWithVerification,
     NavigationOptions,
 } from './utils/navigationHelperNew';
 
@@ -47,18 +45,16 @@ test.describe('Element Verification Tests', () => {
         // Navigate to the tasks page with debug info
         console.log('Navigating to tasks page...');
         const result = await navigateTo(page, '/tasks', {
-            verbose: true,
             timeout: 30000,
-            retry: true,
             maxRetries: 3,
         });
 
         // Log the verification result for debugging
         console.log('Navigation result:', {
             success: result.success,
-            foundElements: result.foundElements,
-            missingElements: result.missingElements,
-            optionalElementsNotFound: result.optionalElementsNotFound,
+            found: result.elementDetails?.found || [],
+            notFound: result.elementDetails?.notFound || [],
+            missing: result.elementDetails?.missing || []
         });
 
         // Take screenshot after navigation
@@ -111,14 +107,14 @@ test.describe('Element Verification Tests', () => {
 
         // Navigate to dashboard with debug info
         console.log('Navigating to dashboard page...');
-        const result = await navigateWithVerification(page, routes.dashboard);
+        const result = await navigateTo(page, routes.dashboard.id);
 
         // Log the verification result for debugging
         console.log('Navigation result:', {
             success: result.success,
-            foundElements: result.foundElements,
-            missingElements: result.missingElements,
-            optionalElementsNotFound: result.optionalElementsNotFound,
+            found: result.elementDetails?.found || [],
+            notFound: result.elementDetails?.notFound || [],
+            missing: result.elementDetails?.missing || []
         });
 
         // Take screenshot after navigation

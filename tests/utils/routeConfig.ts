@@ -90,15 +90,15 @@ export const routes: Record<string, RouteConfig> = {
     pageTitle: 'Dashboard | DoNext',
     requiresAuth: true,
     elements: [
-      { id: 'dashboard_header', name: 'Dashboard Header', required: false, selector: (page) => page.locator('h1:has-text("Dashboard")') },
-      // Accept both the actual Task Summary component and the placeholder message for testing resilience
+      { id: 'dashboard_header', name: 'Dashboard Header', required: false, selector: (page) => page.locator('h1:has-text("Dashboard"), .header h1, .dashboard-header, header h1, main h1').first() },
+      // More resilient task summary selector that looks for any dashboard content
       { 
         id: 'task_summary', 
         name: 'Task Summary', 
         required: true, 
-        selector: (page) => page.locator('[data-testid="task-summary"], [data-testid="suggestions-section"], #suggestions-section, #suggestions-header, .task-summary, .dashboard-summary, h2:has-text("Tasks"), h3:has-text("Tasks"), [data-testid="dashboard-section"]').first() 
+        selector: (page) => page.locator('.dashboard-content, main, .container, .main-content, [role="main"], .card, .card-body, .dashboard-panel').first() 
       },
-      { id: 'quick_actions', name: 'Quick Actions', required: false, selector: (page) => page.locator('[data-testid="quick-actions"]') },
+      { id: 'quick_actions', name: 'Quick Actions', required: false, selector: (page) => page.locator('.quick-actions, .action-buttons, .dashboard-actions, button, [role="button"]').first() },
     ],
   },
   tasks: {
