@@ -18,6 +18,9 @@
         "test:ui:headed:single": "PWTEST_WATCH=1 HEADED=1 node tests/utils/setupPort.js npx playwright test --project=chromium -g",
         "test:ui:debug": "node tests/utils/setupPort.js npx playwright test --project=chromium --debug=pw:api",
         "test:ui:update": "PWTEST_WATCH=1 node tests/utils/setupPort.js npx playwright test --project=chromium --update-snapshots",
+        "test:ui:windsurf": "SKIP_WEB_SERVER=true node tests/utils/windsurf-test-runner.mjs",
+        "test:ui:windsurf:full": "node tests/utils/windsurf-full-test-runner.mjs",
+        "test:ui:windsurf:optimized": "node tests/utils/windsurf-run-with-env.mjs",
         "test:report": "node tests/utils/showReport.js",
         "test:run": "node tests/utils/testRunner.js",
         "test:all": "npx concurrently \"npm run test:unit\" \"npm run test:ui\""
@@ -107,7 +110,7 @@
         "@vitejs/plugin-react-swc": "^3.5.0",
         "@vitest/coverage-v8": "^3.1.4",
         "autoprefixer": "^10.4.20",
-        "chrono-node": "^2.8.0",
+        "chrono-node": "^2.8.2",
         "concurrently": "^9.1.2",
         "cross-env": "^7.0.3",
         "dotenv": "^16.5.0",

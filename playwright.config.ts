@@ -97,7 +97,9 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
+  // Conditionally start web server - skip it in Windsurf or when SKIP_WEB_SERVER is set
+  // Make the webServer conditional so tests can be discovered by VS Code extension
+  webServer: process.env.SKIP_WEB_SERVER === 'true' ? undefined : {
     command: 'npm run dev',
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,

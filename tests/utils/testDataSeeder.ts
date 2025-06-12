@@ -3,13 +3,11 @@ import { Priority, TaskStatus, EffortLevel, DueDateType, Task } from '../../src/
 import { Note } from '../../src/types/note';
 // Import database types for Note structure
 import type { Database } from '../../src/types/supabase';
+import { verifyEnvironmentVariables } from './environmentHelper';
+import { AUTH_FILE_PATH, checkAuthFile } from './authConstants';
+import { safeReadAuthFile, ensureMinimalAuthFile } from './authFileHelper';
+import path from 'path';
 import fs from 'fs';
-// Import shared auth constants
-import {
-  AUTH_FILE_PATH,
-  checkAuthFile,
-  verifyEnvironmentVariables
-} from './authConstants';
 
 // Constants for test data generation
 const TEST_TAG_PREFIX = 'test_tag_';
@@ -137,13 +135,25 @@ export class TestDataSeeder {
 
     // Use provided auth file path or default
     const finalAuthFilePath = authFilePath || this.authFilePath;
-    const authCheck = checkAuthFile();
-    if (!authCheck.exists || !authCheck.valid) {
-      throw new Error(`Auth file issue: ${authCheck.message}`);
+    
+    // Ensure auth file exists and is valid using our new helper
+    if (!ensureMinimalAuthFile(finalAuthFilePath)) {
+      throw new Error('Failed to ensure a valid auth file exists.');
     }
 
     try {
-      const authState = JSON.parse(fs.readFileSync(finalAuthFilePath, 'utf-8'));
+      // Use the safe read function that can repair corrupt auth files
+      const result = safeReadAuthFile(finalAuthFilePath);
+      
+      if (!result.success) {
+        throw new Error(`Auth file read failed: ${result.message}`);
+      }
+      
+      if (result.wasRepaired) {
+        console.log(`Auth file was automatically repaired: ${result.message}`);
+      }
+      
+      const authState = result.data;
 
       const localStorage = authState.origins?.[0]?.localStorage;
       if (!localStorage) {
@@ -592,15 +602,32 @@ export class TestDataSeeder {
         console.error('Error cleaning up test tasks:', taskError);
       }
 
-      // Delete all test tags
-      const { error: tagError } = await this.supabase
-        .from('tags')
-        .delete()
-        .eq('user_id', userId)
-        .like('tag_name', `${TEST_TAG_PREFIX}%`);
+      // Delete all test tags - handle potential schema changes gracefully
+      try {
+        // Try first with name column (current schema)
+        const { error: tagErrorName } = await this.supabase
+          .from('tags')
+          .delete()
+          .eq('user_id', userId)
+          .like('name', `${TEST_TAG_PREFIX}%`);
 
-      if (tagError) {
-        console.error('Error cleaning up test tags:', tagError);
+        // If that fails, try with tag_name column (old schema)
+        if (tagErrorName?.message?.includes('column "name" does not exist')) {
+          const { error: tagErrorTagName } = await this.supabase
+            .from('tags')
+            .delete()
+            .eq('user_id', userId)
+            .like('tag_name', `${TEST_TAG_PREFIX}%`);
+          
+          if (tagErrorTagName && !tagErrorTagName.message.includes('does not exist')) {
+            console.error('Error cleaning up test tags with tag_name:', tagErrorTagName);
+          }
+        } else if (tagErrorName) {
+          console.error('Error cleaning up test tags with name:', tagErrorName);
+        }
+      } catch (err) {
+        // If tag cleanup fails, log but continue with the rest of the cleanup
+        console.warn('Tag cleanup failed but continuing with other cleanups:', err);
       }
       
       // Delete all test notes
