@@ -50,7 +50,7 @@ describe('Textarea Component', () => {
                 data-testid="tiptap-editor"
             />
         );
-        const editorElement = screen.getByTestId('tiptap-editor');
+        const editorElement = screen.getByTestId('tiptap-editor-content');
         expect(editorElement).toBeInTheDocument();
     });
 
@@ -64,7 +64,7 @@ describe('Textarea Component', () => {
                 data-testid="tiptap-editor"
             />
         );
-        const editorElement = screen.getByTestId('tiptap-editor');
+        const editorElement = screen.getByTestId('tiptap-editor-content');
 
         // userEvent.type directly on the contentEditable div
         await user.type(editorElement, 'Hello World');
@@ -84,7 +84,7 @@ describe('Textarea Component', () => {
                 data-testid="tiptap-editor"
             />
         );
-        const editorElement = screen.getByTestId('tiptap-editor');
+        const editorElement = screen.getByTestId('tiptap-editor-content');
 
         fireEvent.keyDown(editorElement, { key: 'a', code: 'KeyA' });
         expect(handleKeyDown).toHaveBeenCalledTimes(1);
@@ -98,7 +98,7 @@ describe('Textarea Component', () => {
                 data-testid="tiptap-editor"
             />
         );
-        const editorElement = screen.getByTestId('tiptap-editor');
+        const editorElement = screen.getByTestId('tiptap-editor-content');
         expect(editorElement).toContainHTML('<p>Initial</p>');
 
         rerender(
@@ -121,7 +121,7 @@ describe('Textarea Component', () => {
                 data-testid="tiptap-editor"
             />
         );
-        const editorElement = screen.getByTestId('tiptap-editor');
+        const editorElement = screen.getByTestId('tiptap-editor-content');
 
         await user.type(editorElement, 'test space');
 

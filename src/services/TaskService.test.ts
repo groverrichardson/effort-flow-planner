@@ -119,7 +119,8 @@ const mockTaskInputBase: TaskCreationPayload = {
     description: 'Base Description',
     status: TaskStatus.PENDING,
     priority: Priority.NORMAL,
-    targetDeadline: new Date().toISOString(),
+    // Using null for targetDeadline instead of having duplicate keys
+    targetDeadline: null,
     scheduledDateType: 'specific',
     effortLevel: EffortLevel.M, // Consistent with mockDbTaskDefaults
     completed: false,
@@ -130,7 +131,6 @@ const mockTaskInputBase: TaskCreationPayload = {
     originalScheduledDate: null,
     isRecurringInstance: false,
     originalRecurringTaskId: null,
-    targetDeadline: null,
     goLiveDate: null,
     completedDate: null,
 };
@@ -454,9 +454,9 @@ describe('TaskService', () => {
                 is_archived: mockExistingDbTaskBase.is_archived!,
                 tags: updates.tags as Tag[],
                 people: updates.people as Person[],
+                // Using a single targetDeadline definition that considers due_date as fallback
                 targetDeadline: mockExistingDbTaskBase.target_deadline ? new Date(mockExistingDbTaskBase.target_deadline) : (mockExistingDbTaskBase.due_date ? new Date(mockExistingDbTaskBase.due_date) : null),
                 scheduledDateType: mockUpdatedDbTaskResponse.scheduled_date_type as string || 'none',
-                targetDeadline: mockExistingDbTaskBase.target_deadline ? new Date(mockExistingDbTaskBase.target_deadline) : null,
                 goLiveDate: mockExistingDbTaskBase.go_live_date ? new Date(mockExistingDbTaskBase.go_live_date) : null,
                 dependencies: mockExistingDbTaskBase.dependencies || [],
                 originalScheduledDate: mockExistingDbTaskBase.original_scheduled_date ? new Date(mockExistingDbTaskBase.original_scheduled_date) : null,

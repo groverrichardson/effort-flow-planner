@@ -1,5 +1,5 @@
 
-import { addDays, addWeeks, addMonths, parse, isValid, getDay } from 'date-fns';
+import { addDays, addWeeks, addMonths, isValid, getDay, parseISO, formatISO } from 'date-fns';
 import { Priority, EffortLevel, ParsedTaskDetails } from '@/types';
 import { mapEffortLevel } from './parserUtils';
 
@@ -183,11 +183,49 @@ export async function parseWithTraditional(input: string): Promise<ParsedTaskDet
             normalizedDate = `${normalizedDate}/${today.getFullYear()}`;
           }
           
-          // Try multiple formats
-          const formats = ['MMM d yyyy', 'M/d/yyyy', 'M-d-yyyy'];
-          for (const format of formats) {
-            parsedDate = parse(normalizedDate, format, new Date());
-            if (isValid(parsedDate)) break;
+          // Instead of using date-fns parse, we'll use a more basic approach with regex and Date constructor
+          // This will help avoid the dependency on the problematic parse/_lib/parsers.mjs module
+          
+          // Try to parse MM/DD/YYYY or MM-DD-YYYY format
+          const dateRegex = /^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?$/;
+          const match = normalizedDate.match(dateRegex);
+          
+          if (match) {
+            const month = parseInt(match[1]) - 1; // JS months are 0-based
+            const day = parseInt(match[2]);
+            let year = match[3] ? parseInt(match[3]) : today.getFullYear();
+            
+            // Handle 2-digit years
+            if (year < 100) {
+              year = year < 50 ? 2000 + year : 1900 + year;
+            }
+            
+            try {
+              parsedDate = new Date(year, month, day);
+              if (!isValid(parsedDate)) parsedDate = null;
+            } catch (e) {
+              console.error('Error creating date:', e);
+            }
+          } else {
+            // Try to parse month name format
+            const monthNameRegex = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* (\d{1,2})(?:\s*,?\s*(\d{4}))?$/i;
+            const monthMatch = normalizedDate.match(monthNameRegex);
+            
+            if (monthMatch) {
+              const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+              const monthIndex = monthNames.findIndex(m => m === monthMatch[1].toLowerCase().substring(0, 3));
+              const day = parseInt(monthMatch[2]);
+              const year = monthMatch[3] ? parseInt(monthMatch[3]) : today.getFullYear();
+              
+              if (monthIndex !== -1) {
+                try {
+                  parsedDate = new Date(year, monthIndex, day);
+                  if (!isValid(parsedDate)) parsedDate = null;
+                } catch (e) {
+                  console.error('Error creating date:', e);
+                }
+              }
+            }
           }
           
           if (isValid(parsedDate)) {

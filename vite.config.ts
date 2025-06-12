@@ -21,6 +21,14 @@ export default defineConfig(({ mode }) => ({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    include: ['chrono-node'],
+    esbuildOptions: {
+      // This helps with CommonJS/ESM compatibility issues
+      mainFields: ['module', 'main'],
+      resolveExtensions: ['.js', '.jsx', '.ts', '.tsx'],
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

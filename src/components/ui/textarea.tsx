@@ -56,31 +56,14 @@ const Textarea = React.forwardRef<
             editorProps: {
                 attributes: {
                     'data-testid': dataTestId ? `${dataTestId}-content` : 'tiptap-editor-content',
+                    'aria-label': ariaLabel, // Pass aria-label here
+                    class: cn(
+                        'max-w-none focus:outline-none w-full min-h-[80px] rounded-md border border-input bg-background pl-3 pr-0 py-2 text-sm ring-offset-background',
+                        // Removed placeholder:text-muted-foreground as TipTap's Placeholder extension handles this
+                        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                        className // Apply className prop for additional styling
+                    ),
                 },
-            },
-            extensions: [
-                StarterKit.configure({
-                    bulletList: false,
-                    orderedList: false,
-                    blockquote: false,
-                    codeBlock: false,
-                    heading: false,
-                    horizontalRule: false,
-                    // You can configure StarterKit options here if needed
-                    // For example, to disable some default extensions from StarterKit:
-                    // heading: false, // Disables headings
-                    // bulletList: { keepMarks: true, keepAttributes: true }, // Configure bullet lists
-                }),
-                Placeholder.configure({
-                    placeholder: placeholder ?? 'Enter your text here...',
-                }),
-            ],
-            content: value,
-            autofocus: autoFocus,
-            onUpdate: ({ editor: currentEditor }: { editor: Editor }) => {
-                onChange(currentEditor.getHTML());
-            },
-            editorProps: {
                 handleKeyDown: (
                     view: EditorView,
                     event: KeyboardEvent
@@ -111,20 +94,27 @@ const Textarea = React.forwardRef<
 
                     return false; // Default behavior if onTiptapKeyDown is not provided or doesn't return explicitly
                 },
-                attributes: {
-                    'data-testid': dataTestId, // Pass data-testid here
-                    'aria-label': ariaLabel, // Pass aria-label here
-                    class: cn(
-                        'max-w-none focus:outline-none w-full min-h-[80px] rounded-md border border-input bg-background pl-3 pr-0 py-2 text-sm ring-offset-background',
-                        // Removed placeholder:text-muted-foreground as TipTap's Placeholder extension handles this
-                        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-                        className // Apply className prop for additional styling
-                    ),
-                    // The 'id' prop is applied to the wrapper div, not directly to the editor's input area.
-                },
+            },
+            extensions: [
+                StarterKit.configure({
+                    bulletList: false,
+                    orderedList: false,
+                    blockquote: false,
+                    codeBlock: false,
+                    heading: false,
+                    horizontalRule: false,
+                }),
+                Placeholder.configure({
+                    placeholder: placeholder ?? 'Enter your text here...',
+                }),
+            ],
+            content: value,
+            autofocus: autoFocus,
+            onUpdate: ({ editor: currentEditor }: { editor: Editor }) => {
+                onChange(currentEditor.getHTML());
             },
         });
-
+        
         // Set placeholder using TipTap's placeholder extension if not already in StarterKit
         // Or handle it via CSS if the `placeholder` prop is intended for the visual cue
         // For now, relying on CSS might be simpler if StarterKit doesn't handle it directly
