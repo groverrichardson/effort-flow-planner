@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Check, Mail, Lock, Loader2, ZapIcon } from 'lucide-react';
 
 const Login = () => {
+  console.log('%c[LOGIN] Login component initializing', 'color: blue; font-weight: bold');
+  const loginString = 'Login component rendering';
   const [tab, setTab] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -77,16 +79,22 @@ const Login = () => {
     }
   };
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background dark:bg-slate-900 text-slate-900 dark:text-slate-200 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <img 
-              src="/lovable-uploads/df8e6029-f2da-4281-bd02-198de6b96226.png" 
-              alt="Do Next Logo" 
-              className="h-8"
-            />
+  console.log('Login component about to render UI');
+  console.log('%c[LOGIN] About to render Login component', 'color: green; font-weight: bold');
+  
+  try {
+    console.log('%c[LOGIN] Rendering Login UI...', 'color: orange');
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background dark:bg-slate-900 text-slate-900 dark:text-slate-200 p-4">
+        {console.log('%c[LOGIN] Rendering top-level div', 'color: green')}
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <img 
+                src="/lovable-uploads/df8e6029-f2da-4281-bd02-198de6b96226.png" 
+                alt="Do Next Logo" 
+                className="h-8"
+              />
           </div>
           <CardDescription>Sign in or create an account to manage your tasks</CardDescription>
         </CardHeader>
@@ -228,8 +236,21 @@ const Login = () => {
           )}
         </CardFooter>
       </Card>
+      {console.log('%c[LOGIN] Login component fully rendered', 'color: blue; font-weight: bold')}
     </div>
   );
+  } catch (error) {
+    console.error('%c[LOGIN] Error rendering Login component:', 'color: red; font-weight: bold', error);
+    
+    // Fallback rendering to show error
+    return (
+      <div style={{ padding: '20px', margin: '20px', border: '2px solid red' }}>
+        <h2 style={{ color: 'red' }}>Login Rendering Error</h2>
+        <p>The Login component failed to render.</p>
+        <p>Error: {error?.message || 'Unknown error'}</p>
+      </div>
+    );
+  }
 };
 
 export default Login;

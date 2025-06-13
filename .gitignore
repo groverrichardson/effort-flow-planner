@@ -27,5 +27,30 @@ dist-ssr
 .netlify
 coverage/
 
-# Playwright test screenshots
-screenshots/
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Test screenshots and results
+/screenshots/
+/tests/ui.spec.ts-snapshots/
+/test-results/
+
+# All test-related PNG files
+*.png
+!src/**/*.png
+!public/**/*.png
+!assets/**/*.png
+
+# Playwright reports
+/playwright-report/
+/playwright-report.json
+
+# Playwright authentication state
+/playwright/.auth/
+
+# Build artifacts
+*.tsbuildinfo
+.eslintcache
+.nyc_output

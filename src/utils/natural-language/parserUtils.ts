@@ -1,6 +1,8 @@
 
 import { Priority, EffortLevel } from '@/types';
-import * as chrono from 'chrono-node';
+// Changed from static to dynamic import to fix Vite build issues
+// import * as chrono from 'chrono-node';
+let chronoParser: any = null;
 
 // Helper function to calculate the last occurrence of a specific day of the week in a given month and year
 function calculateLastDayOfWeekInMonth(year: number, month: number, dayOfWeek: number): Date | null {
@@ -66,11 +68,35 @@ export function parseDateFromString(dateString: string | null): Date | null {
   }
 
   console.log('[parserUtils] Did not enter custom logic, or custom logic failed. Falling back to chrono-node.');
-  // Fallback to chrono-node for other phrases
   try {
-    const parsedDate = chrono.parseDate(dateString, new Date(), { forwardDate: true });
-    if (parsedDate) {
-      return parsedDate;
+    // Dynamically import chrono-node to fix Vite build issues
+    if (!chronoParser) {
+      try {
+        // Try to import synchronously for tests that don't support await
+        // This is a workaround for Vite test environment
+        chronoParser = require('chrono-node');
+      } catch (e) {
+        console.error('Error requiring chrono-node:', e);
+        // Fallback to regex date parsing if chrono-node can't be loaded
+        const dateRegex = /\b(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})\b/;
+        const match = dateString.match(dateRegex);
+        if (match) {
+          const [_, month, day, year] = match;
+          const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          if (!isNaN(dateObj.getTime())) {
+            return dateObj;
+          }
+        }
+        return null;
+      }
+    }
+    
+    // Use the imported parser
+    if (chronoParser) {
+      const parsedDate = chronoParser.parseDate(dateString, new Date(), { forwardDate: true });
+      if (parsedDate) {
+        return parsedDate;
+      }
     }
   } catch (error) {
     console.error('Error parsing date string with chrono-node:', error);

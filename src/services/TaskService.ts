@@ -574,74 +574,10 @@ export const TaskService = {
         }
     },
 
-    async getTasksContributingToEffortOnDate(targetDate: string, userId: string): Promise<Task[]> {
-        try {
-            // Query for PENDING tasks scheduled on the targetDate
-            const { data: pendingTasksData, error: pendingError } = await supabase
-                .from('tasks')
-                .select(`
-                    *,
-                    task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
-                    task_tags(tags(*)),
-                    task_people(people(*))
-                `)
-                .eq('user_id', userId)
-                .eq('status', TaskStatus.PENDING)
-                .eq('is_archived', false)
-                .eq('scheduled_start_date', targetDate);
-
-            if (pendingError) {
-                console.error('[TaskService.getTasksContributingToEffortOnDate] Error fetching PENDING tasks:', pendingError);
-                throw pendingError;
-            }
-
-            // Query for IN_PROGRESS tasks active on the targetDate
-            const { data: inProgressTasksData, error: inProgressError } = await supabase
-                .from('tasks')
-                .select(`
-                    *,
-                    task_recurrence_rules!tasks_recurrenceRuleId_fkey(*),
-                    task_tags(tags(*)),
-                    task_people(people(*))
-                `)
-                .eq('user_id', userId)
-                .eq('status', TaskStatus.IN_PROGRESS)
-                .eq('is_archived', false)
-                .lte('scheduled_start_date', targetDate)
-                .gte('scheduled_completion_date', targetDate);
-
-            if (inProgressError) {
-                console.error('[TaskService.getTasksContributingToEffortOnDate] Error fetching IN_PROGRESS tasks:', inProgressError);
-                throw inProgressError;
-            }
-
-            const combinedDbTasks = [
-                ...(pendingTasksData || []),
-                ...(inProgressTasksData || [])
-            ];
-
-            // Deduplicate tasks: although status-based queries should prevent direct overlap,
-            // this ensures safety if a task somehow matched both (e.g., data inconsistency)
-            const uniqueDbTasks = Array.from(new Map(combinedDbTasks.map(task => [task.id, task])).values());
-
-            return uniqueDbTasks.map(dbTask => {
-                const recurrenceRule = dbTask.task_recurrence_rules
-                    ? mapDbRecurrenceRuleToRecurrenceRule(
-                        Array.isArray(dbTask.task_recurrence_rules)
-                            ? dbTask.task_recurrence_rules[0]
-                            : dbTask.task_recurrence_rules
-                      )
-                    : null;
-                const tags = dbTask.task_tags?.map((tt: any) => tt.tags as Tag).filter(Boolean) || [];
-                const people = dbTask.task_people?.map((tp: any) => tp.people as Person).filter(Boolean) || [];
-                return mapDbTaskToTask(dbTask as DbTask, recurrenceRule, tags, people);
-            });
-
-        } catch (error) {
-            console.error('[TaskService.getTasksContributingToEffortOnDate] Unexpected error:', error);
-            throw new Error('Failed to fetch tasks contributing to effort on date.');
-        }
-    },
+    // Previous implementation removed to fix duplicate key error. See implementation below.
+    // Method signature maintained for reference:
+    // async getTasksContributingToEffortOnDate(targetDate: string, userId: string): Promise<Task[]>
+    
 
     async getTags(): Promise<Tag[]> {
         const userId = await this.getCurrentUserId();

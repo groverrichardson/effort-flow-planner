@@ -214,7 +214,7 @@ describe('NaturalLanguageInput Component', () => {
         placeholder="Enter task..."
       />
     );
-    const editorPlaceholder = screen.getByTestId('tiptap-editor');
+    const editorPlaceholder = screen.getByTestId('tiptap-editor-content');
     const placeholderP = editorPlaceholder.querySelector('p[data-placeholder="Enter task..."]');
     expect(placeholderP).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Create Task/i })).toBeInTheDocument();
@@ -228,7 +228,7 @@ describe('NaturalLanguageInput Component', () => {
         onSubmit={mockOnSubmit}
       />
     );
-    const editor = screen.getByTestId('tiptap-editor'); // Assuming Textarea uses this internally or we adjust selector
+    const editor = screen.getByTestId('tiptap-editor-content'); // Assuming Textarea uses this internally or we adjust selector
     fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true });
     
     await waitFor(() => {
@@ -244,7 +244,7 @@ describe('NaturalLanguageInput Component', () => {
         onSubmit={mockOnSubmit}
       />
     );
-    const editor = screen.getByTestId('tiptap-editor');
+    const editor = screen.getByTestId('tiptap-editor-content');
     fireEvent.keyDown(editor, { key: 'Enter', metaKey: true });
 
     await waitFor(() => {
@@ -260,7 +260,7 @@ describe('NaturalLanguageInput Component', () => {
         onSubmit={mockOnSubmit}
       />
     );
-    const editor = screen.getByTestId('tiptap-editor');
+    const editor = screen.getByTestId('tiptap-editor-content');
     // The Textarea component is a Tiptap editor, direct fireEvent.change might not work as expected.
     // We'll simulate typing by calling the onChange prop directly, which is what Tiptap would do.
     // This requires the Textarea mock or actual component to correctly propagate changes.
@@ -288,7 +288,7 @@ describe('NaturalLanguageInput Component', () => {
         onSubmit={mockOnSubmit}
       />
     );
-    const editor = screen.getByTestId('tiptap-editor');
+    const editor = screen.getByTestId('tiptap-editor-content');
 
     await act(async () => {
       await user.type(editor, 'Hello World');
@@ -347,7 +347,7 @@ describe('NaturalLanguageInput Component', () => {
         onSubmit={mockOnSubmit}
       />
     );
-    const editor = screen.getByTestId('tiptap-editor');
+    const editor = screen.getByTestId('tiptap-editor-content');
 
     // Simulate typing that should trigger suggestions. 
     // mockCheckForSuggestionsFn is set up to make currentMockPopoverOpen true if text includes '@'
