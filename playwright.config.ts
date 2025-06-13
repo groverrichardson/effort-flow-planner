@@ -55,7 +55,7 @@ export default defineConfig({
   ],
 
   // Global setup to run before all tests
-  globalSetup: path.resolve(__dirname, './tests/global.setup.ts'), // Use path.resolve with ESM-compatible __dirname
+  globalSetup: path.resolve(__dirname, './tests/global-setup.ts'), // Use path.resolve with ESM-compatible __dirname
   
   // Global teardown to run after all tests (for port cleanup)
   globalTeardown: path.resolve(__dirname, './tests/global.teardown.mjs'),
