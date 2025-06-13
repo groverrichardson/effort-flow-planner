@@ -14,4 +14,11 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Configure Supabase client with browser-specific options
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true, // Use localStorage for session persistence
+    detectSessionInUrl: true, // Detect session from URL hash
+    autoRefreshToken: true, // Auto-refresh token
+  }
+});

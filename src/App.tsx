@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,7 @@ import AllNotesPage from './components/pages/AllNotesPage'; // Added AllNotesPag
 import TaskDetailPage from './pages/TaskDetailPage'; // Added TaskDetailPage
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import TestPage from "./pages/TestPage";
 
 const queryClient = new QueryClient();
 
@@ -21,7 +22,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
   
-  console.log('ProtectedRoute - Auth state:', { user: user?.email || 'null', loading });
+  // Auth state check
   
   // Show loading state while checking authentication
   if (loading) {
@@ -30,15 +31,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   // Redirect to login if not authenticated
   if (!user) {
-    console.log('ProtectedRoute - No user, redirecting to login');
+  
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
-  console.log('ProtectedRoute - User authenticated, rendering protected content');
+
   return <>{children}</>;
 };
 
 const AppRoutes = () => {
+
   return (
     <BrowserRouter>
       <Routes>
@@ -89,6 +91,8 @@ const AppRoutes = () => {
           element={<ProtectedRoute><TaskDetailPage /></ProtectedRoute>}
         />
 
+        {/* Test Route removed after debugging */}
+
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -96,20 +100,45 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <TaskProvider>
-          <NoteProvider> { /* Added NoteProvider wrapper */ }
-            <Toaster />
-            <Sonner />
-            <AppRoutes />
-          </NoteProvider>
-        </TaskProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const { user, session } = useAuth();
+  
+  try {
+    return (
+      <React.Fragment>
+
+        <QueryClientProvider client={queryClient}>
+
+          <TooltipProvider>
+
+            <AuthProvider>
+
+              <TaskProvider>
+
+                <NoteProvider>
+
+                  <Toaster />
+                  <Sonner />
+                  <AppRoutes />
+                </NoteProvider>
+              </TaskProvider>
+            </AuthProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </React.Fragment>
+    );
+  } catch (error) {
+    console.error('Error rendering App component:', error);
+    
+    // Emergency fallback rendering
+    return (
+      <div style={{ padding: '20px', margin: '20px', border: '2px solid red' }}>
+        <h2 style={{ color: 'red' }}>App Rendering Error</h2>
+        <p>The application failed to render properly.</p>
+        <p>Error: {error?.message || 'Unknown error'}</p>
+      </div>
+    );
+  }
+};
 
 export default App;
