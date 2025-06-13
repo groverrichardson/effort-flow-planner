@@ -113,6 +113,7 @@ export async function navigateTo(page: Page, route: string, options: NavigationO
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      // Use the full URL with baseURL to ensure we're using the right port
       await page.goto(routeConfig.path, { timeout });
 
       const urlVerified = await verifyUrl(page, routeConfig.path);
@@ -188,6 +189,7 @@ export async function authenticate(page: Page): Promise<void> {
   console.log('[Auth] Checking if already authenticated...');
   try {
     // Try to access the dashboard - if it works, we're already logged in
+    // Navigate to dashboard with the baseURL
     await page.goto('/dashboard', { timeout: 5000 });
     const dashboardElement = page.locator('[data-testid="task-summary"]');
     const isLoggedIn = await dashboardElement.isVisible({ timeout: 3000 }).catch(() => false);
@@ -202,6 +204,7 @@ export async function authenticate(page: Page): Promise<void> {
   // Navigate to login page
   try {
     console.log('[Auth] Navigating to /login...');
+    // Navigate to the login page using the baseURL
     await page.goto('/login', { timeout: 15000 });
     console.log(`[Auth] Current URL after navigation: ${page.url()}`);
     
@@ -326,6 +329,7 @@ console.log(`[Auth] Authentication successful. Redirected to: ${page.url()}`);
 
     // Verify we can access protected content
     console.log('[Auth] Verifying access to protected content...');
+    // Use baseURL for dashboard navigation
     await page.goto('/dashboard');
 
     // Wait briefly for the dashboard to load

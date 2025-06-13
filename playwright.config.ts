@@ -65,8 +65,11 @@ export default defineConfig({
     headless: HEADLESS,
     // Always capture traces in watch mode
     trace: process.env.PWTEST_WATCH ? 'on' : 'on-first-retry',
-    // Take screenshots of everything in watch mode
-    screenshot: process.env.PWTEST_WATCH ? 'on' : 'only-on-failure',
+    // ⚠️ CRITICAL REQUIREMENT: Always take screenshots for ALL tests ⚠️
+    // This setting must remain 'on' to ensure screenshots for every test (pass or fail)
+    // DO NOT change this to 'only-on-failure' or any other value
+    // Project requirement: Screenshots must be generated for all tests without exception
+    screenshot: 'on',
     // Automatically capture screenshots after navigation and major UI interactions
     viewport: { width: 1280, height: 720 },
     // Use the saved authentication state for all tests
