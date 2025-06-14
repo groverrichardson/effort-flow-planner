@@ -435,9 +435,9 @@ describe('groupTasksByDate', () => {
         const groupIds = groupedTasks.map((group) => group.id);
 
         // Check number of groups - either 6 or 7 depending on whether THIS_WEEK is included
-        // We're now classifying tomorrow's tasks as THIS_WEEK, so we have one fewer group than before
-        const expectedGroupCount = thisWeekDate ? 7 : 6;
-        expect(groupedTasks.length).toBe(expectedGroupCount);
+        // We always expect 7 groups because tomorrow's tasks are classified as THIS_WEEK
+        // and we have: NO_DATE, TODAY, OVERDUE, THIS_WEEK, NEXT_WEEK, THIS_MONTH, FUTURE
+        expect(groupedTasks.length).toBe(7);
 
         // Check that essential groups always exist
         expect(groupIds).toContain(DateGroup.OVERDUE);
