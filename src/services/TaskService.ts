@@ -1461,7 +1461,7 @@ scheduled_date: mainTaskInput.scheduledDate
                 `)
                 .eq('user_id', user.id)
                 .eq('is_archived', false)
-                .is('completed_date', null)
+                .filter('completed_date', 'is', null)
                 .neq('status', TaskStatus.COMPLETED);
 
             if (fetchError) {
