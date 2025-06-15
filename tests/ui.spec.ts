@@ -432,16 +432,172 @@ test.describe('Playwright UI Tests', () => {
             await waitForPageStability(page);
             await compareScreenshotAndAttachToReport(page, 'task-creation-form');
         });
+
+        test('Task Editing Workflow', async ({ page }) => {
+            console.log('[TEST] Starting Task Editing Workflow test');
+            
+            let screenshotTaken = false;
+            
+            try {
+                // Navigate to home page first
+                await page.goto('/');
+                await waitForPageStability(page);
+                
+                // Ensure we have test data available
+                console.log('[TEST] Verifying test data is available');
+                await waitForRouteReady(page, 'dashboard', { throwOnFailure: true });
+                
+                // Take initial screenshot
+                await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-start');
+                
+                // Look for a task card to edit - use a more flexible selector
+                console.log('[TEST] Looking for task card to edit');
+                
+                // First try to find any task card with test data
+                const taskCards = page.locator('[data-testid*="task-card"]');
+                const taskCardCount = await taskCards.count();
+                
+                if (taskCardCount === 0) {
+                    console.log('[TEST] No task cards found, taking screenshot for debugging');
+                    await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-no-tasks');
+                    throw new Error('No task cards available for editing test');
+                }
+                
+                console.log(`[TEST] Found ${taskCardCount} task cards, clicking on first one`);
+                
+                // Click on the first available task card
+                await taskCards.first().click();
+                await page.waitForTimeout(1000); // Wait for task editor to open
+                
+                // Take screenshot after task is opened
+                await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-task-opened');
+                
+                // Test various form interactions
+                console.log('[TEST] Testing form interactions');
+                
+                // Try to interact with due date selector
+                try {
+                    const dueDateButton = page.getByRole('button', { name: /due date/i });
+                    if (await dueDateButton.isVisible()) {
+                        await dueDateButton.click();
+                        await page.waitForTimeout(500);
+                        await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-due-date');
+                        
+                        // Click away to close any date picker
+                        await page.locator('html').click();
+                        await page.waitForTimeout(500);
+                    }
+                } catch (e) {
+                    console.log('[TEST] Due date interaction failed:', e.message);
+                }
+                
+                // Try to interact with scheduled date selector
+                try {
+                    const scheduledDateButton = page.getByRole('button', { name: /scheduled date/i });
+                    if (await scheduledDateButton.isVisible()) {
+                        await scheduledDateButton.click();
+                        await page.waitForTimeout(500);
+                        await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-scheduled-date');
+                        
+                        // Click away to close any date picker
+                        await page.locator('html').click();
+                        await page.waitForTimeout(500);
+                    }
+                } catch (e) {
+                    console.log('[TEST] Scheduled date interaction failed:', e.message);
+                }
+                
+                // Try to interact with priority selector
+                try {
+                    const priorityCombobox = page.getByRole('combobox', { name: /priority/i });
+                    if (await priorityCombobox.isVisible()) {
+                        await priorityCombobox.click();
+                        await page.waitForTimeout(500);
+                        await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-priority');
+                        
+                        // Click away to close dropdown
+                        await page.locator('html').click();
+                        await page.waitForTimeout(500);
+                    }
+                } catch (e) {
+                    console.log('[TEST] Priority interaction failed:', e.message);
+                }
+                
+                // Try to interact with effort selector
+                try {
+                    const effortCombobox = page.getByRole('combobox', { name: /effort/i });
+                    if (await effortCombobox.isVisible()) {
+                        await effortCombobox.click();
+                        await page.waitForTimeout(500);
+                        await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-effort');
+                        
+                        // Click away to close dropdown
+                        await page.locator('html').click();
+                        await page.waitForTimeout(500);
+                    }
+                } catch (e) {
+                    console.log('[TEST] Effort interaction failed:', e.message);
+                }
+                
+                // Try to interact with status selector
+                try {
+                    const statusCombobox = page.getByRole('combobox', { name: /status/i });
+                    if (await statusCombobox.isVisible()) {
+                        await statusCombobox.click();
+                        await page.waitForTimeout(500);
+                        await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-status');
+                        
+                        // Click away to close dropdown
+                        await page.locator('html').click();
+                        await page.waitForTimeout(500);
+                    }
+                } catch (e) {
+                    console.log('[TEST] Status interaction failed:', e.message);
+                }
+                
+                // Try to interact with people search
+                try {
+                    const peopleSearch = page.getByRole('textbox', { name: /search or add people/i });
+                    if (await peopleSearch.isVisible()) {
+                        await peopleSearch.click();
+                        await page.waitForTimeout(500);
+                        await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-people');
+                    }
+                } catch (e) {
+                    console.log('[TEST] People search interaction failed:', e.message);
+                }
+                
+                // Take final screenshot of the completed form interactions
+                await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-complete');
+                screenshotTaken = true;
+                
+                console.log('[TEST] Task Editing Workflow test completed successfully');
+                
+            } catch (error) {
+                console.error('[TEST] Task Editing Workflow test failed:', error.message);
+                
+                // Ensure we take a screenshot even on failure
+                if (!screenshotTaken) {
+                    try {
+                        await compareScreenshotAndAttachToReport(page, 'task-editing-workflow-error');
+                    } catch (screenshotError) {
+                        console.error('[TEST] Failed to take error screenshot:', screenshotError.message);
+                    }
+                }
+                
+                // Re-throw the error to fail the test
+                throw error;
+            }
+        });
+
     });
-    
+
     test.describe('Device-specific views', () => {
         test.beforeEach(async () => {
             // This group focuses on device-specific layouts, ensure data exists
             await testDataSeeder.cleanup();
-            // Fix TypeScript error with correctly typed optional parameter
-            await seedTestTasks(3, { prefix: 'DeviceTest' } as { prefix?: string });
-            // Fix TypeScript error with correctly typed optional parameter
-            await seedTestNotes(2, { prefix: 'DeviceNote' } as { prefix?: string });
+            await seedTestTasks(3);
+            await seedTestNotes(2);
         });
 
         test.describe('Desktop viewport', () => {
