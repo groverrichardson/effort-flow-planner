@@ -12,16 +12,20 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useTaskContext } from '@/context/TaskContext';
 import { useTaskFiltering } from '@/hooks/useTaskFiltering';
 import { useNoteStore } from '@/store/noteStore'; // Import useNoteStore
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import TaskDialogs from '@/components/dialogs/TaskDialogs';
 import { Task, TaskStatus, Note } from '@/types'; // Import Task and Note types
 import UpcomingTasks from '@/components/UpcomingTasks';
 import TaskListHeader from '@/components/headers/TaskListHeader'; // Import TaskListHeader
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 function IndexPage() {
+    console.log('[[INDEX_COMPONENT_ROOT]] IndexPage function execution started.');
     const { addNote } = useNoteStore(); // Get addNote from the store
     const navigate = useNavigate(); // Add useNavigate hook
+    const location = useLocation(); // Get current location
+    console.log('[[INDEX_LOCATION]] Current location.pathname:', location.pathname);
     const [createTaskOpen, setCreateTaskOpen] = useState(false);
+    console.log('[[INDEX_CREATE_TASK_DIALOG_STATE_INIT]] Initial isCreateTaskDialogOpen:', createTaskOpen);
     const [manageDialogOpen, setManageDialogOpen] = useState(false);
     const [bulkImportOpen, setBulkImportOpen] = useState(false);
     const [manageActiveTab, setManageActiveTab] = useState<'tags' | 'people'>(
@@ -48,6 +52,50 @@ function IndexPage() {
     const [searchTerm, setSearchTerm] = useState(''); // Add searchTerm state
     const [isAllTasksExpanded, setIsAllTasksExpanded] = useState(false);
     const [isOwedToOthersExpanded, setIsOwedToOthersExpanded] = useState(true); // Default to expanded
+    
+    // Effect to handle /tasks/create route by automatically opening the create task dialog
+    useEffect(() => {
+        console.log('[[INDEX_CREATE_TASK_DIALOG_EFFECT]] useEffect for /tasks/create triggered. Current path:', location.pathname);
+        const isCreateTaskRoute = location.pathname === '/tasks/create';
+        console.log('[IndexPage] Current route:', location.pathname, 'isCreateTaskRoute:', isCreateTaskRoute);
+        
+        if (isCreateTaskRoute) {
+            console.log('[IndexPage] Opening create task dialog due to route');
+            setCreateTaskOpen(true);
+            (window as any)._isCreateTaskDialogOpen = true;
+            console.log('[[INDEX_CREATE_TASK_DIALOG_EFFECT]] setCreateTaskOpen(true) called.');
+            
+            // Add event listener for dialog close to update URL
+            const handleDialogClose = () => {
+                if (location.pathname === '/tasks/create') {
+            console.log('[[INDEX_CREATE_TASK_DIALOG_EFFECT]] Path is /tasks/create, attempting to open dialog.');
+                    console.log('[IndexPage] Dialog closed, navigating to /tasks');
+                    navigate('/tasks');
+                }
+
+};
+            
+            // Cleanup function to remove the listener
+
+
+    return () => {
+                console.log('[IndexPage] Cleaning up create task route effect');
+            };
+        }
+    }, [location.pathname, navigate]);
+
+    // Log when createTaskOpen changes
+    useEffect(() => {
+        console.log('[[INDEX_CREATE_TASK_DIALOG_STATE_CHANGE]] isCreateTaskDialogOpen changed to:', createTaskOpen);
+    }, [createTaskOpen]);
+    
+    // Effect to handle dialog close and URL syncing
+    useEffect(() => {
+        if (!createTaskOpen && location.pathname === '/tasks/create') {
+            console.log('[IndexPage] Create task dialog closed, updating URL');
+            navigate('/tasks');
+        }
+    }, [createTaskOpen, location.pathname, navigate]);
 
     // tasksFromCtx is now used directly, original useTaskContext() call for 'tasks' is covered by the log above.
     // console.log('[[INDEX_PAGE_LOG]] RECEIVED tasks from useTaskContext():', tasks ? tasks.length : 'undefined/empty', JSON.stringify(tasks?.map(t => t.id))); // This log is now redundant due to the one above.
@@ -401,6 +449,7 @@ function IndexPage() {
                     )}
 
                     {/* Create Task Dialog */}
+                    {console.log('[[INDEX_CREATE_TASK_DIALOG_RENDER]] Rendering CreateTaskDialog. Open state:', createTaskOpen)}
                     <CreateTaskDialog
                         open={createTaskOpen}
                         onOpenChange={setCreateTaskOpen}

@@ -98,6 +98,37 @@ type NoteFromDB = Database['public']['Tables']['notes']['Row'];
  * Converts a database note row to the application Note type
  * Uses consistent property naming with is_archived for archive status
  */
+// Helper function to get predefined data for a task template
+export function getTaskDataForTemplate(template: TestTaskTemplate): Partial<Task> {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  switch (template) {
+    case TestTaskTemplate.BASIC:
+      return {
+        title: `${TEST_TASK_PREFIX} Basic Template Task`,
+        description: 'This is a basic task generated from a template for testing purposes.',
+        priority: Priority.NORMAL,
+        status: TaskStatus.PENDING,
+        dueDate: tomorrow, // Keep as Date object
+        dueDateType: DueDateType.ON,
+        effortLevel: EffortLevel.M,
+      };
+    default:
+      console.warn(`getTaskDataForTemplate: Unknown template '${template}', returning basic task data.`);
+      return {
+        title: `${TEST_TASK_PREFIX} Default Template Task`,
+        description: 'Default task data due to unknown template.',
+        priority: Priority.NORMAL,
+        status: TaskStatus.PENDING,
+        dueDate: tomorrow,
+        dueDateType: DueDateType.ON,
+        effortLevel: EffortLevel.M,
+      };
+  }
+}
+
 function convertDbNoteToNote(dbNote: NoteFromDB): Note {
   return {
     id: dbNote.id,
@@ -248,12 +279,37 @@ export class TestDataSeeder {
       throw new Error(`Failed to create task: ${error?.message}`);
     }
 
-    return {
-      ...data,
-      dueDate: data.due_date,
-      dueDateType: data.due_date_type as DueDateType,
-      effortLevel: data.effort_level as EffortLevel,
-    } as Task;
+    const dbTask = data as any; // Treat Supabase data as 'any' for easier mapping initially
+
+    const transformedTask: Task = {
+    id: dbTask.id,
+    title: dbTask.title,
+      description: dbTask.description || '',
+    status: dbTask.status as TaskStatus,
+    priority: dbTask.priority as Priority,
+    dueDate: dbTask.due_date ? new Date(dbTask.due_date) : null,
+    dueDateType: dbTask.due_date_type as DueDateType,
+    targetDeadline: dbTask.target_deadline ? new Date(dbTask.target_deadline) : null,
+    scheduledDate: dbTask.scheduled_date ? new Date(dbTask.scheduled_date) : null,
+    goLiveDate: dbTask.go_live_date ? new Date(dbTask.go_live_date) : null,
+    effortLevel: dbTask.effort_level as EffortLevel,
+    completed: dbTask.completed || false,
+    completedDate: dbTask.completed_date ? new Date(dbTask.completed_date) : null,
+    tags: dbTask.tags || [], // Assuming tags might be part of 'data' or default to []
+    people: dbTask.people || [], // Assuming people might be part of 'data' or default to []
+    dependencies: dbTask.dependencies || [], // Assuming dependencies might be part of 'data' or default to []
+    createdAt: new Date(dbTask.created_at),
+    updatedAt: new Date(dbTask.updated_at),
+    originalScheduledDate: dbTask.original_scheduled_date ? new Date(dbTask.original_scheduled_date) : null,
+    is_archived: dbTask.is_archived || false,
+    segments: dbTask.segments || [],
+    recurrenceRuleId: dbTask.recurrence_rule_id || undefined,
+    recurrenceRule: undefined,
+    isRecurringInstance: dbTask.is_recurring_instance || false,
+    originalRecurringTaskId: dbTask.original_recurring_task_id || undefined,
+    userId: dbTask.user_id,
+  };
+  return transformedTask;
   }
 
   async createRichTask(options: RichTaskOptions): Promise<Task> {
@@ -655,7 +711,6 @@ export class TestDataSeeder {
     return this.cleanupTestTasks();
   }
 }
-
 
 export const testDataSeeder = new TestDataSeeder();
 

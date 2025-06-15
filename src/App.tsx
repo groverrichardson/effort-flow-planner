@@ -62,6 +62,11 @@ const AppRoutes = () => {
             <Index />
           </ProtectedRoute>
         } />
+        <Route path="/tasks/create" element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        } />
 
         {/* Note Editor Routes */}
         <Route 

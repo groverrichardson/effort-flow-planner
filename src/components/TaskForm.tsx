@@ -290,8 +290,8 @@ const TaskForm = ({
     };
 
     return (
-        <div id="task-form-outer-container" className="h-full flex flex-col">
-          <form onSubmit={handleSubmit} className="flex-grow flex flex-col overflow-hidden" id="task-form">
+        <div className="h-full flex flex-col">
+          <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden" aria-label="Task Form">
             <div className="flex items-center justify-between mb-4 p-4 bg-background sticky top-0 z-10 border-b">
               <h2 className="text-xl font-semibold" id="task-form-title-header">{isEditing ? 'Edit Task' : 'Create New Task'}</h2>
               <div className="flex items-center">

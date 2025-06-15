@@ -165,6 +165,58 @@ export const routes: Record<string, RouteConfig> = {
       { id: 'theme_selector', name: 'Theme Selector', required: false, selector: (page) => page.locator('[data-testid="theme-selector"]') },
     ],
   },
+  task_create: {
+    id: 'task_create',
+    path: '/tasks/create',
+    title: 'Create Task',
+    description: 'Task creation form',
+    pageTitle: 'Create Task | DoNext',
+    requiresAuth: true,
+    elements: [
+      // Form header and main elements
+      { id: 'task_form_title', name: 'Task Form Title', required: true, selector: (page) => page.locator('#task-form h2:has-text("Edit Task"), #task-form h2:has-text("Create Task")').first() },
+      { id: 'title_input', name: 'Title Input', required: true, selector: (page) => page.locator('#task-form input[name="title"], input[placeholder="Task title"]').first() },
+      { id: 'description_editor', name: 'Description Editor', required: true, selector: (page) => page.locator('.tiptap-editor, [contenteditable="true"]').first() },
+      
+      // Date pickers
+      { id: 'due_date_picker', name: 'Due Date Picker', required: true, selector: (page) => page.locator('[data-testid="due-date-field"], label:has-text("Due Date")').first() },
+      { id: 'scheduled_date_picker', name: 'Scheduled Date Picker', required: true, selector: (page) => page.locator('[data-testid="scheduled-date-field"], label:has-text("Scheduled Date")').first() },
+      
+      // Dropdown selectors
+      { id: 'priority_select', name: 'Priority Select', required: true, selector: (page) => page.locator('select[name="priority"], [data-testid="priority-selector"]').first() },
+      { id: 'repeats_select', name: 'Repeats Select', required: true, selector: (page) => page.locator('select[name="repeats"], [data-testid="repeat-selector"]').first() },
+      
+      // Other form elements
+      { id: 'effort_points_input', name: 'Effort Points Input', required: false, selector: (page) => page.locator('input[name="effort_points"], [data-testid="effort-points-input"]').first() },
+      { id: 'repeat_checkbox', name: 'Repeat Only After Completion', required: false, selector: (page) => page.locator('input[type="checkbox"][name="repeat_after_completion"], [data-testid="repeat-checkbox"]').first() },
+      
+      // Form action buttons
+      { id: 'submit_button', name: 'Save Button', required: true, selector: (page) => page.locator('button[type="submit"], button:has-text("Save")').first() },
+      { id: 'cancel_button', name: 'Cancel Button', required: true, selector: (page) => page.locator('button:has-text("Cancel")').first() },
+    ],
+    defaultTimeout: 12000,
+  },
+  task_detail: {
+    id: 'task_detail',
+    path: '/tasks/:taskId',
+    title: 'Task Detail',
+    description: 'Task detail view',
+    pageTitle: 'Task Detail | DoNext',
+    requiresAuth: true,
+    elements: [
+      // Task detail elements
+      { id: 'task_detail_title', name: 'Task Detail Title', required: true, selector: (page) => page.locator('#task-detail-title-\\w+-\\w+-\\w+-\\w+-\\w+, h1').first() },
+      { id: 'task_detail_content', name: 'Task Detail Content', required: true, selector: (page) => page.locator('#task-detail-content-\\w+-\\w+-\\w+-\\w+-\\w+, [id^="task-detail-content-"]').first() },
+      
+      // Task form elements when in edit mode
+      { id: 'task_form', name: 'Task Form', required: false, selector: (page) => page.locator('#task-form, form').first() },
+      
+      // Task action buttons
+      { id: 'back_button', name: 'Back Button', required: true, selector: (page) => page.locator('#task-detail-back-button-\\w+-\\w+-\\w+-\\w+-\\w+, [aria-label="Go back to previous page"]').first() },
+      { id: 'edit_button', name: 'Edit Button', required: false, selector: (page) => page.locator('button:has-text("Edit"), [data-testid="edit-task-button"]').first() },
+    ],
+    defaultTimeout: 12000,
+  },
 };
 
 /**

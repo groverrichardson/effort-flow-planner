@@ -292,27 +292,7 @@ test.describe('Playwright UI Tests', () => {
         test('dashboard content test', async ({ page, context }) => {
             console.log('[TEST] Starting dashboard content test');
             
-            // Clear cookies first (safe before navigation)
-            console.log('[TEST] Clearing cookies');
-            await context.clearCookies();
-            
-            // Navigate to the root URL first to ensure we're in the app domain
-            console.log('[TEST] Navigating to root URL to ensure we are on app domain');
-            await page.goto('/');
-            
-            // Now clear localStorage and sessionStorage after we're on the app domain
-            console.log('[TEST] Clearing localStorage and sessionStorage');
-            try {
-              await page.evaluate(() => {
-                localStorage.clear();
-                sessionStorage.clear();
-                console.log('[BROWSER] Successfully cleared storage');
-              });
-            } catch (error) {
-              console.error('[TEST] Error clearing storage:', error);
-            }
-            
-            // Now navigate to dashboard and verify elements
+            // Navigate to dashboard and verify elements
             console.log('[TEST] Navigating to dashboard');
             await navigateToPage(page, '/dashboard');
             
@@ -338,36 +318,11 @@ test.describe('Playwright UI Tests', () => {
         });
 
         test('dashboard visual test', async ({ page, context }, testInfo) => {
-            // Apply Firefox-specific configurations if needed
-            const isFirefox = page.context().browser()?.browserType().name() === 'firefox';
-            if (isFirefox) {
-                console.log('[TEST] Running dashboard visual test with Firefox optimizations');
-            }
             console.log('[TEST] Starting dashboard visual test');
             
-            // Clear cookies first (safe before navigation)
-            console.log('[TEST] Clearing cookies');
-            await context.clearCookies();
-            
-            // Navigate to the root URL first to ensure we're in the app domain
-            console.log('[TEST] Navigating to root URL to ensure we are on app domain');
-            await page.goto('/');
-            
-            // Now clear localStorage and sessionStorage after we're on the app domain
-            console.log('[TEST] Clearing localStorage and sessionStorage');
-            try {
-              await page.evaluate(() => {
-                localStorage.clear();
-                sessionStorage.clear();
-                console.log('[BROWSER] Successfully cleared storage');
-              });
-            } catch (error) {
-              console.error('[TEST] Error clearing storage:', error);
-            }
-            
-            // Directly navigate to the dashboard
-            console.log('[TEST] Navigating directly to dashboard');
-            await page.goto('/dashboard');
+            // Navigate to dashboard and verify elements
+            console.log('[TEST] Navigating to dashboard');
+            await navigateToPage(page, '/dashboard');
             
             // Add a small wait to ensure app initializes
             console.log('[TEST] Waiting for app to initialize...');
@@ -441,29 +396,9 @@ test.describe('Playwright UI Tests', () => {
             }
             console.log('[TEST] Starting task creation form test');
             
-            // Clear cookies first (safe before navigation)
-            console.log('[TEST] Clearing cookies');
-            await context.clearCookies();
-            
-            // Navigate to the root URL first to ensure we're in the app domain
-            console.log('[TEST] Navigating to root URL to ensure we are on app domain');
-            await page.goto('/');
-            
-            // Now clear localStorage and sessionStorage after we're on the app domain
-            console.log('[TEST] Clearing localStorage and sessionStorage');
-            try {
-              await page.evaluate(() => {
-                localStorage.clear();
-                sessionStorage.clear();
-                console.log('[BROWSER] Successfully cleared storage');
-              });
-            } catch (error) {
-              console.error('[TEST] Error clearing storage:', error);
-            }
-            
-            // Directly navigate to tasks page
-            console.log('[TEST] Navigating directly to tasks page');
-            await page.goto('/tasks');
+            // Navigate to task creation form and verify elements
+            console.log('[TEST] Navigating to task creation form');
+            await navigateToPage(page, '/tasks/create');
             
             // Add a small wait to ensure app initializes
             console.log('[TEST] Waiting for app to initialize...');
