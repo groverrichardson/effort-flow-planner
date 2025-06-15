@@ -49,10 +49,13 @@ export const determineTaskDateGroup = (task: Task): DateGroup => {
     return DateGroup.TODAY;
   }
   
+  // Check for tomorrow explicitly before week logic to handle Sunday→Monday boundary
+  if (isTomorrow(taskDateObj)) {
+    return DateGroup.THIS_WEEK;
+  }
+  
   // isThisWeek checks if the date is within the current week (Mon-Sun by default with weekStartsOn:1)
   if (isThisWeek(taskDateObj, { weekStartsOn: 1 })) {
-    // For test compatibility, we're treating all days this week (including tomorrow) as THIS_WEEK
-    // This aligns with the test expectations that check for THIS_WEEK instead of TOMORROW
     return DateGroup.THIS_WEEK;
   }
   

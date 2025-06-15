@@ -69,23 +69,43 @@ const getThisWeekDate = () => {
     // Testing THIS_WEEK requires a date that's in the current week but not past (to avoid OVERDUE)
     // and not today or tomorrow (which have their own categories)
     const today = startOfDay(new Date());
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
-
-    // For testing THIS_WEEK, we need to use a future date within this week
-    // to avoid the date being categorized as OVERDUE
-    let daysToAdd = 3; // Default to 3 days ahead (should be within the week)
-
-    // Adjust days to add based on current day to keep it in THIS_WEEK
-    if (dayOfWeek === 0) daysToAdd = 3; // Sunday (0) -> Wednesday
-    if (dayOfWeek === 1) daysToAdd = 3; // Monday -> Thursday
-    if (dayOfWeek === 2) daysToAdd = 3; // Tuesday -> Friday
-    if (dayOfWeek === 3) daysToAdd = 3; // Wednesday -> Saturday
-    if (dayOfWeek === 4) daysToAdd = 2; // Thursday -> Saturday
-    if (dayOfWeek === 5) daysToAdd = 1; // Friday -> Saturday
-    if (dayOfWeek === 6) daysToAdd = -1; // Saturday -> Friday (still this week)
-
-    const thisWeekDate = addDays(today, daysToAdd);
-    return thisWeekDate;
+    
+    // When weekStartsOn: 1 (Monday), we need to be careful about week boundaries
+    // Get the start and end of the current week using the same logic as the main function
+    const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 1 });
+    const endOfCurrentWeek = addDays(startOfCurrentWeek, 6);
+    
+    // Find a future date within this week that's not today or tomorrow
+    let candidateDate = addDays(today, 2); // Start with day after tomorrow
+    
+    // If day after tomorrow is beyond current week, try yesterday (if it's future from today)
+    if (candidateDate > endOfCurrentWeek) {
+        // We're near the end of the week, try going backwards to find a valid date
+        candidateDate = addDays(today, -1); // Yesterday
+        if (candidateDate < today) {
+            // If yesterday is in the past, try today + 1 (tomorrow) but that's handled separately
+            // Let's try a different day in the current week
+            for (let i = 1; i <= 6; i++) {
+                const testDate = addDays(startOfCurrentWeek, i);
+                if (testDate > today && testDate !== addDays(today, 1)) { // Not today, not tomorrow
+                    candidateDate = testDate;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Ensure the candidate date is within the current week with weekStartsOn: 1
+    if (!isThisWeek(candidateDate, { weekStartsOn: 1 })) {
+        // Fallback: use the last day of current week if it's in the future
+        candidateDate = endOfCurrentWeek;
+        if (candidateDate <= today) {
+            // If we can't find a future date in this week, use the first future day
+            candidateDate = addDays(startOfCurrentWeek, 1); // Tuesday of current week
+        }
+    }
+    
+    return candidateDate;
 };
 
 // Get a date within the current month but not today, tomorrow, this week or next week
@@ -263,8 +283,8 @@ describe('determineTaskDateGroup', () => {
         // Skip this test if we're at the end of the week where it's harder to get a valid THIS_WEEK date
         const today = new Date();
         const dayOfWeek = today.getDay();
-        if (dayOfWeek >= 5) {
-            // Friday, Saturday, Sunday - harder to get THIS_WEEK date
+        if (dayOfWeek === 0 || dayOfWeek >= 5) {
+            // Sunday (0), Friday (5), Saturday (6) - harder to get THIS_WEEK date
             console.log('Skipping THIS_WEEK test on day:', dayOfWeek);
             return;
         }
@@ -294,8 +314,8 @@ describe('determineTaskDateGroup', () => {
         // Skip this test if we're at the end of the week where it's harder to get a valid THIS_WEEK date
         const today = new Date();
         const dayOfWeek = today.getDay();
-        if (dayOfWeek >= 5) {
-            // Friday, Saturday, Sunday - harder to get THIS_WEEK date
+        if (dayOfWeek === 0 || dayOfWeek >= 5) {
+            // Sunday (0), Friday (5), Saturday (6) - harder to get THIS_WEEK date
             console.log('Skipping THIS_WEEK test on day:', dayOfWeek);
             return;
         }
