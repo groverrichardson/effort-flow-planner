@@ -1,10 +1,10 @@
 import { test as base, expect } from '@playwright/test';
 
 // Create a test that doesn't use the authenticated state
-const test = base.extend({
-    // Override the storageState to be undefined for this test file only
-    storageState: [undefined, { scope: 'test' }]
-});
+const test = base;
+
+// Override the storageState to be undefined for this test file only
+test.use({ storageState: undefined });
 
 test('login page visual test', async ({ page }, testInfo) => {
     // Navigate to login page using relative URL (will use baseURL from config)
