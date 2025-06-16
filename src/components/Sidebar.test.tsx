@@ -6,6 +6,17 @@ import '@testing-library/jest-dom';
 import Sidebar from './Sidebar';
 import { MobileFiltersProps } from '@/components/filters/components/MobileFilterSection';
 
+// Mock the useAuth hook
+const mockSignOut = vi.fn();
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({
+    signOut: mockSignOut,
+    user: { email: 'test@example.com' },
+    session: { access_token: 'mock-token' },
+    loading: false,
+  }),
+}));
+
 // Mock lucide-react icons
 vi.mock('lucide-react', async () => ({
   ...await vi.importActual('lucide-react'), // Import and retain default behavior
@@ -17,6 +28,7 @@ vi.mock('lucide-react', async () => ({
   Edit: () => <svg data-testid="edit-icon" />,
   X: () => <svg data-testid="x-icon" />,
   NotebookText: () => <svg data-testid="notebook-text-icon" />,
+  LogOut: () => <svg data-testid="logout-icon" />,
 }));
 
 // Mock useIsMobile hook
@@ -132,5 +144,49 @@ describe('Sidebar', () => {
 
     fireEvent.click(allNotesButton);
     expect(screen.getByText('All Notes Page Mock')).toBeInTheDocument();
+  });
+
+  it('renders the sign out button with correct styling and icon', () => {
+    render(<MemoryRouter><Sidebar {...defaultProps} /></MemoryRouter>);
+    
+    const signOutButton = screen.getByRole('button', { name: /Sign Out/i });
+    expect(signOutButton).toBeInTheDocument();
+    expect(signOutButton).toHaveAttribute('id', 'sidebar-sign-out-button');
+    
+    // Check for the LogOut icon
+    expect(screen.getByTestId('logout-icon')).toBeInTheDocument();
+    
+    // Check for red styling classes (indicating danger/sign out styling)
+    expect(signOutButton).toHaveClass('border-red-200', 'text-red-600');
+  });
+
+  it('calls signOut function when sign out button is clicked', async () => {
+    render(<MemoryRouter><Sidebar {...defaultProps} /></MemoryRouter>);
+    
+    const signOutButton = screen.getByRole('button', { name: /Sign Out/i });
+    fireEvent.click(signOutButton);
+    
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles sign out errors gracefully', async () => {
+    // Mock console.error to avoid noise in test output
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Make signOut throw an error
+    mockSignOut.mockRejectedValueOnce(new Error('Sign out failed'));
+    
+    render(<MemoryRouter><Sidebar {...defaultProps} /></MemoryRouter>);
+    
+    const signOutButton = screen.getByRole('button', { name: /Sign Out/i });
+    fireEvent.click(signOutButton);
+    
+    // Wait for the async operation to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Sign out error:', expect.any(Error));
+    
+    consoleErrorSpy.mockRestore();
   });
 });

@@ -4,6 +4,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from '@/components/ui/input'; // Added
 import TaskFilters from '@/components/filters/TaskFilters'; // Added
 import TaskListHeader from '@/components/headers/TaskListHeader'; // Added
+import { useAuth } from '@/hooks/useAuth'; // Added for sign out functionality
 import {
     ChevronLeft,
     ChevronRight,
@@ -15,7 +16,8 @@ import {
     NotebookText,
     Search,
     PlusCircle,
-} from 'lucide-react'; // Added Search, PlusCircle
+    LogOut, // Added for sign out icon
+} from 'lucide-react'; // Added Search, PlusCircle, LogOut
 import { Link } from 'react-router-dom'; // Import Link for navigation
 import { Tag, Person, Priority, Task } from '@/types'; // Added types for props
 import FullScreenSearchModal from './FullScreenSearchModal'; // Import the new modal
@@ -80,6 +82,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     allTasks, // Destructure allTasks
 }) => {
     const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+    const { signOut } = useAuth(); // Get the signOut function from the useAuth hook
     console.log('[Sidebar Props Check] isMobileSheetView:', isMobileSheetView, 'isOpen:', isOpen);
     console.log('[Sidebar Props Check] allTasks received:', allTasks ? allTasks.length : 'undefined/empty', JSON.stringify(allTasks?.map(t => t.id))); // ADDED LOG
     // const isMobile = useIsMobile(); // No longer needed here as it will be controlled by parent for mobile sheet usage
@@ -280,6 +283,23 @@ const Sidebar: React.FC<SidebarProps> = ({
                             <NotebookText className="h-4 w-4 mr-1" />
                             All Notes
                         </Link>
+                    </Button>
+                    {/* Sign Out Button */}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-1 justify-start border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/10 dark:hover:text-red-300"
+                        onClick={async () => {
+                            try {
+                                await signOut();
+                                // Navigation to login will be handled by the auth state change
+                            } catch (error) {
+                                console.error('Sign out error:', error);
+                            }
+                        }}
+                        id="sidebar-sign-out-button">
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
                     </Button>
                 </div>
             </div>
