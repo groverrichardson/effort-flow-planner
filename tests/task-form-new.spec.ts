@@ -48,12 +48,19 @@ test.describe('Task Creation Form UI Elements', () => {
   test('should display all form fields with expected labels', async ({ page }) => {
     console.log('Starting test: should display all form fields with expected labels');
     
-    // Navigate directly to task creation page
-    await page.goto(`${baseUrl}/#/tasks/create`);
-    console.log('Navigated to task creation page');
+    // Navigate to home page first
+    await page.goto(`${baseUrl}`);
+    console.log('Navigated to home page');
     
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
+    
+    // Click the "New Task" button to open the task creation form
+    await page.getByRole('button', { name: 'New Task' }).click();
+    console.log('Clicked New Task button');
+    
+    // Wait for the form/modal to appear
+    await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
     
     // Take a screenshot for verification
     await page.screenshot({ path: 'test-results/task-form-creation-fields.png' });
@@ -66,7 +73,7 @@ test.describe('Task Creation Form UI Elements', () => {
     
     // Verify form is present
     const taskForm = await page.locator('form').first();
-    await expect(taskForm).toBeVisible({ timeout: 15000 });
+    await expect(taskForm).toBeVisible({ timeout: 5000 });
     console.log('Task form is visible');
     
     // Verify form title if it exists
@@ -82,42 +89,23 @@ test.describe('Task Creation Form UI Elements', () => {
     // Verify essential input fields exist with correct labels
     // Use more flexible selectors that can match various implementations
     
-    // Title field
-    await expect(page.locator('label:text-is("Title"), label:has-text("Title"), [for*="title" i], [data-testid="title-label"]').first())
-      .toBeVisible({ timeout: 10000 })
-      .catch(e => console.log('Title label not found with exact selector, trying alternatives'));
-      
-    // If the label approach fails, look for the input directly
-    await expect(page.locator('input[name="title" i], [placeholder*="title" i], [data-testid="title-input"]').first())
-      .toBeVisible({ timeout: 10000 });
+    // Title field - use correct id selector
+    await expect(page.locator('#title, input#title')).toBeVisible({ timeout: 10000 });
     console.log('Title field verified');
     
-    // Description field - could be a textarea, rich text editor, or other element
-    const descriptionSelectors = [
-      'label:has-text("Description")',
-      '[for*="description" i]',
-      '[data-testid="description-label"]',
-      // Editor selectors if label isn't found
-      '.tiptap-editor',
-      '[contenteditable="true"]',
-      'textarea[name="description" i]',
-      '[data-testid="description-input"]'
-    ];
+    // Description field - use correct id selector
+    await expect(page.locator('#description, textarea#description')).toBeVisible({ timeout: 10000 });
+    console.log('Description field verified');
     
-    let descriptionFound = false;
-    for (const selector of descriptionSelectors) {
-      const count = await page.locator(selector).count();
-      if (count > 0) {
-        await expect(page.locator(selector).first()).toBeVisible();
-        console.log(`Description field found with selector: ${selector}`);
-        descriptionFound = true;
-        break;
-      }
-    }
+    // Due date field - flexible selectors
+    const dueDateField = page.locator('#task-form-due-date-trigger, button[id*="due-date-trigger"], [aria-label*="due date"]').first();
+    await expect(dueDateField).toBeVisible({ timeout: 10000 });
+    console.log('Due date field verified');
     
-    if (!descriptionFound) {
-      console.log('Description field not found with standard selectors, continuing test');
-    }
+    // Priority field - use select element with correct ID
+    const priorityField = page.locator('#priority, [aria-labelledby="task-form-priority-label"]').first();
+    await expect(priorityField).toBeVisible({ timeout: 10000 });
+    console.log('Priority field verified');
     
     // Test for other essential fields with flexible selectors
     // Due Date field
@@ -136,149 +124,101 @@ test.describe('Task Creation Form UI Elements', () => {
   test('should have correct priority dropdown options', async ({ page }) => {
     console.log('Starting test: should have correct priority dropdown options');
     
-    // Navigate directly to task creation page
-    await page.goto(`${baseUrl}/#/tasks/create`);
-    console.log('Navigated to task creation page');
+    // Navigate to home page first
+    await page.goto(`${baseUrl}`);
+    console.log('Navigated to home page');
     
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
     
-    // Find priority selector with flexible approach
-    const prioritySelectors = [
-      'select[name="priority"]', 
-      '[data-testid="priority-select"]',
-      'div[role="combobox"][aria-label*="priority" i]',
-      'label:has-text("Priority") + select',
-      'label:has-text("Priority") ~ select'
-    ];
+    // Click the "New Task" button to open the task creation form
+    await page.getByRole('button', { name: 'New Task' }).click();
+    console.log('Clicked New Task button');
     
-    let prioritySelect;
-    for (const selector of prioritySelectors) {
-      const count = await page.locator(selector).count();
-      if (count > 0) {
-        prioritySelect = page.locator(selector).first();
-        console.log(`Priority select found with selector: ${selector}`);
-        break;
-      }
-    }
+    // Wait for the form/modal to appear
+    await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
     
-    if (!prioritySelect) {
-      console.log('Priority select not found with standard selectors, using fallback');
-      // Fallback to a label-based approach
-      const priorityLabel = await page.locator('label:has-text("Priority")').first();
+    // Find priority selector - it's a Select component with id="priority"
+    const priorityTrigger = page.locator('#priority');
+    
+    // Verify the priority trigger exists
+    await expect(priorityTrigger).toBeVisible();
+    console.log('Priority trigger found and visible');
+    
+    // Click the priority trigger to open the dropdown
+    await priorityTrigger.click();
+    console.log('Clicked priority trigger');
+    
+    // Wait for the dropdown content to appear
+    await page.waitForSelector('[role="listbox"], [data-radix-select-content]', { timeout: 5000 });
+    
+    // Take screenshot after opening dropdown
+    await page.screenshot({ path: 'test-results/task-form-priority-dropdown-open.png' });
+    
+    // Find the select options in the dropdown content
+    const options = await page.locator('[role="option"], [data-radix-select-item]').all();
+    console.log(`Found ${options.length} priority options`);
+    
+    // Define expected priority levels
+    const expectedPriorities = ['Low', 'Medium', 'High'];
+    
+    if (options.length > 0) {
+      // Get all option texts
+      const optionTexts = await Promise.all(options.map(async option => {
+        return await option.textContent() || '';
+      }));
       
-      if (await priorityLabel.count() > 0) {
-        console.log('Found priority label, looking for associated select element');
-        
-        // Try to find the select that follows this label
-        const select = await page.locator('label:has-text("Priority") + select, label:has-text("Priority") ~ select').first();
-        if (await select.count() > 0) {
-          prioritySelect = select;
-          console.log('Found priority select using label association');
+      // Check if expected options are present
+      for (const expectedOption of expectedPriorities) {
+        if (optionTexts.some(text => text.toLowerCase().includes(expectedOption.toLowerCase()))) {
+          console.log(`Found expected priority option: ${expectedOption}`);
+        } else {
+          console.log(`Expected priority option "${expectedOption}" NOT found`);
         }
       }
-    }
-    
-    // Take screenshot 
-    await page.screenshot({ path: 'test-results/task-form-priority-dropdown.png' });
-    
-    // If we found the select element, check its options
-    if (prioritySelect && await prioritySelect.count() > 0) {
-      await prioritySelect.click().catch(e => console.log('Could not click priority select'));
-      
-      // Try to find options with flexible approach
-      const optionSelector = 'option, [role="option"]';
-      let options;
-      
-      try {
-        options = await prioritySelect.locator(optionSelector).all();
-        console.log(`Found ${options.length} priority options`);
-      } catch (e) {
-        console.log('Could not get options directly from select, trying alternative approach');
-        // Try to find options in the document that appear after clicking the select
-        options = await page.locator(optionSelector).all();
-        console.log(`Found ${options.length} potential priority options using alternative method`);
-      }
-      
-      // Define expected priority levels
-      const expectedPriorities = ['Low', 'Medium', 'High'];
-      
-      if (options.length > 0) {
-        // Get all option texts
-        const optionTexts = await Promise.all(options.map(async option => {
-          return await option.textContent() || '';
-        }));
-        
-        // Check if expected options are present
-        for (const expectedOption of expectedPriorities) {
-          if (optionTexts.some(text => text.toLowerCase().includes(expectedOption.toLowerCase()))) {
-            console.log(`Found expected priority option: ${expectedOption}`);
-          } else {
-            console.log(`Expected priority option "${expectedOption}" NOT found`);
-          }
-        }
-        console.log('Verified priority options');
-      } else {
-        console.log('No priority options found, test partially skipped');
-      }
+      console.log('Verified priority options');
     } else {
-      console.log('Priority select element not found, test partially skipped');
+      console.log('No priority options found, test partially skipped');
     }
   });
 
   test('should have correct repeats dropdown options', async ({ page }) => {
     console.log('Starting test: should have correct repeats dropdown options');
     
-    // Navigate directly to task creation page
-    await page.goto(`${baseUrl}/#/tasks/create`);
-    console.log('Navigated to task creation page');
+    // Navigate to home page first
+    await page.goto(`${baseUrl}`);
+    console.log('Navigated to home page');
     
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
     
-    // Find repeats selector with flexible approach
-    const repeatsSelectors = [
-      'select[name="repeats"]', 
-      '[data-testid="repeats-select"]',
-      'div[role="combobox"][aria-label*="repeats" i]',
-      'label:has-text("Repeats") + select',
-      'label:has-text("Repeats") ~ select'
-    ];
+    // Click the "New Task" button to open the task creation form
+    await page.getByRole('button', { name: 'New Task' }).click();
+    console.log('Clicked New Task button');
     
-    let repeatsSelect;
-    for (const selector of repeatsSelectors) {
-      const count = await page.locator(selector).count();
-      if (count > 0) {
-        repeatsSelect = page.locator(selector).first();
-        console.log(`Repeats select found with selector: ${selector}`);
-        break;
-      }
-    }
+    // Wait for the form/modal to appear
+    await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
     
-    if (!repeatsSelect) {
-      console.log('Repeats select not found with standard selectors, using fallback');
-      // Fallback to a label-based approach
-      const repeatsLabel = await page.locator('label:has-text("Repeats")').first();
-      
-      if (await repeatsLabel.count() > 0) {
-        console.log('Found repeats label, looking for associated select element');
-        
-        // Try to find the select that follows this label
-        const select = await page.locator('label:has-text("Repeats") + select, label:has-text("Repeats") ~ select').first();
-        if (await select.count() > 0) {
-          repeatsSelect = select;
-          console.log('Found repeats select using label association');
-        }
-      }
-    }
+    // Find recurrence frequency selector - it's a Select component with id="recurrence-frequency"
+    const recurrenceFrequencyTrigger = page.locator('#recurrence-frequency');
     
-    // Take screenshot 
-    await page.screenshot({ path: 'test-results/task-form-repeats-dropdown.png' });
-    console.log('Screenshot taken: task-form-repeats-dropdown.png');
+    // Verify the recurrence frequency trigger exists
+    await expect(recurrenceFrequencyTrigger).toBeVisible();
+    console.log('Recurrence frequency trigger found and visible');
     
-    // Verify repeats options
-    const optionSelector = 'option, [role="option"]';
-    const options = await repeatsSelect.locator(optionSelector).all();
+    // Click the recurrence frequency trigger to open the dropdown
+    await recurrenceFrequencyTrigger.click();
+    console.log('Clicked recurrence frequency trigger');
+    
+    // Wait for the dropdown content to appear
+    await page.waitForSelector('[role="listbox"], [data-radix-select-content]', { timeout: 5000 });
+    
+    // Take screenshot after opening dropdown
+    await page.screenshot({ path: 'test-results/task-form-repeats-dropdown-open.png' });
+    console.log('Screenshot taken: task-form-repeats-dropdown-open.png');
+    
+    // Find the select options in the dropdown content
+    const options = await page.locator('[role="option"], [data-radix-select-item]').all();
     console.log(`Found ${options.length} repeats options`);
     
     if (options.length > 0) {
@@ -334,12 +274,19 @@ test.describe('Task Creation Form UI Elements', () => {
   test('should have correctly formatted date fields', async ({ page }) => {
     console.log('Starting test: should have correctly formatted date fields');
     
-    // Navigate directly to task creation page
-    await page.goto(`${baseUrl}/#/tasks/create`);
-    console.log('Navigated to task creation page');
+    // Navigate to home page first
+    await page.goto(`${baseUrl}`);
+    console.log('Navigated to home page');
     
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
+    
+    // Click the "New Task" button to open the task creation form
+    await page.getByRole('button', { name: 'New Task' }).click();
+    console.log('Clicked New Task button');
+    
+    // Wait for the form/modal to appear
+    await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
     
     // Find due date input with flexible approach
     const dueDateSelectors = [
@@ -648,73 +595,84 @@ test.describe('Task Form Validation', () => {
   test('should require title field', async ({ page }) => {
     console.log('Starting test: should require title field');
     
-    // Navigate directly to task creation form
-    await page.goto(`${baseUrl}/#/tasks/create`);
-    console.log('Navigated to task creation form');
+    // Navigate to home page first
+    await page.goto(`${baseUrl}`);
+    console.log('Navigated to home page');
     
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
     
-    // Try to submit the form without filling the title
-    const submitButton = page.getByRole('button', { name: /save|create|submit/i }).first();
+    // Click the "New Task" button to open the task creation form
+    await page.getByRole('button', { name: 'New Task' }).click();
+    console.log('Clicked New Task button');
     
-    if (await submitButton.count() > 0) {
-      await submitButton.click();
-      console.log('Form submitted without a title');
-      
-      // Wait a moment for validation to trigger
-      await page.waitForTimeout(500);
-      
-      // Take a screenshot
-      await page.screenshot({ path: 'test-results/form-validation-title-required.png' });
-      console.log('Screenshot taken: form-validation-title-required.png');
-      
-      // Look for validation error messages
-      const errorSelectors = [
-        '.error-message',
-        '.validation-error',
-        '.form-error',
-        '.alert',
-        '[role="alert"]',
-        '.error',
-        '.invalid-feedback'
-      ];
-      
-      let errorFound = false;
-      for (const selector of errorSelectors) {
-        const count = await page.locator(selector).count();
-        if (count > 0) {
-          const errorMessages = await page.locator(selector).all();
-          for (const message of errorMessages) {
-            const text = await message.textContent() || '';
-            if (text && /title|required|enter/i.test(text)) {
-              await expect(message).toBeVisible();
-              console.log(`Error message found with selector: ${selector}, text: ${text}`);
-              errorFound = true;
-              break;
-            }
+    // Wait for the form/modal to appear
+    await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
+    
+    // Try form submission using keyboard instead of clicking the button that's outside viewport
+    const titleInput = page.locator('#title');
+    await titleInput.focus();
+    await titleInput.press('Enter');
+    console.log('Form submitted without a title using Enter key');
+    
+    // Wait a moment for validation to trigger
+    await page.waitForTimeout(500);
+    
+    // Take a screenshot
+    await page.screenshot({ path: 'test-results/form-validation-title-required.png' });
+    console.log('Screenshot taken: form-validation-title-required.png');
+    
+    // Look for validation error messages
+    const errorSelectors = [
+      '.error-message',
+      '.validation-error',
+      '.form-error',
+      '.alert',
+      '[role="alert"]',
+      '.error',
+      '.invalid-feedback'
+    ];
+    
+    let errorFound = false;
+    for (const selector of errorSelectors) {
+      const errorCount = await page.locator(selector).count();
+      if (errorCount > 0) {
+        const messages = await page.locator(selector).all();
+        for (let i = 0; i < errorCount; i++) {
+          const message = messages[i];
+          const text = await message.textContent() || '';
+          if (text && /title|required|enter/i.test(text)) {
+            await expect(message).toBeVisible();
+            console.log(`Error message found with selector: ${selector}, text: ${text}`);
+            errorFound = true;
+            break;
           }
         }
-        if (errorFound) break;
       }
-      
-      if (!errorFound) {
-        console.log('No specific error message found for title validation');
-      }
-    } else {
-      console.log('Submit button not found, cannot test validation');
+      if (errorFound) break;
+    }
+    
+    if (!errorFound) {
+      console.log('No specific error message found for title validation');
     }
   });
 
   test('should validate due date format', async ({ page }) => {
     console.log('Starting test: should validate due date format');
     
-    // Navigate directly to task creation form
-    await page.goto(`${baseUrl}/#/tasks/create`);
-    console.log('Navigated to task creation form');
+    // Navigate to home page first
+    await page.goto(`${baseUrl}`);
+    console.log('Navigated to home page');
     
     // Wait for page to be fully loaded
     await page.waitForLoadState('networkidle');
+    
+    // Click the "New Task" button to open the task creation form
+    await page.getByRole('button', { name: 'New Task' }).click();
+    console.log('Clicked New Task button');
+    
+    // Wait for the form/modal to appear
+    await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
     
     // Fill required title field with flexible selectors
     const titleInputSelectors = [
@@ -743,8 +701,9 @@ test.describe('Task Form Validation', () => {
           console.log('Filled due date input with invalid data');
           
           // Try to submit the form
-          const submitButton = page.getByRole('button', { name: /save|create|submit/i }).first();
-          await submitButton.click();
+          const submitButton = page.getByRole('button', { name: /^Create Task$|^Update Task$/i }).first();
+          await submitButton.scrollIntoViewIfNeeded();
+          await submitButton.click({ force: true });
           
           console.log('Form submitted, checking for validation errors');
           
