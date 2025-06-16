@@ -653,9 +653,12 @@ test.describe('Task Detail Page Elements', () => {
             ];
 
             for (const selector of alternativeSelectors) {
-                const count = await page.locator(selector).count();
+                const locator = page.locator(selector);
+                const count = await locator.count();
                 if (count > 0) {
-                    await page.click(selector);
+                    // Wait for element to be visible and clickable
+                    await locator.first().waitFor({ state: 'visible' });
+                    await locator.first().click();
                     console.log(
                         `Clicked alternative edit button with selector: ${selector}`
                     );
