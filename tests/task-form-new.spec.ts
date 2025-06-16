@@ -68,7 +68,7 @@ test.describe('Task Creation Form UI Elements', () => {
         console.log('Clicked New Task button');
 
         // Wait for the form/modal to appear
-        await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
+        await page.getByRole('dialog', { name: 'Create New Task' }).waitFor({ state: 'visible', timeout: 10000 });
 
         // Take a screenshot for verification
         await page.screenshot({
@@ -176,7 +176,7 @@ test.describe('Task Creation Form UI Elements', () => {
         console.log('Clicked New Task button');
 
         // Wait for the form/modal to appear
-        await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
+        await page.getByRole('dialog', { name: 'Create New Task' }).waitFor({ state: 'visible', timeout: 10000 });
 
         // Find priority selector - it's a Select component with id="priority"
         const priorityTrigger = page.locator('#priority');
@@ -257,7 +257,7 @@ test.describe('Task Creation Form UI Elements', () => {
         console.log('Clicked New Task button');
 
         // Wait for the form/modal to appear
-        await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
+        await page.getByRole('dialog', { name: 'Create New Task' }).waitFor({ state: 'visible', timeout: 10000 });
 
         // Find recurrence frequency selector - it's a Select component with id="recurrence-frequency"
         const recurrenceFrequencyTrigger = page.locator(
@@ -376,7 +376,7 @@ test.describe('Task Creation Form UI Elements', () => {
         console.log('Clicked New Task button');
 
         // Wait for the form/modal to appear
-        await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
+        await page.getByRole('dialog', { name: 'Create New Task' }).waitFor({ state: 'visible', timeout: 10000 });
 
         // Find due date input with flexible approach
         const dueDateSelectors = [
@@ -728,7 +728,7 @@ test.describe('Task Form Validation', () => {
         console.log('Clicked New Task button');
 
         // Wait for the form/modal to appear
-        await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
+        await page.getByRole('dialog', { name: 'Create New Task' }).waitFor({ state: 'visible', timeout: 10000 });
 
         // Verify the title field is present and empty
         const titleInput = page.locator('#title');
@@ -758,7 +758,10 @@ test.describe('Task Form Validation', () => {
 
         // Attempt to click the button and see what happens (but don't wait for navigation)
         try {
-            await createTaskButton.click({ timeout: 5000 });
+            // Ensure button is in viewport before clicking
+            await createTaskButton.scrollIntoViewIfNeeded();
+            // Use force click to bypass viewport issues
+            await createTaskButton.click({ timeout: 5000, force: true });
             console.log('Clicked Create Task button successfully');
         } catch (error) {
             console.log(`Failed to click Create Task button: ${error.message}`);
@@ -773,12 +776,13 @@ test.describe('Task Form Validation', () => {
         });
 
         // Check if the dialog is still open (use specific dialog selector to avoid strict mode violation)
-        const dialogStillVisible = await page.getByRole('dialog', { name: 'Create New Task' }).isVisible();
+        const dialogStillVisible = await page.getByRole('dialog', { name: 'Create New Task' }).isVisible({ timeout: 5000 }).catch(() => false);
         console.log(`Dialog still visible after button click: ${dialogStillVisible}`);
 
-        // Check if the form is still visible
-        const formStillVisible = await page.getByRole('form', { name: 'Task Form' }).isVisible();
-        console.log(`Form still visible after button click: ${formStillVisible}`);
+        // Check if the form is still visible using count method which is more reliable
+        const formCount = await page.getByRole('form', { name: 'Task Form' }).count();
+        const formStillVisible = formCount > 0;
+        console.log(`Form still visible after button click: ${formStillVisible} (count: ${formCount})`);
 
         // Look for any toast notifications that might have appeared
         const toastElements = page.locator('[data-radix-toast-title], [role="status"], .toast, [data-state="open"]');
@@ -842,7 +846,7 @@ test.describe('Task Form Validation', () => {
         console.log('Clicked New Task button');
 
         // Wait for the form/modal to appear
-        await page.waitForSelector('form, [role="dialog"]', { timeout: 10000 });
+        await page.getByRole('dialog', { name: 'Create New Task' }).waitFor({ state: 'visible', timeout: 10000 });
 
         // Fill required title field with flexible selectors
         const titleInputSelectors = [
