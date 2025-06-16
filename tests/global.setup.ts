@@ -62,9 +62,7 @@ async function globalSetup() {
         console.log(
             `Navigating to login page at http://localhost:${process.env.TEST_PORT}/login`
         );
-      await page.waitForURL(`http://localhost:${port}/`, { timeout: 30000 });
-            timeout: 30000,
-        });
+        await page.goto(`http://localhost:${port}/login`, { timeout: 30000 });
         await page.screenshot({
             path: screenshotPath('01-login-page-loaded'),
             fullPage: true,

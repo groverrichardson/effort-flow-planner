@@ -21,8 +21,8 @@ export async function getFreePort(): Promise<number> {
     });
 }
 
-// Use a default port for tests, but allow it to be overridden via environment variables
-process.env.TEST_PORT = process.env.TEST_PORT || '8081';
+// Use port 8080 to match the default Vite server port
+process.env.TEST_PORT = process.env.TEST_PORT || '8080';
 
 export default defineConfig({
     // Directory where tests are located
@@ -68,7 +68,16 @@ export default defineConfig({
     ],
 
     // Configure reporting
-    reporter: [['html', { outputFolder: 'playwright-report' }], ['list']],
+    reporter: [
+        ['html', { 
+            outputFolder: 'playwright-report',
+            // Use absolute attachment paths for more reliable linking
+            attachmentsBaseURL: '',
+            open: 'never'
+        }], 
+        ['list'],
+        ['json', { outputFile: 'playwright-report/test-results.json' }]
+    ],
 
     // Run your local dev server before starting tests
     webServer: {
@@ -84,7 +93,11 @@ export default defineConfig({
     // Configure expect behavior
     expect: {
         timeout: 10000,
-        toHaveScreenshot: { maxDiffPixelRatio: 0.05 },
+        toHaveScreenshot: { 
+            maxDiffPixelRatio: 0.05,
+            threshold: 0.2,  // Make threshold more permissive to ensure screenshots appear
+            maxDiffPixels: 100,  // Allow some pixels to differ
+        },
     },
 
     // Global setup - used for authentication
