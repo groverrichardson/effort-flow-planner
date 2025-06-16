@@ -431,17 +431,15 @@ describe('groupTasksByDate', () => {
         // We'll set it to the 28th day of the current month to ensure it stays in this month
         const currentMonth = today.getMonth();
         const currentYear = today.getFullYear();
-        const thisMonthDate = new Date(currentYear, currentMonth, 28);
-
-        // If the 28th is today or in the past, or falls within next week, adjust to a different date
-let thisMonthDate = addMonths(today, 0);
-// Iterate forward until the helper confirms it falls into THIS_MONTH
-while (determineTaskDateGroup(createTestTask(null, thisMonthDate)) !== DateGroup.THIS_MONTH) {
-    thisMonthDate = addDays(thisMonthDate, 1);
-}
-            // Use the 20th as an alternative
-            thisMonthDate.setDate(20);
+        let thisMonthDate = addMonths(today, 0);
+        
+        // Iterate forward until the helper confirms it falls into THIS_MONTH
+        while (determineTaskDateGroup(createTestTask(null, thisMonthDate)) !== DateGroup.THIS_MONTH) {
+            thisMonthDate = addDays(thisMonthDate, 1);
         }
+        
+        // Use the 20th as an alternative if needed
+        thisMonthDate.setDate(20);
         const futureDate = addMonths(today, 2); // Far future
 
         // Create tasks with various date combinations
