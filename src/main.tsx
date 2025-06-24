@@ -1,43 +1,100 @@
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx';
-import { ThemeProvider } from './context/ThemeContext.tsx';
-import './index.css'
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import { ThemeProvider } from "./context/ThemeContext.tsx";
+import "./index.css";
+
+// Suppress ResizeObserver loop error - this is a common harmless warning
+// that occurs when ResizeObserver callbacks take too long or cause layout changes
+const originalError = console.error;
+console.error = (...args) => {
+  if (
+    args.length > 0 &&
+    typeof args[0] === "string" &&
+    args[0].includes(
+      "ResizeObserver loop completed with undelivered notifications",
+    )
+  ) {
+    // Suppress this specific error as it's harmless
+    return;
+  }
+  originalError.apply(console, args);
+};
+
+// Also handle window error events for ResizeObserver
+window.addEventListener("error", (event) => {
+  if (
+    event.message &&
+    event.message.includes(
+      "ResizeObserver loop completed with undelivered notifications",
+    )
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  }
+});
+
+// Handle unhandled promise rejections that might be related to ResizeObserver
+window.addEventListener("unhandledrejection", (event) => {
+  if (
+    event.reason &&
+    typeof event.reason === "string" &&
+    event.reason.includes("ResizeObserver")
+  ) {
+    event.preventDefault();
+    return false;
+  }
+});
 
 // DEBUGGING: Track initialization phases with timestamps
 const now = new Date();
-console.log(`%c[${now.toISOString()}] MAIN.TSX: Script execution started`, 'color: green; font-weight: bold');
+console.log(
+  `%c[${now.toISOString()}] MAIN.TSX: Script execution started`,
+  "color: green; font-weight: bold",
+);
 
 // DEBUGGING: Check for fundamental DOM elements
-const rootElement = document.getElementById('root');
-console.log(`%c[MAIN] Root element found:`, 'color: blue; font-weight: bold', rootElement);
-console.log(`%c[MAIN] Document state:`, 'color: blue', {
+const rootElement = document.getElementById("root");
+console.log(
+  `%c[MAIN] Root element found:`,
+  "color: blue; font-weight: bold",
+  rootElement,
+);
+console.log(`%c[MAIN] Document state:`, "color: blue", {
   readyState: document.readyState,
   URL: document.URL,
   location: window.location.href,
 });
 
 // DEBUGGING: Log imports
-console.log(`%c[MAIN] Imports loaded:`, 'color: purple', {
+console.log(`%c[MAIN] Imports loaded:`, "color: purple", {
   createRoot: typeof createRoot,
   App: typeof App,
   ThemeProvider: typeof ThemeProvider,
 });
 
 try {
-  console.log(`%c[MAIN] Creating Root...`, 'color: orange');
+  console.log(`%c[MAIN] Creating Root...`, "color: orange");
   const reactRoot = createRoot(rootElement!);
-  console.log(`%c[MAIN] Root created successfully`, 'color: green');
-  
-  console.log(`%c[MAIN] Starting render...`, 'color: orange');
+  console.log(`%c[MAIN] Root created successfully`, "color: green");
+
+  console.log(`%c[MAIN] Starting render...`, "color: orange");
   reactRoot.render(
     <ThemeProvider>
       <App />
-    </ThemeProvider>
+    </ThemeProvider>,
   );
-  console.log(`%c[MAIN] Render method called - React should now be rendering`, 'color: green; font-weight: bold');
+  console.log(
+    `%c[MAIN] Render method called - React should now be rendering`,
+    "color: green; font-weight: bold",
+  );
 } catch (error) {
-  console.error(`%c[MAIN] CRITICAL ERROR: Failed to render React application:`, 'color: red; font-weight: bold', error);
-  
+  console.error(
+    `%c[MAIN] CRITICAL ERROR: Failed to render React application:`,
+    "color: red; font-weight: bold",
+    error,
+  );
+
   // Emergency fallback rendering to show something if React fails
   if (rootElement) {
     rootElement.innerHTML = `
@@ -45,7 +102,7 @@ try {
         <h2 style="color: red;">React Rendering Error</h2>
         <p>The application failed to render properly.</p>
         <p>Please check your browser console for details.</p>
-        <pre style="background: #f0f0f0; padding: 10px; overflow: auto;">${error?.message || 'Unknown error'}</pre>
+        <pre style="background: #f0f0f0; padding: 10px; overflow: auto;">${error?.message || "Unknown error"}</pre>
       </div>
     `;
   }
