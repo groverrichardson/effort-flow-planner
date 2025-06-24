@@ -20,6 +20,32 @@ console.error = (...args) => {
   originalError.apply(console, args);
 };
 
+// Also handle window error events for ResizeObserver
+window.addEventListener("error", (event) => {
+  if (
+    event.message &&
+    event.message.includes(
+      "ResizeObserver loop completed with undelivered notifications",
+    )
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  }
+});
+
+// Handle unhandled promise rejections that might be related to ResizeObserver
+window.addEventListener("unhandledrejection", (event) => {
+  if (
+    event.reason &&
+    typeof event.reason === "string" &&
+    event.reason.includes("ResizeObserver")
+  ) {
+    event.preventDefault();
+    return false;
+  }
+});
+
 // DEBUGGING: Track initialization phases with timestamps
 const now = new Date();
 console.log(
